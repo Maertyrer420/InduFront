@@ -168,9 +168,21 @@ startService("auth-server", "src/server/auth/AuthServer.ts");
 startService("game-server", "src/server/Server.ts");
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(
-    `[gateway] Unified 24/7 Server listening on http://0.0.0.0:${PORT} (Master :${MASTER_PORT}, Workers :3001..${3000 + NUM_WORKERS}, Auth :${AUTH_PORT})`,
-  );
+  const externalUrl = (
+    process.env.RENDER_EXTERNAL_URL ??
+    process.env.KEEP_ALIVE_URL ??
+    ""
+  ).replace(/\/$/, "");
+
+  console.log("==================================================================");
+  console.log(`[gateway] UNIFIED 24/7 SERVER ONLINE!`);
+  if (externalUrl.startsWith("http")) {
+    console.log(`[gateway] PUBLIC GAME URL: ${externalUrl}`);
+  } else {
+    console.log(`[gateway] Listening on port ${PORT} (traffic proxied by Render)`);
+  }
+  console.log(`[gateway] Internal processes: Master :${MASTER_PORT}, Workers :3001..${3000 + NUM_WORKERS}, Auth :${AUTH_PORT}`);
+  console.log("==================================================================");
 
   // Optional 24/7 Keep-Alive self-ping when running on Render (prevents 15-min idle sleep)
   const externalUrl = (
