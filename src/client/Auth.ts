@@ -27,9 +27,25 @@ export const PUBLIC_ID_CACHE_PREFIX = "cached_public_id_";
 let __inMemoryPublicId: string | null = null;
 let __inMemoryPublicIdSub: string | null = null;
 
+export const INDUFRONT_JWT_KEY = "indufront_jwt";
+
 let __jwt: string | null = null;
 let __refreshPromise: Promise<void> | null = null;
 let __expiresAt: number = 0;
+
+// Immediately restore active session from localStorage if present and unexpired
+try {
+  const cachedJwt = localStorage.getItem(INDUFRONT_JWT_KEY);
+  if (cachedJwt) {
+    const payload = decodeJwt(cachedJwt);
+    if (payload.exp && payload.exp * 1000 > Date.now() + 60_000) {
+      __jwt = cachedJwt;
+      __expiresAt = payload.exp * 1000;
+    }
+  }
+} catch {
+  // Ignore malformed token
+}
 
 let __sessionState: DesktopSessionState = { status: "unknown" };
 
@@ -329,6 +345,9 @@ function announceLoggedOut(): void {
 export function clearLocalSession(): void {
   const hadSession = __jwt !== null;
   __jwt = null;
+  try {
+    localStorage.removeItem(INDUFRONT_JWT_KEY);
+  } catch {}
   updateUserSettingsForJwt(null);
   localStorage.removeItem(PERSISTENT_ID_KEY);
   // Switch cosmetics back to the logged-out scope (via updateUserSettingsForJwt).
@@ -556,6 +575,9 @@ async function doRefreshJwt(): Promise<void> {
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log("Refresh succeeded");
     __jwt = jwt;
+    try {
+      localStorage.setItem(INDUFRONT_JWT_KEY, jwt);
+    } catch {}
     updateUserSettingsForJwt(jwt);
   } catch (e) {
     console.warn("Refresh failed", e);

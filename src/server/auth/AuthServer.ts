@@ -11,7 +11,7 @@ import {
   JWK,
   SignJWT,
 } from "jose";
-import { randomBytes, randomUUID } from "node:crypto";
+import { randomBytes, randomUUID, createHash, createPrivateKey, createPublicKey } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -43,19 +43,31 @@ const googleEnabled = GOOGLE_ID !== "" && GOOGLE_SECRET !== "";
 const store = new AuthStore(path.join(DATA_DIR, "users.json"));
 
 type Keys = { privateJwk: JWK; publicJwk: JWK };
+const AUTH_SECRET = process.env.AUTH_SECRET ?? "indufront_persistent_auth_secret_v1_2026";
+
 async function loadKeys(): Promise<Keys> {
   const file = path.join(DATA_DIR, "keys.json");
-  if (fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, "utf8"));
-  const { publicKey, privateKey } = await generateKeyPair("EdDSA", {
-    crv: "Ed25519",
-    extractable: true,
+  if (fs.existsSync(file)) {
+    try {
+      return JSON.parse(fs.readFileSync(file, "utf8"));
+    } catch {}
+  }
+  // Generate deterministic Ed25519 keypair based on AUTH_SECRET so restarts never invalidate active sessions
+  const seed = createHash("sha256").update(AUTH_SECRET).digest();
+  const privKeyObj = createPrivateKey({
+    key: Buffer.concat([Buffer.from("302e020100300506032b657004220420", "hex"), seed]),
+    format: "der",
+    type: "pkcs8",
   });
+  const pubKeyObj = createPublicKey(privKeyObj);
   const keys: Keys = {
-    privateJwk: { ...(await exportJWK(privateKey)), alg: "EdDSA" },
-    publicJwk: { ...(await exportJWK(publicKey)), alg: "EdDSA" },
+    privateJwk: { ...(await exportJWK(privKeyObj)), alg: "EdDSA" },
+    publicJwk: { ...(await exportJWK(pubKeyObj)), alg: "EdDSA" },
   };
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(keys), { mode: 0o600 });
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(keys), { mode: 0o600 });
+  } catch {}
   return keys;
 }
 
@@ -136,7 +148,13 @@ async function main() {
   const verifyKey = await importJWK(keys.publicJwk, "EdDSA");
 
   async function issueAccessToken(u: UserRecord): Promise<string> {
-    return new SignJWT({ role: "player", provider: u.googleId ? "google" : "password" })
+    return new SignJWT({
+      role: "player",
+      provider: u.googleId ? "google" : "password",
+      username: u.username,
+      email: u.email,
+      publicId: u.publicId,
+    })
       .setProtectedHeader({ alg: "EdDSA" })
       .setJti(randomUUID())
       .setSubject(uuidToBase64url(u.id))
@@ -150,7 +168,16 @@ async function main() {
   async function startSession(req: Request, res: Response, u: UserRecord) {
     const token = store.createSession(u.id);
     setCookie(req, res, COOKIE, token, 30 * 24 * 3600);
-    return { jwt: await issueAccessToken(u), expiresIn: ACCESS_TTL_S };
+    return {
+      jwt: await issueAccessToken(u),
+      expiresIn: ACCESS_TTL_S,
+      user: {
+        id: u.id,
+        username: u.username,
+        email: u.email,
+        publicId: u.publicId,
+      },
+    };
   }
 
   const app = express();
@@ -338,7 +365,17 @@ async function main() {
         audience: AUDIENCE,
       });
       const { base64urlToUuid } = await import("@openfront/shared/Base64");
-      const user = store.byId(base64urlToUuid(String(payload.sub)));
+      const userId = base64urlToUuid(String(payload.sub));
+      let user = store.byId(userId);
+      // Ephemeral disk reboot recovery: reconstruct user record from cryptographically verified token
+      if (!user && payload.username && payload.email) {
+        user = store.createUser({
+          id: userId,
+          username: String(payload.username),
+          email: String(payload.email),
+          publicId: payload.publicId ? String(payload.publicId) : undefined,
+        });
+      }
       if (!user) return void res.sendStatus(401);
       (req as Request & { user: UserRecord }).user = user;
       next();
@@ -346,6 +383,33 @@ async function main() {
       res.sendStatus(401);
     }
   }
+
+  app.post("/auth/sync", async (req, res) => {
+    const rawToken = req.body?.jwt ?? (req.headers.authorization ?? "").replace(/^Bearer /, "");
+    if (!rawToken) return void res.status(400).json({ error: "missing_token" });
+    try {
+      const { payload } = await jwtVerify(rawToken, verifyKey, {
+        algorithms: ["EdDSA"],
+        issuer: ISSUER,
+        audience: AUDIENCE,
+      });
+      const { base64urlToUuid } = await import("@openfront/shared/Base64");
+      const userId = base64urlToUuid(String(payload.sub));
+      let user = store.byId(userId);
+      if (!user && payload.username && payload.email) {
+        user = store.createUser({
+          id: userId,
+          username: String(payload.username),
+          email: String(payload.email),
+          publicId: payload.publicId ? String(payload.publicId) : undefined,
+        });
+      }
+      if (!user) return void res.status(404).json({ error: "not_found" });
+      res.json({ ok: true, user: userMe(user) });
+    } catch {
+      res.status(401).json({ error: "invalid_token" });
+    }
+  });
 
   app.get("/users/@me", authed, (req, res) => {
     res.json(userMe((req as Request & { user: UserRecord }).user));

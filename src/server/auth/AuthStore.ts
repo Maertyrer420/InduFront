@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID, scrypt, timingSafeEqual, createHash } from "node:crypto";
+import { randomBytes, randomUUID, scrypt, timingSafeEqual, createHash, createHmac } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -66,7 +66,11 @@ export class AuthStore {
   constructor(private readonly file: string) {
     fs.mkdirSync(path.dirname(file), { recursive: true });
     if (fs.existsSync(file)) {
-      this.data = JSON.parse(fs.readFileSync(file, "utf8")) as Data;
+      try {
+        this.data = JSON.parse(fs.readFileSync(file, "utf8")) as Data;
+      } catch {
+        this.data = { users: [], sessions: [] };
+      }
     }
   }
 
@@ -207,7 +211,7 @@ export class AuthStore {
     me.friends ??= [];
     other.friends ??= [];
     if (!me.friends.includes(other.publicId)) me.friends.push(other.publicId);
-    if (!other.friends.includes(me.publicId)) other.friends.push(me.publicId);
+    if (!other.friends.includes(me.publicId)) targetPush(other.friends, me.publicId);
     this.save();
     return true;
   }
@@ -254,21 +258,33 @@ export class AuthStore {
   }
 
   createUser(p: {
+    id?: string;
+    publicId?: string;
     email: string;
     username: string;
     passwordHash?: string;
     googleId?: string;
+    createdAt?: number;
   }): UserRecord {
-    const id = randomUUID();
+    const id = p.id ?? randomUUID();
+    const existing = this.byId(id);
+    if (existing) {
+      existing.username = p.username.trim();
+      existing.usernameLower = p.username.trim().toLowerCase();
+      existing.email = p.email.trim().toLowerCase();
+      if (p.passwordHash) existing.passwordHash = p.passwordHash;
+      this.save();
+      return existing;
+    }
     const user: UserRecord = {
       id,
-      publicId: randomBytes(5).toString("hex"),
+      publicId: p.publicId ?? randomBytes(5).toString("hex"),
       username: p.username.trim(),
       usernameLower: p.username.trim().toLowerCase(),
       email: p.email.trim().toLowerCase(),
       passwordHash: p.passwordHash,
       googleId: p.googleId,
-      createdAt: Date.now(),
+      createdAt: p.createdAt ?? Date.now(),
     };
     this.data.users.push(user);
     this.save();
@@ -283,25 +299,49 @@ export class AuthStore {
     }
   }
 
-  /** Returns the opaque refresh token; only its hash is stored. */
+  /** Returns the signed refresh token; works both in-memory and statelessly across server restarts. */
   createSession(userId: string): string {
-    const token = randomBytes(32).toString("base64url");
     const now = Date.now();
+    const expiresAt = now + SESSION_TTL_MS;
+    const authSecret = process.env.AUTH_SECRET ?? "indufront_persistent_auth_secret_v1_2026";
+    const hmacSig = createHmac("sha256", authSecret)
+      .update(`${userId}:${expiresAt}`)
+      .digest("base64url");
+    const token = `${userId}.${expiresAt}.${hmacSig}`;
     this.data.sessions = this.data.sessions.filter((s) => s.expiresAt > now);
     this.data.sessions.push({
       tokenHash: sha(token),
       userId,
-      expiresAt: now + SESSION_TTL_MS,
+      expiresAt,
     });
     this.save();
     return token;
   }
 
   sessionUser(token: string): UserRecord | undefined {
+    const now = Date.now();
     const h = sha(token);
     const s = this.data.sessions.find((x) => x.tokenHash === h);
-    if (!s || s.expiresAt < Date.now()) return undefined;
-    return this.byId(s.userId);
+    if (s && s.expiresAt >= now) {
+      const u = this.byId(s.userId);
+      if (u) return u;
+    }
+    // Stateless fallback verification if server was restarted
+    const parts = token.split(".");
+    if (parts.length === 3) {
+      const [userId, expStr, sig] = parts;
+      const expiresAt = parseInt(expStr, 10);
+      if (expiresAt > now) {
+        const authSecret = process.env.AUTH_SECRET ?? "indufront_persistent_auth_secret_v1_2026";
+        const expectedSig = createHmac("sha256", authSecret)
+          .update(`${userId}:${expiresAt}`)
+          .digest("base64url");
+        if (sig === expectedSig) {
+          return this.byId(userId);
+        }
+      }
+    }
+    return undefined;
   }
 
   deleteSession(token: string): void {
@@ -314,4 +354,8 @@ export class AuthStore {
     this.data.sessions = this.data.sessions.filter((s) => s.userId !== userId);
     this.save();
   }
+}
+
+function targetPush(arr: string[], item: string) {
+  if (!arr.includes(item)) arr.push(item);
 }

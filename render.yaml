@@ -23,3 +23,5 @@ services:
         value: "2"
       - key: AUTH_DATA_DIR
         value: ./data/auth
+      - key: AUTH_SECRET
+        value: "indufront_persistent_auth_secret_v1_2026"

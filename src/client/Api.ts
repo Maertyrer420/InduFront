@@ -235,12 +235,31 @@ async function requestUserMe(): Promise<{
     // the session — cosmetics, store, inventory, the multiplayer join path —
     // awaits that same promise. An abort lands in the catch below, which
     // returns false, the same answer a signed-out player already gets.
-    const response = await fetch(getApiBase() + "/users/@me", {
+    let response = await fetch(getApiBase() + "/users/@me", {
       headers: {
         authorization: `Bearer ${jwt}`,
       },
       signal: AbortSignal.timeout(10_000),
     });
+    if (response.status === 401) {
+      // Try to sync/restore user session with server in case server restarted on ephemeral disk
+      try {
+        const syncRes = await fetch(getApiBase() + "/auth/sync", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            authorization: `Bearer ${jwt}`,
+          },
+          body: JSON.stringify({ jwt }),
+        });
+        if (syncRes.ok) {
+          response = await fetch(getApiBase() + "/users/@me", {
+            headers: { authorization: `Bearer ${jwt}` },
+            signal: AbortSignal.timeout(10_000),
+          });
+        }
+      } catch {}
+    }
     if (response.status === 401) {
       // Only when the session that issued this request is still the current
       // one — the same guard, and the same reason, as the setPlayerId one

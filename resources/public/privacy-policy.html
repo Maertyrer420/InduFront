@@ -61,21 +61,6 @@
         border: 1px solid #2f4335;
         border-radius: 8px;
       }
-      table {
-        border-collapse: collapse;
-        width: 100%;
-        margin: 20px 0;
-      }
-      th, td {
-        border: 1px solid #2f4335;
-        padding: 10px 14px;
-        text-align: left;
-        vertical-align: top;
-      }
-      th {
-        background-color: #1c2b20;
-        color: #4ade80;
-      }
       a {
         color: #38bdf8;
         text-decoration: none;
@@ -95,146 +80,83 @@
   </head>
   <body>
     <h1>Privacy Policy</h1>
-    <p class="updated-date"><strong>Last Updated: October 20, 2026</strong></p>
+    <p class="updated-date"><strong>Last Updated: October 2026</strong></p>
 
     <div class="highlight-box">
-      <strong>Our Privacy Promise:</strong> We respect your privacy. 
-      <strong>We do NOT sell, rent, trade, or monetize your personal data to anyone.</strong> 
-      We do NOT use third-party advertising tracking networks or data brokers. 
-      We only collect the absolute minimum data required to operate the game, save your account progress, and connect you with other players in multiplayer.
+      <strong>Our Privacy Commitment:</strong> We respect your privacy.
+      <strong>We do NOT sell, rent, monetize, or broker your personal information to any third parties or advertising networks.</strong>
+      We collect strictly and exclusively what is technically necessary to operate an online multiplayer game in your browser.
     </div>
 
-    <h2>1. Introduction & Overview</h2>
     <p>
-      This Privacy Policy applies to the <strong>InduFront</strong> game service, website, and related multiplayer servers ("Service"). 
-      By creating an account or accessing the Service, you acknowledge this Privacy Policy. 
-      This document should be read alongside our <a href="/terms-of-service.html">Terms of Service</a>.
+      This Privacy Policy applies to the <strong>InduFront</strong> game service, website, and multiplayer servers ("Service"). 
+      InduFront is an independent fork and project focused on strategic RTS gameplay.
     </p>
 
-    <h2>2. What We Collect and Why (Only What Is Strictly Needed to Play)</h2>
+    <h2>1. Data Minimization Principles</h2>
+    <p>We adhere to strict data minimization:</p>
+    <ul>
+      <li><strong>No Advertising Networks:</strong> We do not run third-party advertising scripts, retargeting pixels, behavioral profiling, or tracking cookies.</li>
+      <li><strong>No Financial Data:</strong> We do not process payments, credit cards, or banking information. The game is free to play.</li>
+      <li><strong>No Third-Party Data Brokers:</strong> Your data is never sold, traded, or shared with data aggregators.</li>
+    </ul>
+
+    <h2>2. What Information We Collect & Why</h2>
+    <p>To enable browser multiplayer gameplay, we process only the following essential technical data:</p>
+    
+    <h3>A. Account & Profile Information (Optional)</h3>
+    <ul>
+      <li><strong>Username:</strong> The display name you choose to identify yourself in game lobbies and matches.</li>
+      <li><strong>Email Address:</strong> Used solely as your account login identifier and for password recovery. Never shared or used for unsolicited marketing.</li>
+      <li><strong>Password Hash:</strong> Stored securely using standard cryptographic hashing (scrypt with unique salts). We never store plaintext passwords.</li>
+    </ul>
+
+    <h3>B. Gameplay & Multiplayer State</h3>
+    <ul>
+      <li><strong>In-game Statistics:</strong> Match outcomes, match duration, rankings, and friendly leaderboard progress.</li>
+      <li><strong>Lobby State:</strong> Game room configurations, player readiness status, and active game coordinates.</li>
+    </ul>
+
+    <h3>C. Technical & Security Logs</h3>
+    <ul>
+      <li><strong>IP Address:</strong> Temporarily processed for low-latency WebSocket communication between your browser and our game server, and to protect our infrastructure against distributed denial-of-service (DDoS) attacks and automated abuse.</li>
+      <li><strong>Session Tokens:</strong> Secure cryptographic tokens (JSON Web Tokens / signed session cookies) stored locally in your browser to keep you logged in between visits.</li>
+    </ul>
+
+    <h2>3. How We Store Your Data</h2>
     <p>
-      We follow the principle of strict data minimization. We only process data necessary to provide a functioning multiplayer gaming service:
+      Your account information is stored securely on our server backend.
+      Local game settings (such as volume preferences, visual settings, and active session tokens) are stored directly on your own device using standard browser <code>localStorage</code>.
     </p>
 
-    <h3>2.1 Account & Identity Data</h3>
+    <h2>4. Account Deletion & Your Control (GDPR / CCPA)</h2>
+    <p>You have complete autonomy over your personal data at all times:</p>
     <ul>
-      <li>
-        <strong>Username & Email:</strong> Used exclusively to identify your account, enable login, and prevent duplicate accounts.
-      </li>
-      <li>
-        <strong>Password:</strong> Stored securely as an irreversible cryptographic hash (using modern salt + <code>scrypt</code> hashing). We can never see or read your actual password.
-      </li>
-      <li>
-        <strong>Google Sign-In (Optional):</strong> If you choose to sign in with Google, we receive only your Google account ID and verified email to link your login. We do not access contacts, files, or any other Google data.
-      </li>
+      <li><strong>Immediate Self-Service Deletion:</strong> You can permanently delete your account at any time directly through the in-game Account settings or via our API endpoint (<code>DELETE /users/@me</code>).</li>
+      <li><strong>Permanent Erasure:</strong> When deleted, your account record, email, and authentication tokens are immediately and irreversibly purged from our active databases.</li>
+      <li><strong>Export & Access:</strong> You can view all information associated with your account directly in your profile view.</li>
     </ul>
 
-    <h3>2.2 Gameplay & Multiplayer Data</h3>
-    <ul>
-      <li>
-        <strong>In-Game Stats & Level:</strong> Your public Player ID, match records, achievements, level, and selected cosmetics to render the game world and allow progression.
-      </li>
-      <li>
-        <strong>Friend Lists & Social Features:</strong> Friend connections and pending requests that you initiate so you can invite and play with friends.
-      </li>
-      <li>
-        <strong>Match Actions & Chat:</strong> Real-time in-game troop movements, chat messages, and commands transmitted over WebSockets during a match so that all players in the lobby stay synchronized.
-      </li>
-    </ul>
-
-    <h3>2.3 Technical & Security Data</h3>
-    <ul>
-      <li>
-        <strong>IP Addresses:</strong> Used ephemerally to establish WebSocket connections, route game traffic to game workers, and defend against malicious attacks (such as DDoS or rate-limit violations).
-      </li>
-      <li>
-        <strong>Session Tokens:</strong> Secure cryptographic JWT tokens issued to keep you authenticated during your session.
-      </li>
-    </ul>
-
-    <h2>3. What We Explicitly DO NOT Do</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Practice</th>
-          <th>Our Policy</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><strong>Selling Personal Data</strong></td>
-          <td><strong>Never.</strong> We do not sell, rent, or trade your personal data to third parties under any circumstances.</td>
-        </tr>
-        <tr>
-          <td><strong>Third-Party Ad Networks</strong></td>
-          <td><strong>None.</strong> We do not run third-party advertising networks, cross-site trackers, or behavioral profiling.</td>
-        </tr>
-        <tr>
-          <td><strong>Data Profiling & Brokers</strong></td>
-          <td><strong>None.</strong> We do not share your information with data brokers or credit bureaus.</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h2>4. Cookies and Local Storage</h2>
+    <h2>5. Third-Party Services</h2>
     <p>
-      We do not use tracking or marketing cookies. We only use strictly necessary technical storage:
+      InduFront connects only to the necessary infrastructure required to deliver game assets and multiplayer connectivity:
     </p>
     <ul>
-      <li>
-        <strong>Essential Authentication Cookie:</strong> An HTTP-only, secure session cookie (<code>refresh_token</code>) to keep you logged in to your game account without re-entering credentials every visit.
-      </li>
-      <li>
-        <strong>Browser Local Storage:</strong> Used locally on your device to remember client-side preferences (such as audio volume, graphics settings, keybindings, and theme preferences).
-      </li>
+      <li><strong>Game Hosting:</strong> Our servers are hosted on modern cloud infrastructure (e.g. Render) to serve game files and manage live WebSocket matches.</li>
+      <li><strong>Optional Google Sign-In:</strong> If you explicitly choose to sign in via Google OAuth, Google authenticates your identity and provides your verified email.</li>
     </ul>
 
-    <h2>5. Data Sharing and Third-Party Providers</h2>
+    <h2>6. Changes to this Privacy Policy</h2>
     <p>
-      We only share data with infrastructure providers strictly needed to host and run the game:
+      We may occasionally update this Privacy Policy as InduFront evolves. Any changes will be posted on this page with an updated revision date.
     </p>
-    <ul>
-      <li>
-        <strong>Cloud Hosting & Infrastructure:</strong> Hosting providers (such as Render) that run our game servers, databases, and secure HTTPS/WSS network connections.
-      </li>
-      <li>
-        <strong>OAuth Providers (Optional):</strong> Google Identity Services, only if you explicitly choose to sign in via Google.
-      </li>
-      <li>
-        <strong>Legal Compliance:</strong> We will only disclose information if legally compelled by a binding court order or subpoena from authorized law enforcement authorities.
-      </li>
-    </ul>
 
-    <h2>6. Account Deletion & Data Retention</h2>
-    <p>
-      You have full control over your data:
-    </p>
-    <ul>
-      <li>
-        <strong>Instant Account Deletion:</strong> You can delete your account at any time directly through the in-game account settings or via our API (<code>DELETE /users/@me</code>). Once deleted, your account, login credentials, and friend links are permanently erased.
-      </li>
-      <li>
-        <strong>Server Logs:</strong> Temporary connection logs and IP rate-limiting entries are automatically rotated and discarded.
-      </li>
-    </ul>
-
-    <h2>7. Your Rights (GDPR, CCPA & Global)</h2>
-    <p>
-      Regardless of where you reside, you have the following rights regarding your data:
-    </p>
-    <ul>
-      <li><strong>Right to Access:</strong> View the data associated with your profile at any time in your in-game profile.</li>
-      <li><strong>Right to Rectification:</strong> Update your username or password whenever you wish.</li>
-      <li><strong>Right to Erasure:</strong> Delete your account and all associated personal data with one click.</li>
-      <li><strong>Right to Object:</strong> Because we do not sell data or run marketing trackers, you do not need to opt out of tracking networks.</li>
-    </ul>
-
-    <h2>8. Contact & Questions</h2>
+    <h2>7. Contact & Issue Reports</h2>
     <div class="contact-box">
-      If you have questions about this Privacy Policy or need assistance regarding your data, you can reach out via:
+      If you have questions, feedback, or data privacy requests, please contact us via our project repository:
       <br /><br />
-      <strong>Email:</strong> <a href="mailto:support@openfront.io">support@openfront.io</a><br />
-      <strong>GitHub Repository:</strong> <a href="https://github.com/Maertyrer420/InduFront" target="_blank" rel="noopener">github.com/Maertyrer420/InduFront</a>
+      <strong>Project Repository:</strong> <a href="https://github.com/Maertyrer420/InduFront" target="_blank" rel="noopener">github.com/Maertyrer420/InduFront</a><br />
+      <strong>Issue Tracker:</strong> <a href="https://github.com/Maertyrer420/InduFront/issues" target="_blank" rel="noopener">github.com/Maertyrer420/InduFront/issues</a>
     </div>
 
     <div class="footer">

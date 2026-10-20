@@ -68,10 +68,15 @@ export class AuthForm extends LitElement {
         },
       );
       if (res.ok) {
-        // Turn on the verified account username by default on sign-in / registration
-        // so the player immediately plays under their registered account name.
+        const body = await res.json().catch(() => ({}));
+        if (body?.jwt) {
+          localStorage.setItem("indufront_jwt", body.jwt);
+        }
+        const effectiveName = register ? this.username : (body?.user?.username || this.identifier);
+        if (effectiveName) {
+          localStorage.setItem("username", effectiveName);
+        }
         localStorage.setItem("useVerifiedName", "true");
-        // The refresh cookie is set; a reload runs the normal startup auth.
         window.location.reload();
         return;
       }
