@@ -185,11 +185,6 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log("==================================================================");
 
   // Optional 24/7 Keep-Alive self-ping when running on Render (prevents 15-min idle sleep)
-  const externalUrl = (
-    process.env.RENDER_EXTERNAL_URL ??
-    process.env.KEEP_ALIVE_URL ??
-    ""
-  ).replace(/\/$/, "");
   if (externalUrl.startsWith("http")) {
     const intervalMs = 10 * 60 * 1000; // every 10 minutes
     console.log(
