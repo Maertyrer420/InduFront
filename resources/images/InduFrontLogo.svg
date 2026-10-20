@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1364 259" width="1364" height="259">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="mossGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#b4d896" />
+      <stop offset="50%" stop-color="#72a55d" />
+      <stop offset="100%" stop-color="#467335" />
+    </linearGradient>
+
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff6dd" />
+      <stop offset="40%" stop-color="#e2c88c" />
+      <stop offset="100%" stop-color="#b08d4b" />
+    </linearGradient>
+
+    <linearGradient id="whiteGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="50%" stop-color="#eaf2e6" />
+      <stop offset="100%" stop-color="#c8d6c2" />
+    </linearGradient>
+
+    <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1d261e" />
+      <stop offset="100%" stop-color="#111712" />
+    </linearGradient>
+
+    <filter id="logoShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.85"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="16" flood-color="#72a55d" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#logoShadow)">
+    <!-- TACTICAL INDUSTRIAL EMBLEM -->
+    <g transform="translate(65, 24)">
+      <!-- Outer Hex Shield -->
+      <polygon points="105,6 195,55 195,155 105,204 15,155 15,55" fill="url(#badgeGrad)" stroke="url(#mossGrad)" stroke-width="7" stroke-linejoin="round"/>
+      <polygon points="105,19 180,60 180,148 105,190 30,148 30,60" fill="#141c15" stroke="#334731" stroke-width="3"/>
+
+      <!-- Rotating Gear / Cog Teeth -->
+      <g transform="translate(105, 104)">
+        <!-- 8 Cog teeth -->
+        <rect x="-10" y="-52" width="20" height="104" rx="3" fill="url(#goldGrad)" />
+        <rect x="-10" y="-52" width="20" height="104" rx="3" fill="url(#goldGrad)" transform="rotate(45)" />
+        <rect x="-10" y="-52" width="20" height="104" rx="3" fill="url(#goldGrad)" transform="rotate(90)" />
+        <rect x="-10" y="-52" width="20" height="104" rx="3" fill="url(#goldGrad)" transform="rotate(135)" />
+        
+        <!-- Gear ring -->
+        <circle cx="0" cy="0" r="40" fill="#182219" stroke="url(#goldGrad)" stroke-width="8" />
+        <!-- Inner hub -->
+        <circle cx="0" cy="0" r="20" fill="url(#mossGrad)" stroke="#182219" stroke-width="4" />
+      </g>
+
+      <!-- Military Chevrons (Bottom of Shield) -->
+      <path d="M72,154 L105,178 L138,154" fill="none" stroke="url(#mossGrad)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- MAIN BRAND TEXT: INDUFRONT -->
+    <!-- Drop outline shadow for text -->
+    <text x="300" y="172" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-size="150" letter-spacing="4" fill="#0c120c">INDU<tspan dx="8">FRONT</tspan></text>
+    
+    <!-- Primary Colored Text -->
+    <text x="296" y="168" font-family="'Impact', 'Arial Black', sans-serif" font-weight="900" font-size="150" letter-spacing="4" fill="url(#goldGrad)">INDU<tspan fill="url(#whiteGrad)" dx="8">FRONT</tspan></text>
+
+    <!-- Subtitle Badge: INDUSTRIAL RTS WARFARE -->
+    <g transform="translate(300, 196)">
+      <rect x="0" y="0" width="530" height="26" rx="4" fill="#151e16" stroke="url(#mossGrad)" stroke-width="1.8"/>
+      <!-- Small left & right tactical crosshairs -->
+      <line x1="12" y1="13" x2="28" y2="13" stroke="#8cb974" stroke-width="2"/>
+      <line x1="502" y1="13" x2="518" y2="13" stroke="#8cb974" stroke-width="2"/>
+      <text x="265" y="18" font-family="'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="13" letter-spacing="7" fill="#b0d696" text-anchor="middle">DYNAMIC RESOURCE RTS</text>
+    </g>
+
+    <!-- Right-side Tactical Badge -->
+    <g transform="translate(1080, 85)">
+      <polygon points="12,0 160,0 148,46 0,46" fill="#1e291f" stroke="#5d8b4b" stroke-width="2"/>
+      <text x="76" y="28" font-family="'Impact', 'Arial Black', sans-serif" font-size="20" letter-spacing="3" fill="#dfc88c" text-anchor="middle">v0.4.2</text>
+      <circle cx="130" cy="23" r="5" fill="#72a55d" />
+    </g>
+  </g>
+</svg>

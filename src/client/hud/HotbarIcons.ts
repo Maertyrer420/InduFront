@@ -1,0 +1,46 @@
+import { assetUrl } from "@openfront/shared/AssetUrls";
+
+export const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
+export const destroyerIcon = assetUrl("images/DestroyerIconWhite.svg");
+export const submarineIcon = assetUrl("images/RepairShipIconWhite.svg");
+export const repairShipIcon = assetUrl("images/RepairShipIconWhite.svg");
+export const cruiseMissileIcon = assetUrl("images/CruiseMissileIconWhite.svg");
+export const cityIcon = assetUrl("images/CityIconWhite.svg");
+export const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
+export const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
+export const mirvIcon = assetUrl("images/MIRVIcon.svg");
+export const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
+export const hydrogenBombIcon = assetUrl("images/MushroomCloudIconWhite.svg");
+export const atomBombIcon = assetUrl("images/NukeIconWhite.svg");
+export const portIcon = assetUrl("images/PortIcon.svg");
+export const samLauncherIcon = assetUrl("images/SamLauncherIconWhite.svg");
+export const defensePostIcon = assetUrl("images/ShieldIconWhite.svg");
+export const soldierIcon = assetUrl("images/SoldierIcon.svg");
+export const claimIcon = assetUrl("images/ClaimIcon.svg");
+export const profileIcon = assetUrl("images/ProfileIcon.svg");
+export const guildIcon = assetUrl("images/GuildIconWhite.svg");
+export const teamIcon = assetUrl("images/TeamIconSolidWhite.svg");
+export const upperLimitIcon = assetUrl("images/UpperLimitIcon.svg");
+export const allianceIcon = assetUrl("images/AllianceIcon.svg");
+export const traitorIcon = assetUrl("images/TraitorIcon.svg");
+export const ironMineIcon = assetUrl("images/IronMineIconWhite.svg");
+export const coalMineIcon = assetUrl("images/CoalMineIconWhite.svg");
+export const oilRigIcon = assetUrl("images/OilRigIconWhite.svg");
+export const uraniumMineIcon = assetUrl("images/UraniumMineIconWhite.svg");
+export const steelMillIcon = assetUrl("images/SteelMillIconWhite.svg");
+export const refineryIcon = assetUrl("images/RefineryIconWhite.svg");
+export const centrifugeIcon = assetUrl("images/CentrifugeIconWhite.svg");
+export const residentialIcon = assetUrl("images/ResidentialIconWhite.svg");
+export const bunkerIcon = assetUrl("images/BunkerIconWhite.svg");
+export const radarIcon = assetUrl("images/RadarIconWhite.svg");
+
+// Clean HUD and toolbar SVGs
+export const highlightIcon = assetUrl("images/HighlightIconWhite.svg");
+export const buildIcon = assetUrl("images/BuildIconWhite.svg");
+export const targetIcon = assetUrl("images/TargetIconWhite.svg");
+export const eraserIcon = assetUrl("images/EraserIconWhite.svg");
+export const gridIcon = assetUrl("images/GridIconWhite.svg");
+export const populationIcon = assetUrl("images/PopulationIconSolidWhite.svg");
+export const troopIcon = assetUrl("images/TroopIconWhite.svg");
+export const workerIcon = assetUrl("images/WorkerIconWhite.svg");
+export const anchorIcon = assetUrl("images/AnchorIcon.svg");

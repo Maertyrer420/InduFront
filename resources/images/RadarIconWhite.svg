@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff">
+  <!-- Radar: Parabolic antenna dish scanning skies -->
+  <path d="M12 21h4v2h-8v-2h4zm-1-3h2v3h-2v-3zm7.8-8.2a9 9 0 0 0-15.6 0l1.7 1a7 7 0 0 1 12.2 0l1.7-1zm3.4-2a13 13 0 0 0-22.4 0l1.7 1a11 11 0 0 1 19 0l1.7-1z"/>
+  <path d="M12 17a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm-1-3a1 1 0 1 1 2 0 1 1 0 0 1-2 0z"/>
+</svg>

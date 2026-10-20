@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff">
+  <!-- Coal Mine: Mine cart loaded with coal lumps -->
+  <path d="M4 6l2 9h12l2-9H4zm3 2h10l-1.3 5H8.3L7 8z"/>
+  <circle cx="8" cy="18" r="2"/>
+  <circle cx="16" cy="18" r="2"/>
+  <path d="M6 18h12v1.5H6z"/>
+  <path d="M8 5c-.6 0-1 .4-1 1h10c0-.6-.4-1-1-1H8z"/>
+  <path d="M9 2.5l2 2.5 3-1.5 2 2H8l1-3z"/>
+</svg>

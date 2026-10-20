@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff">
+  <!-- Uranium Mine / Radiation Symbol with Crystals -->
+  <circle cx="12" cy="12" r="2.5"/>
+  <path d="M12 2a10 10 0 0 0-4.5 1.1l2.3 4A5 5 0 0 1 12 7c.8 0 1.5.2 2.2.6l2.3-4A10 10 0 0 0 12 2zM3.4 8.7a10 10 0 0 0 0 6.6l4-2.3a5 5 0 0 1 0-2l-4-2.3zm17.2 0l-4 2.3a5 5 0 0 1 0 2l4 2.3a10 10 0 0 0 0-6.6zM6.5 17.5l-2.3 4a10 10 0 0 0 7.8 2.5v-4.6a5 5 0 0 1-5.5-1.9zm11 0a5 5 0 0 1-5.5 1.9v4.6a10 10 0 0 0 7.8-2.5l-2.3-4z"/>
+</svg>

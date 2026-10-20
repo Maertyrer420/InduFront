@@ -1,0 +1,65 @@
+[
+  {
+    "id": "indufront-v059",
+    "title": "InduFront v0.5.9 - Echtes Login-System",
+    "description": "Eigener Login-Server mit Registrierung, sicheren Sitzungen und Token-Prüfung durch den Game-Server - Freunde können jetzt per Link beitreten!",
+    "url": null,
+    "type": "announcement"
+  },
+  {
+    "id": "indufront-v058",
+    "title": "InduFront v0.5.8 - Natürliche Heatmap, Marine-Texturen & Balance-Feinschliff",
+    "description": "Fließende natürliche Ressourcenverteilung ohne harte Kanten, schlanke Rumpf-Texturen für Zerstörer & Reparaturschiffe, 1 HP Mindest-Rumpf bei Treibstoffmangel, optimierte Öl-Förderung und bereinigtes Hauptmenü!",
+    "url": null,
+    "type": "announcement"
+  },
+  {
+    "id": "indufront-v057",
+    "title": "InduFront v0.5.7 - Ultimativer Performance- & Anti-Freeze-Overhaul",
+    "description": "Beseitigung massiver Freezes & Lagspikes: O(1) Fast-Path bei Bot- und Spieler-Gebäudespawns, intelligentes Failed-Spawn-Caching, konsolidierte Single-Pass-Economy und flüssige 60+ FPS!",
+    "url": null,
+    "type": "announcement"
+  },
+  {
+    "id": "indufront-v056",
+    "title": "InduFront v0.5.6 - Radierer-Abriss-Modus, Hover-HP-Balken & Marschflugkörper-Fix",
+    "description": "Neues Radiergummi-Tool zum schnellen Gebäudeabriss mit Bestätigungsdialog, dezente Einblendung von Schiffs-HP-Balken nur bei Mauszeiger-Hover und behobener Marschflugkörper-Absturz samt ballistischer Flugbahn!",
+    "url": null,
+    "type": "announcement"
+  },
+  {
+    "id": "indufront-v055",
+    "title": "InduFront v0.5.5 - Strategische Aufrüstung, Marine-Overhaul & Farbpalette",
+    "description": "Massiv verteuerte Nuklearwaffen (MIRV: 1000 Uran), konventionelle Marschflugkörper, Zerstörer-Damage-Aura (+10% bis +30%), Reparaturschiffe, schneeweiße Map-Icons & Farbwähler in der Lobby!",
+    "url": null,
+    "type": "announcement"
+  },
+  {
+    "id": "indufront-v054",
+    "title": "InduFront v0.5.4 - Logistik-Latenz & 80% Eroberungs-Plünderung",
+    "description": "Entfernungsbasierte Transportzeiten für Minen, 80% Ressourcenübernahme bei Eroberung & Bot-Allianz-Hilfslieferungen!",
+    "url": null,
+    "type": "announcement"
+  },
+  {
+    "id": "indufront-v053",
+    "title": "InduFront v0.5.3 - P2P-Handel & Map-Icons",
+    "description": "Ressourcen-Handel im Spieler-Panel, WebGL-Minen-Icons auf der Weltkarte und flüssiges Preloading!",
+    "url": null,
+    "type": "announcement"
+  },
+  {
+    "id": "indufront-tournament-championship",
+    "title": "InduFront Turnierserie",
+    "description": "Nimm an den wöchentlichen Turnieren teil! Kämpfe um den Ranglisten-Thron und exklusive Skins.",
+    "url": null,
+    "type": "tournament"
+  },
+  {
+    "id": "indufront-economy-guide",
+    "title": "InduFront Wirtschafts-Leitfaden",
+    "description": "Errichte Minen für Eisen, Kohle, Öl und Uran. Schmelze Panzerstahl und reichere Uran in Zentrifugen an!",
+    "url": null,
+    "type": "tutorial"
+  }
+]

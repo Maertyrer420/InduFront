@@ -1,0 +1,25 @@
+# Render.com 1-Click Blueprint Configuration (https://render.com)
+# Verbinde dein GitHub-Repository mit Render -> "New" -> "Blueprint" (oder "Web Service").
+services:
+  - type: web
+    name: openfront-game-server
+    runtime: node
+    plan: free
+    buildCommand: npm install --include=dev --ignore-scripts && npm run build:render
+    startCommand: npm run start:render
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 24.15.0
+      - key: NPM_CONFIG_PRODUCTION
+        value: "false"
+      - key: GAME_ENV
+        value: dev
+      - key: DOMAIN
+        value: localhost
+      - key: GIT_COMMIT
+        value: DEV
+      - key: NUM_WORKERS
+        value: "2"
+      - key: AUTH_DATA_DIR
+        value: ./data/auth

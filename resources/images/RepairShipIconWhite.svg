@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" width="24" height="24">
+  <!-- Repair Ship / Reparaturschiff: Naval support ship with repair cross & cranes -->
+  <path fill="#ffffff" d="M2 17.5L4.5 21.5h15l2.5-4H2zm3 2.5l-1-1.2h16l-1 1.2H5z"/>
+  <path fill="#ffffff" d="M5 14h14v2.5H5V14z"/>
+  <!-- Central Repair Cross -->
+  <path fill="#ffffff" d="M10.5 4.5h3v3h3v3h-3v3h-3v-3h-3v-3h3v-3z"/>
+  <!-- Support Rig / Crane arms -->
+  <path fill="#ffffff" d="M3.5 13.5l3.5-6h1.5l-2.5 6H3.5zm17 0l-3.5-6h-1.5l2.5 6h2.5z"/>
+</svg>
