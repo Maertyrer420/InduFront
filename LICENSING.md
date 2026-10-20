@@ -1,8 +1,8 @@
-# License for OpenFront.io Project
+# License for InduFront Project
 
 ## Overview
 
-This document provides comprehensive licensing information for the OpenFront.io project, including its evolution from MIT to GPL to AGPL licensing, asset licensing terms, and proprietary content notices.
+This document provides licensing information for the InduFront project, an independent open-source fork continuing development under the GNU Affero General Public License (AGPL v3.0).
 
 ## Timeline
 

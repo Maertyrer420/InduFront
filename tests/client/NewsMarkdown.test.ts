@@ -40,7 +40,7 @@ describe("normalizeNewsMarkdown", () => {
   });
 
   it("does not convert email addresses", () => {
-    const input = "Contact support@openfront.io for help";
+    const input = "Contact support@indufront.local for help";
 
     const result = normalizeNewsMarkdown(input);
 
