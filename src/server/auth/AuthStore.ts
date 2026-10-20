@@ -113,6 +113,14 @@ export class AuthStore {
     return u;
   }
 
+  updatePassword(userId: string, newHash: string): boolean {
+    const u = this.byId(userId);
+    if (!u) return false;
+    u.passwordHash = newHash;
+    this.save();
+    return true;
+  }
+
   isUserDeleted(userId: string): boolean {
     return (this.data.deletedUserIds ?? []).includes(userId);
   }

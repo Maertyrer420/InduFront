@@ -216,13 +216,17 @@ async function main() {
 
   app.post("/auth/register", authLimiter, async (req, res) => {
     const { email, password, username } = req.body ?? {};
-    if (!validEmail(email)) return void res.status(400).json({ error: "invalid_email" });
     if (!validUsername(username)) return void res.status(400).json({ error: "invalid_username" });
     if (!validPassword(password)) return void res.status(400).json({ error: "weak_password" });
-    if (store.byEmail(email)) return void res.status(409).json({ error: "email_taken" });
+    if (email && !validEmail(email)) return void res.status(400).json({ error: "invalid_email" });
+    if (email && store.byEmail(email)) return void res.status(409).json({ error: "email_taken" });
     if (store.byUsername(username)) return void res.status(409).json({ error: "username_taken" });
+    const effectiveEmail =
+      typeof email === "string" && email.trim()
+        ? email.trim()
+        : `${username.toLowerCase()}@indufront.local`;
     const user = store.createUser({
-      email,
+      email: effectiveEmail,
       username,
       passwordHash: await hashPassword(password),
     });
@@ -448,6 +452,25 @@ async function main() {
       bareClaim: "claimed",
     });
   });
+
+  const handlePasswordChange = async (req: Request, res: Response) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const { currentPassword, newPassword } = req.body ?? {};
+    if (!validPassword(newPassword)) {
+      return void res.status(400).json({ error: "weak_password", reason: "Min. 8 Zeichen erforderlich" });
+    }
+    if (u.passwordHash) {
+      if (typeof currentPassword !== "string" || !(await verifyPassword(currentPassword, u.passwordHash))) {
+        return void res.status(401).json({ error: "incorrect_password", reason: "Aktuelles Passwort falsch" });
+      }
+    }
+    const newHash = await hashPassword(newPassword);
+    store.updatePassword(u.id, newHash);
+    res.json({ ok: true });
+  };
+
+  app.put("/users/@me/password", authed, handlePasswordChange);
+  app.post("/auth/change-password", authed, handlePasswordChange);
 
   app.post("/users/@me/notices", authed, (req, res) => {
     const u = (req as Request & { user: UserRecord }).user;

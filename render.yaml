@@ -2,7 +2,7 @@
 # Verbinde dein GitHub-Repository mit Render -> "New" -> "Blueprint" (oder "Web Service").
 services:
   - type: web
-    name: openfront-game-server
+    name: indufront-game-server
     runtime: node
     plan: free
     buildCommand: npm install --include=dev --ignore-scripts && npm run build:render
