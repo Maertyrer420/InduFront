@@ -234,7 +234,8 @@ async function main() {
   });
 
   app.post("/auth/login", authLimiter, async (req, res) => {
-    const { identifier, password } = req.body ?? {};
+    const { identifier: rawId, username, password } = req.body ?? {};
+    const identifier = rawId ?? username;
     if (typeof identifier !== "string" || typeof password !== "string") {
       return void res.status(400).json({ error: "invalid_request" });
     }
