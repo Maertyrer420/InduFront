@@ -154,9 +154,14 @@ export class AuthStore {
     const p = publicId.trim().toLowerCase();
     return this.data.users.find((u) => u.publicId.toLowerCase() === p);
   }
-  /** Resolve a target string by either publicId, username or email (case-insensitive). */
+  /** Resolve a target string by either id, publicId, username or email (case-insensitive). */
   byPublicIdOrUsername(target: string) {
-    return this.byPublicId(target) ?? this.byUsername(target) ?? this.byEmail(target);
+    return (
+      this.byId(target) ??
+      this.byPublicId(target) ??
+      this.byUsername(target) ??
+      this.byEmail(target)
+    );
   }
 
   updateUsername(userId: string, newUsername: string): UserRecord | undefined {
