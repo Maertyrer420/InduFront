@@ -19,20 +19,65 @@ interface LadderState {
 }
 
 // The ranked types with a player ladder. Clan wars rates the clan, not its
-// players, so it has none.
-export type PlayerLadder = Exclude<RankedType, RankedType.ClanWars>;
+// players, so it has none. Added "qp" for Quickplay Punkte ladder.
+export type PlayerLadder = Exclude<RankedType, RankedType.ClanWars> | "qp";
 
 const RANKED_TYPES: PlayerLadder[] = [
   RankedType.OneVOne,
   RankedType.TwoVTwo,
   RankedType.FreeForAll,
+  "qp",
 ];
 
 const emptyLadders = (): Record<PlayerLadder, LadderState> => ({
   [RankedType.OneVOne]: { entries: [], userEntry: null, hasMore: true },
   [RankedType.TwoVTwo]: { entries: [], userEntry: null, hasMore: true },
   [RankedType.FreeForAll]: { entries: [], userEntry: null, hasMore: true },
+  qp: { entries: [], userEntry: null, hasMore: true },
 });
+
+export function renderTierBadge(tier?: string, elo = 1000, rank = 999) {
+  const t =
+    tier ||
+    (rank <= 10 && rank > 0
+      ? "Top 10"
+      : elo >= 2000
+        ? "Elite"
+        : elo >= 1800
+          ? "Expert"
+          : elo >= 1600
+            ? "Diamond"
+            : elo >= 1400
+              ? "Platinum"
+              : elo >= 1200
+                ? "Gold"
+                : elo >= 1000
+                  ? "Silber"
+                  : elo >= 800
+                    ? "Bronze"
+                    : "Wood");
+
+  let color = "bg-amber-950/60 text-amber-500 border-amber-800/40"; // Wood
+  if (t === "Bronze") color = "bg-orange-950/60 text-orange-400 border-orange-700/40";
+  else if (t === "Silber") color = "bg-slate-800/60 text-slate-300 border-slate-600/40";
+  else if (t === "Gold")
+    color = "bg-yellow-950/60 text-yellow-400 border-yellow-600/50 shadow-[0_0_8px_rgba(234,179,8,0.2)]";
+  else if (t === "Platinum")
+    color = "bg-teal-950/60 text-teal-300 border-teal-600/50 shadow-[0_0_8px_rgba(20,184,166,0.2)]";
+  else if (t === "Diamond")
+    color = "bg-cyan-950/60 text-cyan-300 border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.3)]";
+  else if (t === "Expert")
+    color = "bg-indigo-950/60 text-indigo-300 border-indigo-500/50 shadow-[0_0_10px_rgba(99,102,241,0.3)]";
+  else if (t === "Elite")
+    color = "bg-purple-950/60 text-purple-300 border-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]";
+  else if (t === "Top 10")
+    color = "bg-red-950/70 text-red-300 border-red-500/70 font-black animate-pulse shadow-[0_0_14px_rgba(239,68,68,0.4)]";
+
+  return html`<span
+    class="px-2 py-0.5 text-[10px] font-bold uppercase rounded-md border tracking-wider shrink-0 ${color}"
+    >${t}</span
+  >`;
+}
 
 const toPlayerEntry = (
   entry: RankedLeaderboardEntry,
@@ -48,6 +93,8 @@ const toPlayerEntry = (
   level: entry.level,
   prestige: entry.prestige,
   legend: entry.legend,
+  tier: entry.tier,
+  qp: entry.qp,
 });
 
 @customElement("leaderboard-player-list")
@@ -404,10 +451,13 @@ export class LeaderboardPlayerList extends LitElement {
               .nameClass=${"font-bold text-blue-300 truncate text-base hover:underline"}
               .onNameClick=${() => this.openProfile(player.playerId)}
             ></player-name>
+            ${renderTierBadge(player.tier, player.elo, player.rank)}
           </div>
         </td>
         <td class="py-3 px-4 text-right">
-          <span class="font-mono text-white font-medium">${player.elo}</span>
+          <span class="font-mono text-white font-medium"
+            >${this.rankedType === "qp" ? (player.qp ?? player.elo) : player.elo}</span
+          >
         </td>
         <td class="py-3 px-4 text-right">
           <span class="font-mono text-white font-medium">${player.games}</span>
@@ -590,7 +640,9 @@ export class LeaderboardPlayerList extends LitElement {
                     ${translateText("leaderboard_modal.player")}
                   </th>
                   <th class="py-4 px-4 text-right font-bold">
-                    ${translateText("leaderboard_modal.elo")}
+                    ${this.rankedType === "qp"
+                      ? "QP Punkte"
+                      : translateText("leaderboard_modal.elo")}
                   </th>
                   <th class="py-4 px-4 text-right font-bold">
                     ${translateText("leaderboard_modal.games")}

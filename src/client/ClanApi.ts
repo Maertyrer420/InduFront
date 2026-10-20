@@ -851,3 +851,26 @@ export async function buyClanBoost(
     return { error: "clan_modal.error_network" };
   }
 }
+
+export async function createClan(
+  tag: string,
+  name: string,
+  description?: string,
+  isOpen = true,
+): Promise<{ ok: true; clan: ClanInfo } | { ok: false; error: string }> {
+  try {
+    const res = await clanFetch("/clans", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tag, name, description, isOpen }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return { ok: false, error: data.error || "Fehler beim Erstellen des Clans" };
+    }
+    return { ok: true, clan: data };
+  } catch {
+    return { ok: false, error: "Netzwerkfehler" };
+  }
+}
+

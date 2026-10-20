@@ -13,7 +13,17 @@ import "./ClanStatsBreakdown";
 export { renderLoadingSpinner } from "../BaseModal";
 export { showToast };
 
-export type ClanRole = "leader" | "officer" | "member";
+export type ClanRole =
+  | "leader"
+  | "officer"
+  | "member"
+  | "Owner"
+  | "Admin"
+  | "Supporter"
+  | "Mitglied"
+  | "owner"
+  | "admin"
+  | "supporter";
 
 export function defaultOrderForSort(sort: ClanMemberSort): ClanMemberOrder {
   return sort === "default" ? "asc" : "desc";
@@ -31,43 +41,26 @@ export function formatClanDate(iso: string): string {
 }
 
 export function translateClanRole(role: string): string {
+  const r = (role ?? "").toLowerCase();
+  if (r === "owner" || r === "leader") return "Owner";
+  if (r === "admin" || r === "officer") return "Admin";
+  if (r === "supporter") return "Supporter";
+  if (r === "mitglied" || r === "member") return "Mitglied";
   return translateText(`clan_modal.role_${role}`);
 }
 
 export function renderRoleIcon(role: string): TemplateResult {
-  if (role === "leader") {
-    return html`<span class="text-sm">👑</span>`;
+  const r = (role ?? "").toLowerCase();
+  if (r === "owner" || r === "leader") {
+    return html`<span class="text-base" title="Owner">👑</span>`;
   }
-  if (role === "officer") {
-    return html`<svg
-      xmlns="http://www.w3.org/2000/svg"
-      class="w-4 h-4 text-purple-400"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      stroke-width="2"
-    >
-      <path
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
-      />
-    </svg>`;
+  if (r === "admin" || r === "officer") {
+    return html`<span class="text-base" title="Admin">🛡️</span>`;
   }
-  return html`<svg
-    xmlns="http://www.w3.org/2000/svg"
-    class="w-4 h-4 text-white/40"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    stroke-width="2"
-  >
-    <path
-      stroke-linecap="round"
-      stroke-linejoin="round"
-      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-    />
-  </svg>`;
+  if (r === "supporter") {
+    return html`<span class="text-base" title="Supporter">🤝</span>`;
+  }
+  return html`<span class="text-base" title="Mitglied">👤</span>`;
 }
 
 export function renderStat(label: string, value: string): TemplateResult {

@@ -515,20 +515,9 @@ export class ClanManageView extends LitElement {
           >
             ${translateText("clan_modal.banned_players")}
           </button>
-          ${this.myRole === "leader"
+          ${(this.myRole ?? "").toLowerCase() === "owner" ||
+          (this.myRole ?? "").toLowerCase() === "leader"
             ? html`
-                <button
-                  @click=${() =>
-                    this.dispatchEvent(
-                      new CustomEvent("navigate-transfer", {
-                        bubbles: true,
-                        composed: true,
-                      }),
-                    )}
-                  class="w-full px-6 py-3 text-sm font-bold text-amber-400 uppercase tracking-wider bg-amber-600/20 hover:bg-amber-600/30 rounded-xl transition-all border border-amber-500/30"
-                >
-                  ${translateText("clan_modal.transfer_leadership")}
-                </button>
                 <button
                   @click=${() => {
                     this.confirmAction = "disband";
@@ -547,17 +536,32 @@ export class ClanManageView extends LitElement {
   }
 
   private renderManageMemberRow(member: ClanMember) {
-    const isLeader = member.role === "leader";
+    const isOwner = member.role === "Owner" || member.role === "leader";
     const isMe = member.publicId === this.myPublicId;
+    const myRoleNorm = (this.myRole ?? "").toLowerCase();
+    const isOwnerOrAdmin =
+      myRoleNorm === "owner" || myRoleNorm === "leader" || myRoleNorm === "admin";
+    const isSupporter = myRoleNorm === "supporter" || myRoleNorm === "officer";
+
     const canModerate =
       !isMe &&
-      !isLeader &&
-      (this.myRole === "leader" ||
-        (this.myRole === "officer" && member.role === "member"));
+      !isOwner &&
+      (isOwnerOrAdmin ||
+        (isSupporter &&
+          (member.role === "Mitglied" || member.role === "member")));
+
     const canPromote =
-      !isMe && this.myRole === "leader" && member.role === "member";
+      !isMe &&
+      isOwnerOrAdmin &&
+      member.role !== "Admin" &&
+      !isOwner;
+
     const canDemote =
-      !isMe && this.myRole === "leader" && member.role === "officer";
+      !isMe &&
+      isOwnerOrAdmin &&
+      member.role !== "Mitglied" &&
+      member.role !== "member" &&
+      !isOwner;
 
     return html`
       <div

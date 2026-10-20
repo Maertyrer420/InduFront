@@ -2,13 +2,14 @@ import { GameEnv } from "@openfront/shared/configuration/Env";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { getUserMe, invalidateUserMe } from "./Api";
-import { type ClanInfo, type ClanMember } from "./ClanApi";
+import { createClan, type ClanInfo, type ClanMember } from "./ClanApi";
 import { ClientEnv } from "./ClientEnv";
 import { BaseModal } from "./components/BaseModal";
 import "./components/clan/ClanBansView";
 import "./components/clan/ClanBrowseView";
 import type { BrowseState } from "./components/clan/ClanBrowseView";
 import "./components/clan/ClanCard";
+import "./components/clan/ClanChatView";
 import "./components/clan/ClanDetailView";
 import "./components/clan/ClanDonationsView";
 import "./components/clan/ClanGameHistoryView";
@@ -29,7 +30,7 @@ import "./GameStatsModal";
 import { modalRouter } from "./ModalRouter";
 import "./PlayerProfileModal";
 import type { ProfileOrigin } from "./PlayerProfileModal";
-import { translateText } from "./Utils";
+import { showToast, translateText } from "./Utils";
 
 type View =
   | "list"
@@ -38,7 +39,8 @@ type View =
   | "transfer"
   | "requests"
   | "bans"
-  | "my-requests";
+  | "my-requests"
+  | "create";
 
 // List tabs share BaseModal's `activeTab` slot with detail tabs ("overview" /
 // "members" / "game-history" / "donations"); which set is live depends on `view`.
@@ -83,6 +85,12 @@ export class ClanModal extends BaseModal {
   @state() private myRole: ClanRole | null = null;
   private myPublicId: string | null = null;
   @state() private myClanRoles = new Map<string, ClanRole>();
+
+  @state() private newClanTag = "";
+  @state() private newClanName = "";
+  @state() private newClanDescription = "";
+  @state() private newClanIsOpen = true;
+  @state() private isCreatingClan = false;
 
   // Lifted browse state — survives tab switches
   private browseCache: BrowseState | null = null;
@@ -153,6 +161,10 @@ export class ClanModal extends BaseModal {
               {
                 key: "members",
                 label: translateText("clan_modal.members"),
+              },
+              {
+                key: "chat",
+                label: "💬 Clan-Chat",
               },
               {
                 key: "game-history",
@@ -279,6 +291,13 @@ export class ClanModal extends BaseModal {
   private renderSubViewHeader() {
     const clan = this.selectedClan;
     const ariaLabel = translateText("common.back");
+    if (this.view === "create") {
+      return modalHeader({
+        title: "👑 Neuen Clan gründen",
+        onBack: () => (this.view = "list"),
+        ariaLabel,
+      });
+    }
     if (this.view === "my-requests") {
       return modalHeader({
         title: translateText("clan_modal.pending_applications"),
@@ -413,6 +432,10 @@ export class ClanModal extends BaseModal {
       return this.renderLoadingSpinner();
     }
 
+    if (this.view === "create") {
+      return this.renderCreateClanForm();
+    }
+
     if (this.view === "my-requests") {
       return html`<clan-my-requests-view
         .myPendingRequests=${this.myPendingRequests}
@@ -501,6 +524,9 @@ export class ClanModal extends BaseModal {
         ></clan-bans-view>`;
       }
       // Default: detail view — dispatched by the active detail tab
+      if (this.activeTab === "chat") {
+        return html`<clan-chat-view .clanTag=${this.selectedClanTag}></clan-chat-view>`;
+      }
       if (this.activeTab === "donations") {
         return html`<clan-donations-view
           .clanTag=${this.selectedClanTag}
@@ -809,18 +835,35 @@ export class ClanModal extends BaseModal {
           <p class="text-white/40 text-sm mb-4">
             ${translateText("clan_modal.no_clans")}
           </p>
-          <button
-            @click=${() => this.setActiveTab("browse")}
-            class="px-6 py-2 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all"
-          >
-            ${translateText("clan_modal.browse")}
-          </button>
+          <div class="flex items-center gap-3">
+            <button
+              @click=${() => this.setActiveTab("browse")}
+              class="px-6 py-2 text-sm font-bold text-white uppercase tracking-wider bg-white/10 hover:bg-white/20 active:bg-white/10 rounded-lg transition-all"
+            >
+              ${translateText("clan_modal.browse")}
+            </button>
+            <button
+              @click=${() => (this.view = "create")}
+              class="px-6 py-2 text-sm font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 rounded-lg transition-all shadow-md shadow-malibu-blue/20"
+            >
+              👑 Clan gründen
+            </button>
+          </div>
         </div>
       `;
     }
 
     return html`
       <div class="space-y-3">
+        <div class="flex justify-end mb-2">
+          <button
+            @click=${() => (this.view = "create")}
+            class="px-4 py-2 text-xs font-bold text-white uppercase tracking-wider bg-malibu-blue hover:bg-aquarius rounded-lg transition-all shadow-md shadow-malibu-blue/20 flex items-center gap-1.5"
+          >
+            <span>👑</span>
+            <span>Neuen Clan gründen</span>
+          </button>
+        </div>
         ${hasRequests ? this.renderPendingRequestsButton() : ""}
         ${this.myClans.map(
           (clan) => html`
@@ -896,5 +939,129 @@ export class ClanModal extends BaseModal {
         </div>
       </button>
     `;
+  }
+
+  private renderCreateClanForm() {
+    return html`
+      <div class="max-w-lg mx-auto bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl">
+        <h3 class="text-lg font-bold text-white mb-1">Eigenen Clan gründen</h3>
+        <p class="text-xs text-white/50 mb-6">
+          Als Clan-Ersteller wirst du automatisch zum <span class="text-amber-400 font-bold">👑 Owner</span> ernannt. Der Owner-Status kann nicht übertragen werden.
+        </p>
+
+        <form @submit=${this.handleCreateClanSubmit} class="space-y-4">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5">
+              Clan-Kürzel (Tag)
+            </label>
+            <input
+              type="text"
+              maxlength="5"
+              placeholder="z.B. NOVA"
+              required
+              .value=${this.newClanTag}
+              @input=${(e: Event) =>
+                (this.newClanTag = (e.target as HTMLInputElement).value.toUpperCase())}
+              class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white font-mono uppercase focus:border-malibu-blue outline-none transition-all"
+            />
+            <p class="text-[11px] text-white/40 mt-1">2 bis 5 Zeichen (A-Z, 0-9)</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5">
+              Clan-Name
+            </label>
+            <input
+              type="text"
+              maxlength="30"
+              placeholder="z.B. Nova Legion"
+              required
+              .value=${this.newClanName}
+              @input=${(e: Event) =>
+                (this.newClanName = (e.target as HTMLInputElement).value)}
+              class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-malibu-blue outline-none transition-all"
+            />
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5">
+              Clan-Beschreibung
+            </label>
+            <textarea
+              rows="3"
+              maxlength="200"
+              placeholder="Beschreibe die Ziele und Regeln deines Clans..."
+              .value=${this.newClanDescription}
+              @input=${(e: Event) =>
+                (this.newClanDescription = (e.target as HTMLInputElement).value)}
+              class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-malibu-blue outline-none transition-all resize-none"
+            ></textarea>
+          </div>
+
+          <div class="flex items-center gap-3 pt-2">
+            <input
+              type="checkbox"
+              id="clan-is-open"
+              ?checked=${this.newClanIsOpen}
+              @change=${(e: Event) =>
+                (this.newClanIsOpen = (e.target as HTMLInputElement).checked)}
+              class="w-4 h-4 rounded bg-white/5 border-white/20 text-malibu-blue focus:ring-0 cursor-pointer"
+            />
+            <label for="clan-is-open" class="text-sm text-white/80 cursor-pointer select-none">
+              Öffentlicher Clan (Jeder kann direkt beitreten)
+            </label>
+          </div>
+
+          <div class="pt-6 flex items-center justify-end gap-3 border-t border-white/10">
+            <button
+              type="button"
+              @click=${() => (this.view = "list")}
+              class="px-5 py-2.5 text-sm text-white/70 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all"
+            >
+              Abbrechen
+            </button>
+            <button
+              type="submit"
+              ?disabled=${this.isCreatingClan || !this.newClanTag.trim() || !this.newClanName.trim()}
+              class="px-6 py-2.5 text-sm font-bold text-white bg-malibu-blue hover:bg-aquarius disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-malibu-blue/20 flex items-center gap-2"
+            >
+              ${this.isCreatingClan
+                ? html`<span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span> Gründet...`
+                : html`<span>👑 Clan gründen</span>`}
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+  }
+
+  private async handleCreateClanSubmit(e: Event) {
+    e.preventDefault();
+    if (this.isCreatingClan) return;
+    this.isCreatingClan = true;
+    try {
+      const res = await createClan(
+        this.newClanTag.trim(),
+        this.newClanName.trim(),
+        this.newClanDescription.trim(),
+        this.newClanIsOpen,
+      );
+      if (!res.ok) {
+        showToast(res.error, "red");
+        return;
+      }
+      showToast(`Clan [${res.clan.tag}] erfolgreich gegründet!`, "green");
+      const tag = res.clan.tag;
+      this.newClanTag = "";
+      this.newClanName = "";
+      this.newClanDescription = "";
+      await invalidateUserMe();
+      await this.loadMyClans();
+      this.openDetail(tag);
+    } catch {
+      showToast("Fehler beim Erstellen des Clans", "red");
+    } finally {
+      this.isCreatingClan = false;
+    }
   }
 }

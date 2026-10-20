@@ -15,6 +15,7 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import { translateText } from "./Utils";
 
 const TAB_KEYS = [
+  "qp",
   "players",
   "players2v2",
   "playersFfa",
@@ -22,10 +23,9 @@ const TAB_KEYS = [
   "tribes",
 ] as const;
 
-// Tab key -> ladder. "players" predates the 2v2 ladder and stays the 1v1 tab
-// so existing `#modal=leaderboard&tab=players` links keep working. The ladder
-// tabs share one <leaderboard-player-list>: a page fetch returns every ladder.
+// Tab key -> ladder.
 const PLAYER_TABS: Record<string, PlayerLadder> = {
+  qp: "qp",
   players: RankedType.OneVOne,
   players2v2: RankedType.TwoVTwo,
   playersFfa: RankedType.FreeForAll,
@@ -46,25 +46,29 @@ export class LeaderboardModal extends BaseModal {
   private tribeTable?: LeaderboardTribeTable;
 
   private loadToken = 0;
-  private lastRankedType: PlayerLadder = RankedType.OneVOne;
+  private lastRankedType: PlayerLadder = "qp";
 
   protected modalConfig() {
     return {
       tabs: [
         {
+          key: "qp",
+          label: "🏆 QP Punkte",
+        },
+        {
           key: "players",
-          label: translateText("leaderboard_modal.ranked_tab"),
+          label: "1v1 Ranked",
         },
         {
           key: "players2v2",
-          label: translateText("leaderboard_modal.ranked_2v2_tab"),
+          label: "2v2 Ranked",
         },
         {
           key: "playersFfa",
-          label: translateText("leaderboard_modal.ranked_ffa_tab"),
+          label: "FFA Ranked",
         },
         { key: "clans", label: translateText("leaderboard_modal.clans_tab") },
-        { key: "tribes", label: translateText("leaderboard_modal.tribes_tab") },
+        { key: "tribes", label: "Best Bot Nation (Tribes)" },
       ],
     };
   }

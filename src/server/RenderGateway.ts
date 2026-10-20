@@ -56,9 +56,24 @@ function resolveTarget(req: http.IncomingMessage): {
   const pathname = qIndex >= 0 ? rawUrl.slice(0, qIndex) : rawUrl;
   const search = qIndex >= 0 ? rawUrl.slice(qIndex) : "";
 
-  // 1. Auth & Social API (/idp/* -> 127.0.0.1:8787/*)
-  if (pathname === "/idp" || pathname.startsWith("/idp/")) {
-    const stripped = pathname.slice(4) || "/";
+  // 1. Auth & Social API (/idp/* -> 127.0.0.1:8787/* or direct social routes)
+  if (
+    pathname === "/idp" ||
+    pathname.startsWith("/idp/") ||
+    pathname.startsWith("/clans") ||
+    pathname.startsWith("/chat/") ||
+    pathname.startsWith("/friends") ||
+    pathname.startsWith("/presence/") ||
+    pathname.startsWith("/leaderboard/") ||
+    pathname.startsWith("/public/clans") ||
+    pathname.startsWith("/game/") ||
+    pathname === "/api/online_count"
+  ) {
+    const stripped = pathname.startsWith("/idp/")
+      ? pathname.slice(4)
+      : pathname === "/idp"
+        ? "/"
+        : pathname;
     return { port: AUTH_PORT, path: stripped + search };
   }
 

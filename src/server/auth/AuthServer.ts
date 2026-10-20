@@ -20,6 +20,12 @@ import {
   UserRecord,
   verifyPassword,
 } from "./AuthStore";
+import {
+  GameSocialStore,
+  ClanRole,
+  getEloTier,
+  calculateQpPoints,
+} from "./GameSocialStore";
 
 dotenv.config();
 
@@ -41,6 +47,7 @@ const GOOGLE_SECRET = process.env.GOOGLE_CLIENT_SECRET ?? "";
 const googleEnabled = GOOGLE_ID !== "" && GOOGLE_SECRET !== "";
 
 const store = new AuthStore(path.join(DATA_DIR, "users.json"));
+const socialStore = new GameSocialStore(path.join(DATA_DIR, "social.json"));
 
 type Keys = { privateJwk: JWK; publicJwk: JWK };
 const AUTH_SECRET = process.env.AUTH_SECRET ?? "indufront_persistent_auth_secret_v1_2026";
@@ -106,6 +113,12 @@ const validPassword = (p: unknown): p is string =>
   typeof p === "string" && p.length >= 8 && p.length <= 128;
 
 function userMe(u: UserRecord): UserMeResponse {
+  const stats = socialStore.getOrCreatePlayerStats(u.publicId, u.username);
+  const clans = socialStore.getClansForUser(u.publicId).map((c) => ({
+    tag: c.tag,
+    name: c.name,
+    role: c.members.find((m) => m.publicId.toLowerCase() === u.publicId.toLowerCase())?.role ?? "Mitglied",
+  }));
   return {
     user: {
       email: u.email,
@@ -125,20 +138,40 @@ function userMe(u: UserRecord): UserMeResponse {
       usernameStatus: "premium",
       achievements: { singleplayerMap: [], player: [] },
       friends: u.friends ?? [],
+      clans: clans as any,
       subscription: null,
       levelHidden: u.levelHidden ?? false,
       searchHidden: u.searchHidden ?? false,
+      qp: stats.qp,
+      elo: stats.eloFfa,
+      tier: getEloTier(stats.eloFfa),
     },
   } as UserMeResponse;
 }
 
 function playerProfile(u: UserRecord) {
+  const stats = socialStore.getOrCreatePlayerStats(u.publicId, u.username);
+  const clans = socialStore.getClansForUser(u.publicId).map((c) => ({
+    tag: c.tag,
+    name: c.name,
+    role: c.members.find((m) => m.publicId.toLowerCase() === u.publicId.toLowerCase())?.role ?? "Mitglied",
+  }));
   return {
     createdAt: new Date(u.createdAt).toISOString(),
     username: u.username,
-    stats: {},
-    clans: [],
-    displayClanTag: null,
+    stats: {
+      games: stats.games,
+      wins: stats.wins,
+      losses: stats.losses,
+      qp: stats.qp,
+      elo1v1: stats.elo1v1,
+      elo2v2: stats.elo2v2,
+      eloFfa: stats.eloFfa,
+      tier: getEloTier(stats.eloFfa),
+      level: stats.level,
+    },
+    clans,
+    displayClanTag: clans[0]?.tag ?? null,
   };
 }
 
@@ -385,6 +418,7 @@ async function main() {
         });
       }
       if (!user) return void res.sendStatus(401);
+      socialStore.recordPing(user.publicId);
       (req as Request & { user: UserRecord }).user = user;
       next();
     } catch {
@@ -510,9 +544,394 @@ async function main() {
   });
 
   app.get("/public/player/:publicId/games", (req, res) => {
-    const u = store.byPublicId(String(req.params.publicId));
-    if (!u) return void res.status(404).json({ error: "not_found" });
-    res.json({ results: [], nextCursor: null });
+    const games = socialStore.getPlayerMatches(String(req.params.publicId));
+    res.json({ results: games, nextCursor: null });
+  });
+
+  // ---- Match Records Ingestion & History ----
+  app.post("/game/:gameId", async (req, res) => {
+    try {
+      const gameRecord = req.body ?? {};
+      const gameId = String(req.params.gameId || gameRecord.info?.gameID || randomUUID());
+      const playersObj = gameRecord.players ?? {};
+      const winnerId = gameRecord.winner;
+      const rankedType = String(gameRecord.info?.rankedType || "ffa");
+      const gameType = String(gameRecord.info?.gameType || "Public");
+
+      const playerList: any[] = [];
+      let rankCounter = 1;
+
+      for (const [clientId, p] of Object.entries<any>(playersObj)) {
+        const isWinner = clientId === winnerId || (p.teamIndex !== undefined && p.teamIndex === winnerId);
+        const publicId = p.persistentID || clientId;
+        const username = p.username || "Player";
+        const kills = p.stats?.kills ?? 0;
+        const territory = p.stats?.territory ?? 0;
+        playerList.push({
+          publicId,
+          username,
+          winner: isWinner,
+          kills,
+          territory,
+          placement: isWinner ? 1 : ++rankCounter,
+        });
+      }
+
+      playerList.sort((a, b) => (a.winner ? -1 : b.winner ? 1 : a.placement - b.placement));
+      playerList.forEach((pl, idx) => {
+        pl.placement = idx + 1;
+        pl.qpEarned = calculateQpPoints(pl.placement);
+        pl.eloChange = pl.winner ? 25 : -15;
+      });
+
+      socialStore.recordFinishedMatch({
+        gameId,
+        timestamp: new Date().toISOString(),
+        gameType,
+        rankedType,
+        durationSeconds: Number(gameRecord.info?.turns?.length ?? 120),
+        players: playerList,
+      });
+
+      res.json({ ok: true });
+    } catch (e) {
+      console.error("Failed to archive game in socialStore", e);
+      res.status(500).json({ error: "archive_failed" });
+    }
+  });
+
+  app.get("/game/:gameId", (req, res) => {
+    const matches = socialStore.getPlayerMatches("");
+    const g = matches.find((m) => m.gameId === req.params.gameId);
+    if (!g) return void res.status(404).json({ error: "not_found" });
+    res.json(g);
+  });
+
+  // ---- Leaderboards ----
+  app.get("/leaderboard/ranked", (req, res) => {
+    const ladder1v1 = socialStore.getRankedLeaderboard("1v1");
+    const ladder2v2 = socialStore.getRankedLeaderboard("2v2");
+    const ladderFfa = socialStore.getRankedLeaderboard("ffa");
+    const ladderQp = socialStore.getRankedLeaderboard("qp");
+
+    res.json({
+      "1v1": ladder1v1,
+      "2v2": ladder2v2,
+      ffa: ladderFfa,
+      qp: ladderQp,
+    });
+  });
+
+  app.get("/public/clans/leaderboard", (_req, res) => {
+    res.json({
+      start: new Date(Date.now() - 7 * 86400000).toISOString(),
+      end: new Date().toISOString(),
+      clans: socialStore.getClanLeaderboard(),
+    });
+  });
+
+  app.get("/leaderboard/tribes", (_req, res) => {
+    res.json({
+      start: new Date(Date.now() - 7 * 86400000).toISOString(),
+      end: new Date().toISOString(),
+      tribes: socialStore.getTribeLeaderboard(),
+    });
+  });
+
+  // ---- Clans API ----
+  app.get("/clans", (req, res) => {
+    const search = String(req.query.search ?? "").toLowerCase();
+    const page = Math.max(1, Number(req.query.page ?? 1) || 1);
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit ?? 20) || 20));
+    let list = socialStore.getClans();
+    if (search) {
+      list = list.filter(
+        (c) =>
+          c.tag.toLowerCase().includes(search) ||
+          c.name.toLowerCase().includes(search) ||
+          c.description.toLowerCase().includes(search),
+      );
+    }
+    const total = list.length;
+    const start = (page - 1) * limit;
+    const results = list.slice(start, start + limit).map((c) => ({
+      tag: c.tag,
+      name: c.name,
+      description: c.description,
+      isOpen: c.isOpen,
+      createdAt: c.createdAt,
+      memberCount: c.members.length,
+      softBalance: "0",
+      hardBalance: "0",
+      boosted: false,
+      boostEndsAt: null,
+    }));
+    res.json({ results, total, page, limit });
+  });
+
+  app.post("/clans", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const { tag, name, description, isOpen } = req.body ?? {};
+    const result = socialStore.createClan(u, { tag, name, description, isOpen });
+    if (!result.ok) {
+      return void res.status(400).json({ error: result.error });
+    }
+    res.json(result.clan);
+  });
+
+  app.get("/clans/:tag", (req, res) => {
+    const clan = socialStore.getClan(String(req.params.tag));
+    if (!clan) return void res.status(404).json({ error: "not_found" });
+    res.json({
+      tag: clan.tag,
+      name: clan.name,
+      description: clan.description,
+      isOpen: clan.isOpen,
+      createdAt: clan.createdAt,
+      memberCount: clan.members.length,
+      softBalance: "0",
+      hardBalance: "0",
+      boosted: false,
+      boostEndsAt: null,
+    });
+  });
+
+  app.patch("/clans/:tag", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const result = socialStore.updateClan(u, String(req.params.tag), req.body ?? {});
+    if (!result.ok) {
+      return void res.status(400).json({ error: result.error });
+    }
+    res.json(result.clan);
+  });
+
+  app.delete("/clans/:tag", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const result = socialStore.disbandClan(u, String(req.params.tag));
+    if (!result.ok) {
+      return void res.status(403).json({ error: result.error });
+    }
+    res.sendStatus(200);
+  });
+
+  app.get("/clans/:tag/members", (req, res) => {
+    const clan = socialStore.getClan(String(req.params.tag));
+    if (!clan) return void res.status(404).json({ error: "not_found" });
+    const results = clan.members.map((m) => ({
+      role: m.role,
+      joinedAt: m.joinedAt,
+      publicId: m.publicId,
+      username: m.username,
+      stats: m.stats,
+      eloContributed: m.eloContributed ?? 0,
+    }));
+    res.json({
+      results,
+      total: results.length,
+      page: 1,
+      limit: 100,
+      pendingRequests: clan.requests.length,
+    });
+  });
+
+  app.post("/clans/:tag/join", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const result = socialStore.joinOrRequestClan(u, String(req.params.tag));
+    if (!result.ok) {
+      return void res.status(409).json({ message: result.error });
+    }
+    res.json({ status: result.status });
+  });
+
+  app.post("/clans/:tag/leave", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const result = socialStore.leaveClan(u, String(req.params.tag));
+    if (!result.ok) {
+      return void res.status(400).json({ error: result.error });
+    }
+    res.sendStatus(200);
+  });
+
+  app.post("/clans/:tag/kick", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const { targetPublicId } = req.body ?? {};
+    const result = socialStore.kickMember(u, String(req.params.tag), String(targetPublicId));
+    if (!result.ok) {
+      return void res.status(403).json({ error: result.error });
+    }
+    res.sendStatus(200);
+  });
+
+  app.post("/clans/:tag/promote", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const { targetPublicId } = req.body ?? {};
+    const clan = socialStore.getClan(String(req.params.tag));
+    if (!clan) return void res.status(404).json({ error: "not_found" });
+    const target = clan.members.find(
+      (m) => m.publicId.toLowerCase() === String(targetPublicId).toLowerCase(),
+    );
+    if (!target) return void res.status(404).json({ error: "not_found" });
+    let nextRole: ClanRole = "Supporter";
+    if (target.role === "Supporter") nextRole = "Admin";
+    else if (target.role === "Admin") {
+      return void res
+        .status(400)
+        .json({ error: "Höchster Rang erreicht (Owner ist unübertragbar)" });
+    }
+    const result = socialStore.changeMemberRole(
+      u,
+      String(req.params.tag),
+      String(targetPublicId),
+      nextRole,
+    );
+    if (!result.ok) return void res.status(403).json({ error: result.error });
+    res.sendStatus(200);
+  });
+
+  app.post("/clans/:tag/demote", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const { targetPublicId } = req.body ?? {};
+    const clan = socialStore.getClan(String(req.params.tag));
+    if (!clan) return void res.status(404).json({ error: "not_found" });
+    const target = clan.members.find(
+      (m) => m.publicId.toLowerCase() === String(targetPublicId).toLowerCase(),
+    );
+    if (!target) return void res.status(404).json({ error: "not_found" });
+    let nextRole: ClanRole = "Mitglied";
+    if (target.role === "Admin") nextRole = "Supporter";
+    const result = socialStore.changeMemberRole(
+      u,
+      String(req.params.tag),
+      String(targetPublicId),
+      nextRole,
+    );
+    if (!result.ok) return void res.status(403).json({ error: result.error });
+    res.sendStatus(200);
+  });
+
+  app.post("/clans/:tag/role", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const { targetPublicId, role } = req.body ?? {};
+    const result = socialStore.changeMemberRole(
+      u,
+      String(req.params.tag),
+      String(targetPublicId),
+      role as ClanRole,
+    );
+    if (!result.ok) return void res.status(403).json({ error: result.error });
+    res.sendStatus(200);
+  });
+
+  app.get("/clans/:tag/requests", authed, (req, res) => {
+    const clan = socialStore.getClan(String(req.params.tag));
+    if (!clan) return void res.status(404).json({ error: "not_found" });
+    res.json({
+      results: clan.requests,
+      total: clan.requests.length,
+      page: 1,
+      limit: 100,
+    });
+  });
+
+  app.post("/clans/:tag/requests/approve", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const { targetPublicId } = req.body ?? {};
+    const result = socialStore.approveRequest(
+      u,
+      String(req.params.tag),
+      String(targetPublicId),
+    );
+    if (!result.ok) return void res.status(403).json({ error: result.error });
+    res.sendStatus(200);
+  });
+
+  app.post("/clans/:tag/requests/deny", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const { targetPublicId } = req.body ?? {};
+    const result = socialStore.denyRequest(
+      u,
+      String(req.params.tag),
+      String(targetPublicId),
+    );
+    if (!result.ok) return void res.status(403).json({ error: result.error });
+    res.sendStatus(200);
+  });
+
+  // Persistent Clan Chat
+  app.get("/clans/:tag/chat", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const chat = socialStore.getClanChat(u, String(req.params.tag));
+    if (chat === null) return void res.status(403).json({ error: "not_member" });
+    res.json({ messages: chat });
+  });
+
+  app.post("/clans/:tag/chat", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const { text } = req.body ?? {};
+    const msg = socialStore.addClanChatMessage(
+      u,
+      String(req.params.tag),
+      String(text ?? ""),
+    );
+    if (!msg) return void res.status(400).json({ error: "failed_to_send" });
+    res.json({ message: msg });
+  });
+
+  // ---- Global & Direct Chat ----
+  app.get("/chat/global", (_req, res) => {
+    res.json({ messages: socialStore.getGlobalChat(100) });
+  });
+
+  app.post("/chat/global", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const { text } = req.body ?? {};
+    const msg = socialStore.addGlobalChatMessage(u, String(text ?? ""));
+    if (!msg) return void res.status(400).json({ error: "failed_to_send" });
+    res.json({ message: msg });
+  });
+
+  app.get("/friends/chat/:friendPublicId", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const friendId = String(req.params.friendPublicId);
+    const messages = socialStore.getDirectChat(u.publicId, friendId, 100);
+    res.json({ messages });
+  });
+
+  app.post("/friends/chat/:friendPublicId", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const friendId = String(req.params.friendPublicId);
+    const otherUser = store.byPublicId(friendId);
+    const { text } = req.body ?? {};
+    const msg = socialStore.addDirectChatMessage(
+      u,
+      friendId,
+      otherUser?.username ?? "Friend",
+      String(text ?? ""),
+    );
+    if (!msg) return void res.status(400).json({ error: "failed_to_send" });
+    res.json({ message: msg });
+  });
+
+  // ---- Presence & Online Count ----
+  app.get("/api/online_count", (_req, res) => {
+    const online = socialStore.getOnlineCount();
+    res.json({ online, inGame: Math.floor(online * 0.7) });
+  });
+
+  app.get("/presence/summary", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    socialStore.recordPing(u.publicId);
+    const onlineFriends = socialStore.getOnlineFriends(u.friends ?? []);
+    res.json({
+      onlineCount: socialStore.getOnlineCount(),
+      onlineFriends,
+    });
+  });
+
+  app.post("/presence/ping", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    socialStore.recordPing(u.publicId);
+    res.json({ ok: true, onlineCount: socialStore.getOnlineCount() });
   });
 
   // ---- Friends API ----

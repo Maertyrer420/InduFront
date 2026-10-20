@@ -200,7 +200,18 @@ export const RANKED_BREAKDOWN_KEYS = [
 ] as const satisfies readonly (keyof ClanMemberStats)[];
 
 export const ClanMemberSchema = z.object({
-  role: z.enum(["leader", "officer", "member"]),
+  role: z.enum([
+    "leader",
+    "officer",
+    "member",
+    "Owner",
+    "Admin",
+    "Supporter",
+    "Mitglied",
+    "owner",
+    "admin",
+    "supporter",
+  ]),
   joinedAt: z.iso.datetime(),
   publicId: z.string(),
   // Account username, pre-rendered by the server (null = never set). Render

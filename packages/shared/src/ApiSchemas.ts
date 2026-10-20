@@ -1252,6 +1252,8 @@ export const PlayerLeaderboardEntrySchema = z.object({
   wins: z.number(),
   losses: z.number(),
   winRate: z.number(),
+  tier: z.string().optional(),
+  qp: z.number().optional(),
   ...RowLevelFields,
 });
 export type PlayerLeaderboardEntry = z.infer<
@@ -1276,6 +1278,8 @@ export const RankedLeaderboardEntrySchema = z.object({
   // Account username (null = never set). The client displays
   // `accountUsername ?? public_id`.
   accountUsername: z.string().nullable(),
+  tier: z.string().optional(),
+  qp: z.number().optional(),
   ...RowLevelFields,
 });
 export type RankedLeaderboardEntry = z.infer<
@@ -1290,6 +1294,7 @@ export const RankedLeaderboardResponseSchema = z.object({
   [RankedType.TwoVTwo]: RankedLeaderboardEntrySchema.array().default([]),
   // Defaulted for the same reason: older APIs have no FFA ladder.
   [RankedType.FreeForAll]: RankedLeaderboardEntrySchema.array().default([]),
+  qp: RankedLeaderboardEntrySchema.array().default([]),
 });
 export type RankedLeaderboardResponse = z.infer<
   typeof RankedLeaderboardResponseSchema

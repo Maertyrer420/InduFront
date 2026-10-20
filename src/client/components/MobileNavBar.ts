@@ -1,6 +1,8 @@
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, LitElement, TemplateResult } from "lit";
-import { customElement } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
+import { getApiBase } from "../Api";
+import { getAuthHeader } from "../Auth";
 import { NavNotificationsController } from "./NavNotificationsController";
 
 const MOBILE_ITEM =
@@ -16,6 +18,10 @@ const MOBILE_ITEM =
 export class MobileNavBar extends LitElement {
   private _notifications = new NavNotificationsController(this);
 
+  @state() private onlineCount = 1;
+  @state() private onlineFriendsCount = 0;
+  private presenceInterval: any = null;
+
   createRenderRoot() {
     return this;
   }
@@ -30,11 +36,42 @@ export class MobileNavBar extends LitElement {
         this._updateActiveState(current);
       });
     }
+
+    this.fetchPresence();
+    this.presenceInterval = setInterval(() => this.fetchPresence(), 10000);
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener("showPage", this._onShowPage);
+    if (this.presenceInterval) {
+      clearInterval(this.presenceInterval);
+      this.presenceInterval = null;
+    }
+  }
+
+  private async fetchPresence() {
+    try {
+      const auth = await getAuthHeader();
+      if (auth) {
+        const res = await fetch(`${getApiBase()}/presence/summary`, {
+          headers: { Accept: "application/json", Authorization: auth },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          this.onlineCount = Math.max(1, data.onlineCount ?? 1);
+          this.onlineFriendsCount = (data.onlineFriends ?? []).length;
+          return;
+        }
+      }
+      const res = await fetch(`${getApiBase()}/api/online_count`, {
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        this.onlineCount = Math.max(1, data.online ?? 1);
+      }
+    } catch {}
   }
 
   private _onShowPage = (e: Event) => {
@@ -112,6 +149,28 @@ export class MobileNavBar extends LitElement {
           data-page="page-clan"
           data-i18n="main.clans"
         ></button>
+        <button
+          class="${MOBILE_ITEM} flex items-center justify-between"
+          data-page="page-chat"
+        >
+          <span>💬 Chat</span>
+        </button>
+        <button
+          class="${MOBILE_ITEM} flex items-center justify-between"
+          data-page="page-friends"
+        >
+          <span>👥 Freunde</span>
+          ${this.onlineFriendsCount > 0
+            ? html`<span class="px-2 py-0.5 bg-malibu-blue text-white text-xs font-bold rounded-full">${this.onlineFriendsCount}</span>`
+            : ""}
+        </button>
+
+        <div class="mt-4 pt-4 border-t border-white/10 flex items-center gap-2 text-xs text-white/80">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="font-bold text-emerald-400">${this.onlineCount}</span>
+          <span>Spieler online</span>
+        </div>
+
         <div
           class="flex flex-col w-full mt-auto [.in-game_&]:hidden items-end justify-end pt-4 border-t border-white/10"
         ></div>
