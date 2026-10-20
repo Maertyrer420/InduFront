@@ -366,6 +366,9 @@ async function main() {
       });
       const { base64urlToUuid } = await import("@openfront/shared/Base64");
       const userId = base64urlToUuid(String(payload.sub));
+      if (store.isUserDeleted(userId)) {
+        return void res.sendStatus(401);
+      }
       let user = store.byId(userId);
       // Ephemeral disk reboot recovery: reconstruct user record from cryptographically verified token
       if (!user && payload.username && payload.email) {
@@ -395,6 +398,9 @@ async function main() {
       });
       const { base64urlToUuid } = await import("@openfront/shared/Base64");
       const userId = base64urlToUuid(String(payload.sub));
+      if (store.isUserDeleted(userId)) {
+        return void res.sendStatus(401);
+      }
       let user = store.byId(userId);
       if (!user && payload.username && payload.email) {
         user = store.createUser({

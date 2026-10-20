@@ -28,6 +28,7 @@ interface SessionRecord {
 interface Data {
   users: UserRecord[];
   sessions: SessionRecord[];
+  deletedUserIds?: string[];
 }
 
 const SESSION_TTL_MS = 30 * 24 * 3600 * 1000;
@@ -112,6 +113,10 @@ export class AuthStore {
     return u;
   }
 
+  isUserDeleted(userId: string): boolean {
+    return (this.data.deletedUserIds ?? []).includes(userId);
+  }
+
   deleteUser(userId: string): boolean {
     const u = this.byId(userId);
     if (!u) return false;
@@ -125,6 +130,10 @@ export class AuthStore {
         other.outgoingRequests = other.outgoingRequests.filter((r) => r.publicId !== pub);
     }
     this.deleteAllSessions(userId);
+    this.data.deletedUserIds ??= [];
+    if (!this.data.deletedUserIds.includes(userId)) {
+      this.data.deletedUserIds.push(userId);
+    }
     this.save();
     return true;
   }
