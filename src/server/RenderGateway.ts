@@ -101,6 +101,28 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (pathname === "/terms-of-service.html") {
+    res.writeHead(302, {
+      Location: "/terms.html",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      Pragma: "no-cache",
+      Expires: "0",
+    });
+    res.end();
+    return;
+  }
+
+  if (pathname === "/privacy-policy.html") {
+    res.writeHead(302, {
+      Location: "/privacy.html",
+      "Cache-Control": "no-cache, no-store, must-revalidate",
+      Pragma: "no-cache",
+      Expires: "0",
+    });
+    res.end();
+    return;
+  }
+
   const target = resolveTarget(req);
   const proto =
     (req.headers["x-forwarded-proto"] as string) ?? "http";
@@ -125,7 +147,18 @@ const server = http.createServer((req, res) => {
       headers: proxyHeaders,
     },
     (proxyRes) => {
-      res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+      const headers = { ...proxyRes.headers };
+      if (
+        pathname.endsWith(".html") ||
+        pathname === "/" ||
+        pathname === "/terms.html" ||
+        pathname === "/privacy.html"
+      ) {
+        headers["cache-control"] = "no-cache, no-store, must-revalidate";
+        headers["pragma"] = "no-cache";
+        headers["expires"] = "0";
+      }
+      res.writeHead(proxyRes.statusCode ?? 502, headers);
       proxyRes.pipe(res);
     },
   );

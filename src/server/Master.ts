@@ -100,12 +100,18 @@ app.get("/desktop/release.json", async (_req, res) => {
 
 app.use(
   express.static(path.join(__dirname, "../../static"), {
-    maxAge: "1y", // Set max-age to 1 year for all static assets
-    setHeaders: (res) => {
-      applyStaticAssetCacheControl(
-        res.setHeader.bind(res),
-        res.req.originalUrl,
-      );
+    maxAge: 0,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith(".html") || filePath.endsWith(".json")) {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        res.setHeader("Pragma", "no-cache");
+        res.setHeader("Expires", "0");
+      } else {
+        applyStaticAssetCacheControl(
+          res.setHeader.bind(res),
+          res.req.originalUrl,
+        );
+      }
     },
   }),
 );
