@@ -37,3 +37,5 @@ map-generator/map-generator.exe
 .tick-baseline/
 
 data/
+
+scripts/git-push.ps1
