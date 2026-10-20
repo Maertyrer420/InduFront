@@ -166,11 +166,24 @@ export class PlayerProfileModal extends BaseModal {
       ariaLabel: translateText("common.back"),
       rightContent: this.publicId
         ? html`
-            <player-name
-              class="shrink-0"
-              .publicId=${this.publicId}
-              .copyText=${playerProfileUrl(this.publicId)}
-            ></player-name>
+            <div class="flex items-center gap-2">
+              <span
+                class="text-xs bg-white/10 border border-white/20 text-yellow-300 font-mono font-bold px-2.5 py-1 rounded tracking-wider shadow-sm select-all cursor-pointer hover:bg-white/15 transition-colors"
+                title="Permanente Spieler-ID"
+                @click=${() => {
+                  if (this.publicId) {
+                    navigator.clipboard.writeText(this.publicId);
+                  }
+                }}
+              >
+                🆔 ${this.publicId}
+              </span>
+              <player-name
+                class="shrink-0"
+                .publicId=${this.publicId}
+                .copyText=${playerProfileUrl(this.publicId)}
+              ></player-name>
+            </div>
           `
         : undefined,
     });

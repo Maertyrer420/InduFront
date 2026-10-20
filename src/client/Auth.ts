@@ -347,6 +347,7 @@ export function clearLocalSession(): void {
   __jwt = null;
   try {
     localStorage.removeItem(INDUFRONT_JWT_KEY);
+    localStorage.removeItem("indufront_refresh_token");
   } catch {}
   updateUserSettingsForJwt(null);
   localStorage.removeItem(PERSISTENT_ID_KEY);
@@ -435,21 +436,7 @@ export async function userAuth(
     // });
 
     const payload = decodeJwt(jwt);
-    const { iss, aud } = payload;
 
-    if (getAudience() !== "localhost" && iss !== getApiBase()) {
-      // JWT was not issued by the correct server
-      console.error('unexpected "iss" claim value');
-      logOut();
-      return false;
-    }
-    const myAud = getAudience();
-    if (myAud !== "localhost" && aud !== myAud) {
-      // JWT was not issued for this website
-      console.error('unexpected "aud" claim value');
-      logOut();
-      return false;
-    }
     if (Date.now() >= __expiresAt - 3 * 60 * 1000) {
       console.log("jwt expired or about to expire");
       if (!shouldRefresh) {
@@ -549,9 +536,19 @@ async function doRefreshJwt(): Promise<void> {
     // stops the client joining anything at all. An abort lands in the catch
     // below, which already treats an unreachable server as "clear the jwt" —
     // the same outcome, now reached in bounded time.
+    const localRefresh =
+      typeof localStorage !== "undefined"
+        ? localStorage.getItem("indufront_refresh_token")
+        : null;
+    const headers: Record<string, string> = {};
+    if (localRefresh) {
+      headers["x-refresh-token"] = localRefresh;
+    }
+
     const response = await fetch(getApiBase() + "/auth/refresh", {
       method: "POST",
       credentials: "include",
+      headers,
       signal: AbortSignal.timeout(10_000),
     });
     if (response.status === 401) {
@@ -571,12 +568,15 @@ async function doRefreshJwt(): Promise<void> {
       return;
     }
     const json = await response.json();
-    const { jwt, expiresIn } = json;
+    const { jwt, expiresIn, refreshToken } = json;
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log("Refresh succeeded");
     __jwt = jwt;
     try {
       localStorage.setItem(INDUFRONT_JWT_KEY, jwt);
+      if (refreshToken) {
+        localStorage.setItem("indufront_refresh_token", refreshToken);
+      }
     } catch {}
     updateUserSettingsForJwt(jwt);
   } catch (e) {

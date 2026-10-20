@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { UserRecord } from "./AuthStore";
+import { dbLoadSocialData, dbSaveSocialData } from "./DbStorage";
 
 export type ClanRole = "Owner" | "Admin" | "Supporter" | "Mitglied";
 
@@ -178,35 +179,73 @@ export class GameSocialStore {
 
   // In-memory heartbeat tracker: publicId -> timestamp
   private presence = new Map<string, number>();
+  private backupPath: string;
 
   constructor(private readonly filePath: string) {
+    this.backupPath = this.filePath + ".backup";
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
+
+    let loaded = false;
     if (fs.existsSync(filePath)) {
       try {
         const raw = fs.readFileSync(filePath, "utf8");
         this.data = JSON.parse(raw);
-        this.data.clans ??= [];
-        this.data.playerStats ??= {};
-        this.data.matches ??= [];
-        this.data.globalChat ??= [];
-        this.data.directChat ??= [];
+        loaded = true;
       } catch {
-        this.data = {
-          clans: [],
-          playerStats: {},
-          matches: [],
-          globalChat: [],
-          directChat: [],
-        };
+        console.warn(`[social-store] Failed to parse ${filePath}, checking backup...`);
       }
     }
+
+    if (!loaded && fs.existsSync(this.backupPath)) {
+      try {
+        const raw = fs.readFileSync(this.backupPath, "utf8");
+        this.data = JSON.parse(raw);
+        console.log(`[social-store] Restored from backup: ${this.backupPath}`);
+      } catch {}
+    }
+
+    this.data.clans ??= [];
+    this.data.playerStats ??= {};
+    this.data.matches ??= [];
+    this.data.globalChat ??= [];
+    this.data.directChat ??= [];
+
     this.seedDefaultBotTribes();
+    void this.syncFromDb();
   }
 
-  private save(): void {
-    const tmp = this.filePath + ".tmp";
-    fs.writeFileSync(tmp, JSON.stringify(this.data, null, 2));
-    fs.renameSync(tmp, this.filePath);
+  private async syncFromDb(): Promise<void> {
+    try {
+      const dbData = await dbLoadSocialData();
+      if (dbData) {
+        if (dbData.clans && dbData.clans.length > 0) this.data.clans = dbData.clans;
+        if (dbData.playerStats && Object.keys(dbData.playerStats).length > 0) {
+          this.data.playerStats = { ...this.data.playerStats, ...dbData.playerStats };
+        }
+        if (dbData.matches && dbData.matches.length > 0) this.data.matches = dbData.matches;
+        if (dbData.globalChat && dbData.globalChat.length > 0) this.data.globalChat = dbData.globalChat;
+        if (dbData.directChat && dbData.directChat.length > 0) this.data.directChat = dbData.directChat;
+        this.save(false);
+        console.log("[social-store] Synchronized social data from PostgreSQL.");
+      }
+    } catch (err: any) {
+      console.warn("[social-store] syncFromDb:", err.message);
+    }
+  }
+
+  private save(syncDb = true): void {
+    try {
+      const json = JSON.stringify(this.data, null, 2);
+      const tmp = this.filePath + ".tmp";
+      fs.writeFileSync(tmp, json);
+      fs.renameSync(tmp, this.filePath);
+      fs.writeFileSync(this.backupPath, json);
+    } catch (err) {
+      console.warn("[social-store] Error writing file:", err);
+    }
+    if (syncDb) {
+      dbSaveSocialData(this.data).catch(() => {});
+    }
   }
 
   // ---- PRESENCE TRACKING ----
@@ -714,6 +753,7 @@ export class GameSocialStore {
     const p = publicId.toLowerCase();
     return this.data.matches
       .filter((m) => m.players.some((pl) => pl.publicId.toLowerCase() === p))
+      .slice(-10)
       .reverse();
   }
 

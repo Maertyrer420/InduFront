@@ -7,13 +7,29 @@ const NUM_WORKERS = Number(process.env.NUM_WORKERS ?? 2);
 const AUTH_PORT = Number(process.env.AUTH_PORT ?? 8787);
 const MASTER_PORT = 3000;
 
+const externalUrl = (
+  process.env.RENDER_EXTERNAL_URL ??
+  process.env.KEEP_ALIVE_URL ??
+  process.env.PUBLIC_URL ??
+  ""
+).replace(/\/$/, "");
+
+let derivedDomain = process.env.DOMAIN ?? "localhost";
+try {
+  if (externalUrl.startsWith("http")) {
+    derivedDomain = new URL(externalUrl).host;
+  }
+} catch {}
+
 const env: NodeJS.ProcessEnv = {
   ...process.env,
   GAME_ENV: process.env.GAME_ENV ?? "dev",
-  DOMAIN: process.env.DOMAIN ?? "localhost",
+  DOMAIN: derivedDomain,
   GIT_COMMIT: process.env.GIT_COMMIT ?? "DEV",
   NUM_WORKERS: String(NUM_WORKERS),
   AUTH_PORT: String(AUTH_PORT),
+  AUTH_ISSUER: externalUrl ? `${externalUrl}/idp` : `http://localhost:${AUTH_PORT}`,
+  PUBLIC_URL: externalUrl || "http://localhost:9000",
   TURNSTILE_SITE_KEY:
     process.env.TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA",
   API_KEY:
@@ -60,6 +76,8 @@ function resolveTarget(req: http.IncomingMessage): {
   if (
     pathname === "/idp" ||
     pathname.startsWith("/idp/") ||
+    pathname.startsWith("/auth/") ||
+    pathname.startsWith("/users/") ||
     pathname.startsWith("/clans") ||
     pathname.startsWith("/chat/") ||
     pathname.startsWith("/friends") ||
@@ -67,6 +85,7 @@ function resolveTarget(req: http.IncomingMessage): {
     pathname.startsWith("/leaderboard/") ||
     pathname.startsWith("/public/clans") ||
     pathname.startsWith("/game/") ||
+    pathname.startsWith("/.well-known/") ||
     pathname === "/api/online_count"
   ) {
     const stripped = pathname.startsWith("/idp/")
@@ -178,11 +197,20 @@ const server = http.createServer((req, res) => {
     },
   );
 
+  // Guard against Render 100s timeout by enforcing a 25s upstream timeout
+  proxyReq.setTimeout(25000, () => {
+    proxyReq.destroy(new Error("upstream_timeout"));
+    if (!res.headersSent) {
+      res.writeHead(504, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "gateway_timeout", message: "Server busy or starting up, please try again." }));
+    }
+  });
+
   proxyReq.on("error", (err) => {
     if (!res.headersSent) {
       res.writeHead(502, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: "bad_gateway", message: err.message }));
     }
-    res.end(JSON.stringify({ error: "bad_gateway", message: err.message }));
   });
 
   req.pipe(proxyReq);
@@ -239,7 +267,7 @@ server.listen(PORT, "0.0.0.0", () => {
       `[gateway] 24/7 Keep-Alive active: pinging ${externalUrl}/healthz every 10m`,
     );
     setInterval(() => {
-      fetch(`${externalUrl}/healthz`).catch(() => {
+      fetch(`${externalUrl}/healthz`, { signal: AbortSignal.timeout(5000) }).catch(() => {
         // Ignore transient network errors
       });
     }, intervalMs).unref();

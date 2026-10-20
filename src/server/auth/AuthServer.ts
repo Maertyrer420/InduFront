@@ -121,7 +121,10 @@ function userMe(u: UserRecord): UserMeResponse {
   }));
   return {
     user: {
+      publicId: u.publicId,
       email: u.email,
+      emailVerified: u.emailVerified ?? false,
+      doubleSafeEnabled: u.doubleSafeEnabled ?? false,
       ...(u.googleId ? { google: { email: u.email } } : {}),
     },
     steamLicence: false,
@@ -159,6 +162,7 @@ function playerProfile(u: UserRecord) {
   return {
     createdAt: new Date(u.createdAt).toISOString(),
     username: u.username,
+    publicId: u.publicId,
     stats: {
       games: stats.games,
       wins: stats.wins,
@@ -201,14 +205,18 @@ async function main() {
   async function startSession(req: Request, res: Response, u: UserRecord) {
     const token = store.createSession(u.id);
     setCookie(req, res, COOKIE, token, 30 * 24 * 3600);
+    const jwt = await issueAccessToken(u);
     return {
-      jwt: await issueAccessToken(u),
+      jwt,
+      refreshToken: token,
       expiresIn: ACCESS_TTL_S,
       user: {
         id: u.id,
         username: u.username,
         email: u.email,
         publicId: u.publicId,
+        emailVerified: u.emailVerified ?? false,
+        doubleSafeEnabled: u.doubleSafeEnabled ?? false,
       },
     };
   }
@@ -285,13 +293,89 @@ async function main() {
   });
 
   app.post("/auth/refresh", async (req, res) => {
-    const token = cookies(req)[COOKIE];
+    const headerToken = (req.headers["x-refresh-token"] as string) || req.body?.refreshToken;
+    const cookieToken = cookies(req)[COOKIE];
+    const token = cookieToken || headerToken;
     const user = token ? store.sessionUser(token) : undefined;
     if (!user) {
       setCookie(req, res, COOKIE, "", 0);
       return void res.sendStatus(401);
     }
-    res.json({ jwt: await issueAccessToken(user), expiresIn: ACCESS_TTL_S });
+    const jwt = await issueAccessToken(user);
+    res.json({ jwt, refreshToken: token, expiresIn: ACCESS_TTL_S });
+  });
+
+  // ---- Account Recovery & Double Safe ----
+  app.post("/auth/recover/request", authLimiter, (req, res) => {
+    const { identifier } = req.body ?? {};
+    if (typeof identifier !== "string" || !identifier.trim()) {
+      return void res.status(400).json({ error: "invalid_identifier" });
+    }
+    const recovery = store.createRecoveryCode(identifier.trim(), "recovery");
+    if (!recovery) {
+      return void res.json({
+        ok: true,
+        message: "Falls dieser Account existiert, wurde ein 6-stelliger Wiederherstellungscode erstellt.",
+      });
+    }
+    console.log(
+      `[auth] Account recovery requested for ${recovery.user.username} (${recovery.user.email}). Code: ${recovery.code}`,
+    );
+    res.json({
+      ok: true,
+      message: "Wiederherstellungscode generiert. Bitte Code und neues Passwort eingeben.",
+      code: recovery.code,
+    });
+  });
+
+  app.post("/auth/recover/verify", authLimiter, async (req, res) => {
+    const { identifier, code, newPassword } = req.body ?? {};
+    if (!identifier || !code || !validPassword(newPassword)) {
+      return void res.status(400).json({ error: "weak_password" });
+    }
+    const user = store.verifyRecoveryCode(String(identifier), String(code), "recovery");
+    if (!user) {
+      return void res.status(400).json({ error: "invalid_code" });
+    }
+    store.updatePassword(user.id, await hashPassword(newPassword));
+    store.deleteAllSessions(user.id);
+    const session = await startSession(req, res, user);
+    res.json({ ok: true, session });
+  });
+
+  app.post("/auth/magic-link", authLimiter, (req, res) => {
+    const { email } = req.body ?? {};
+    if (!email) return void res.status(400).json({ error: "missing_email" });
+    const recovery = store.createRecoveryCode(String(email), "recovery");
+    res.json({ ok: true, sent: true, code: recovery?.code });
+  });
+
+  app.post("/auth/email/send-code", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const { email } = req.body ?? {};
+    if (!validEmail(email)) return void res.status(400).json({ error: "invalid_email" });
+    store.setEmail(u.id, email, false);
+    const recovery = store.createRecoveryCode(u.id, "email_verify");
+    console.log(`[auth] Email verification code for ${u.username} (${email}): ${recovery?.code}`);
+    res.json({ ok: true, message: "Code gesendet", code: recovery?.code });
+  });
+
+  app.post("/auth/email/verify-code", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const { code } = req.body ?? {};
+    if (!code) return void res.status(400).json({ error: "missing_code" });
+    const verified = store.verifyRecoveryCode(u.id, String(code), "email_verify");
+    if (!verified) return void res.status(400).json({ error: "invalid_code" });
+    store.setEmail(u.id, verified.email, true);
+    store.setDoubleSafe(u.id, true);
+    res.json({ ok: true, emailVerified: true, doubleSafeEnabled: true });
+  });
+
+  app.post("/auth/double-safe/toggle", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const { enabled } = req.body ?? {};
+    store.setDoubleSafe(u.id, Boolean(enabled));
+    res.json({ ok: true, doubleSafeEnabled: Boolean(enabled) });
   });
 
   app.post("/auth/logout", (req, res) => {

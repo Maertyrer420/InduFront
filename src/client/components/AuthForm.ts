@@ -3,7 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { getApiBase } from "../ApiBase";
 import { googleLogin } from "../Auth";
 
-type Mode = "login" | "register";
+type Mode = "login" | "register" | "recover";
 
 const de = (navigator.language || "en").toLowerCase().startsWith("de");
 const t = (deText: string, enText: string) => (de ? deText : enText);
@@ -16,20 +16,29 @@ const ERRORS: Record<string, [string, string]> = {
   ],
   weak_password: ["Passwort: mindestens 8 Zeichen.", "Password: at least 8 characters."],
   username_taken: ["Dieser Benutzername ist bereits vergeben.", "This username is already taken."],
+  email_taken: ["Diese E-Mail ist bereits mit einem anderen Konto verknüpft.", "This email is already associated with another account."],
   too_many_requests: ["Zu viele Versuche. Bitte später erneut.", "Too many attempts. Try again later."],
+  invalid_code: ["Der 6-stellige Code ist ungültig oder abgelaufen.", "The 6-digit code is invalid or expired."],
 };
 
-/** Username & password sign-in and registration with visibility toggle. */
+/** Username & password sign-in, registration, and email account recovery with visibility toggle. */
 @customElement("auth-form")
 export class AuthForm extends LitElement {
   @state() private mode: Mode = "login";
   @state() private identifier = "";
   @state() private username = "";
+  @state() private email = "";
   @state() private password = "";
   @state() private showPassword = false;
   @state() private error = "";
+  @state() private successMsg = "";
   @state() private busy = false;
   @state() private googleAvailable = false;
+
+  // Recovery flow states
+  @state() private recoveryStep = 1;
+  @state() private recoveryCode = "";
+  @state() private newPassword = "";
 
   createRenderRoot() {
     return this;
@@ -50,6 +59,14 @@ export class AuthForm extends LitElement {
     if (this.busy) return;
     this.busy = true;
     this.error = "";
+    this.successMsg = "";
+
+    if (this.mode === "recover") {
+      await this.handleRecovery();
+      this.busy = false;
+      return;
+    }
+
     const register = this.mode === "register";
     try {
       const res = await fetch(
@@ -60,7 +77,11 @@ export class AuthForm extends LitElement {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(
             register
-              ? { username: this.username.trim(), password: this.password }
+              ? {
+                  username: this.username.trim(),
+                  password: this.password,
+                  email: this.email.trim() || undefined,
+                }
               : { identifier: this.identifier.trim(), password: this.password },
           ),
         },
@@ -69,6 +90,9 @@ export class AuthForm extends LitElement {
         const body = await res.json().catch(() => ({}));
         if (body?.jwt) {
           localStorage.setItem("indufront_jwt", body.jwt);
+        }
+        if (body?.refreshToken) {
+          localStorage.setItem("indufront_refresh_token", body.refreshToken);
         }
         const effectiveName = register ? this.username.trim() : (body?.user?.username || this.identifier.trim());
         if (effectiveName) {
@@ -93,12 +117,79 @@ export class AuthForm extends LitElement {
     }
   }
 
+  private async handleRecovery() {
+    if (this.recoveryStep === 1) {
+      if (!this.identifier.trim()) {
+        this.error = t("Bitte Benutzername oder E-Mail eingeben.", "Please enter username or email.");
+        return;
+      }
+      try {
+        const res = await fetch(`${getApiBase()}/auth/recover/request`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ identifier: this.identifier.trim() }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          this.recoveryStep = 2;
+          this.successMsg = t(
+            `Wiederherstellungscode erstellt! ${data.code ? `Code: ${data.code}` : "Bitte Code eingeben."}`,
+            `Recovery code created! ${data.code ? `Code: ${data.code}` : "Please enter the code."}`,
+          );
+        } else {
+          this.error = data.error || t("Fehler beim Anfordern des Codes.", "Error requesting recovery code.");
+        }
+      } catch {
+        this.error = t("Netzwerkfehler.", "Network error.");
+      }
+    } else {
+      if (!this.recoveryCode.trim() || !this.newPassword) {
+        this.error = t("Bitte Code und neues Passwort eingeben.", "Please enter code and new password.");
+        return;
+      }
+      try {
+        const res = await fetch(`${getApiBase()}/auth/recover/verify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            identifier: this.identifier.trim(),
+            code: this.recoveryCode.trim(),
+            newPassword: this.newPassword,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.session) {
+          if (data.session.jwt) {
+            localStorage.setItem("indufront_jwt", data.session.jwt);
+          }
+          if (data.session.refreshToken) {
+            localStorage.setItem("indufront_refresh_token", data.session.refreshToken);
+          }
+          if (data.session.user?.username) {
+            localStorage.setItem("username", data.session.user.username);
+          }
+          localStorage.setItem("useVerifiedName", "true");
+          window.location.reload();
+          return;
+        } else {
+          this.error = data.error === "invalid_code"
+            ? t("Der Code ist falsch oder abgelaufen.", "The code is invalid or expired.")
+            : t("Passwort muss mindestens 8 Zeichen lang sein.", "Password must be at least 8 characters.");
+        }
+      } catch {
+        this.error = t("Netzwerkfehler.", "Network error.");
+      }
+    }
+  }
+
   private field(
     label: string,
     type: string,
     value: string,
     set: (v: string) => void,
     autocomplete: string,
+    placeholder = "",
+    required = true,
   ) {
     return html`<label class="block">
       <span class="text-xs font-semibold text-white/60">${label}</span>
@@ -106,9 +197,10 @@ export class AuthForm extends LitElement {
         type=${type}
         .value=${value}
         autocomplete=${autocomplete}
-        required
+        ?required=${required}
+        placeholder=${placeholder}
         @input=${(e: Event) => set((e.target as HTMLInputElement).value)}
-        class="mt-1 w-full px-3.5 py-2.5 bg-white/5 border border-white/15 focus:border-white/50 rounded-xl text-white text-sm outline-none"
+        class="mt-1 w-full px-3.5 py-2.5 bg-white/5 border border-white/15 focus:border-white/50 rounded-xl text-white text-sm outline-none transition-all placeholder-white/30"
       />
     </label>`;
   }
@@ -128,7 +220,7 @@ export class AuthForm extends LitElement {
           autocomplete=${autocomplete}
           required
           @input=${(e: Event) => set((e.target as HTMLInputElement).value)}
-          class="w-full pl-3.5 pr-10 py-2.5 bg-white/5 border border-white/15 focus:border-white/50 rounded-xl text-white text-sm outline-none"
+          class="w-full pl-3.5 pr-10 py-2.5 bg-white/5 border border-white/15 focus:border-white/50 rounded-xl text-white text-sm outline-none transition-all"
         />
         <button
           type="button"
@@ -150,6 +242,82 @@ export class AuthForm extends LitElement {
   }
 
   render() {
+    if (this.mode === "recover") {
+      return html`
+        <form class="space-y-4" @submit=${(e: Event) => this.submit(e)}>
+          <div class="flex items-center justify-between border-b border-white/10 pb-3 mb-2">
+            <span class="text-sm font-bold text-white">🔑 Account wiederherstellen</span>
+            <button
+              type="button"
+              @click=${() => {
+                this.mode = "login";
+                this.error = "";
+                this.successMsg = "";
+                this.recoveryStep = 1;
+              }}
+              class="text-xs text-white/50 hover:text-white underline"
+            >
+              ← Zurück zum Login
+            </button>
+          </div>
+
+          ${this.recoveryStep === 1
+            ? html`
+                <p class="text-xs text-white/60 leading-relaxed">
+                  Gib deinen Benutzernamen oder deine E-Mail-Adresse ein, um einen 6-stelligen Wiederherstellungscode zu erhalten.
+                </p>
+                ${this.field(
+                  t("Benutzername oder E-Mail", "Username or Email"),
+                  "text",
+                  this.identifier,
+                  (v) => (this.identifier = v),
+                  "username",
+                  "z.B. Player123",
+                )}
+                <button
+                  type="submit"
+                  ?disabled=${this.busy || !this.identifier.trim()}
+                  class="w-full px-6 py-3 text-sm font-bold uppercase tracking-wider rounded-xl bg-malibu-blue hover:bg-aquarius disabled:opacity-50 text-white transition-colors"
+                >
+                  ${this.busy ? "Sende Code..." : "Code anfordern"}
+                </button>
+              `
+            : html`
+                <p class="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 p-2.5 rounded-lg">
+                  ${this.successMsg}
+                </p>
+                ${this.field(
+                  t("6-stelliger Wiederherstellungscode", "6-digit Recovery Code"),
+                  "text",
+                  this.recoveryCode,
+                  (v) => (this.recoveryCode = v),
+                  "one-time-code",
+                  "z.B. 123456",
+                )}
+                ${this.passwordField(
+                  t("Neues Passwort", "New Password"),
+                  this.newPassword,
+                  (v) => (this.newPassword = v),
+                  "new-password",
+                )}
+                <button
+                  type="submit"
+                  ?disabled=${this.busy || !this.recoveryCode.trim() || !this.newPassword}
+                  class="w-full px-6 py-3 text-sm font-bold uppercase tracking-wider rounded-xl bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white transition-colors"
+                >
+                  ${this.busy ? "Setze zurück..." : "Passwort ändern & Anmelden"}
+                </button>
+              `}
+
+          ${this.error
+            ? html`<div class="text-xs text-red-400 bg-red-500/10 border border-red-500/30 px-3 py-2 rounded-lg">
+                ${this.error}
+              </div>`
+            : nothing}
+        </form>
+      `;
+    }
+
     const register = this.mode === "register";
     return html`
       <form class="space-y-4" @submit=${(e: Event) => this.submit(e)}>
@@ -160,6 +328,7 @@ export class AuthForm extends LitElement {
               @click=${() => {
                 this.mode = m;
                 this.error = "";
+                this.successMsg = "";
               }}
               class="py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-colors ${this.mode === m
                 ? "bg-white text-black"
@@ -173,15 +342,27 @@ export class AuthForm extends LitElement {
         </div>
 
         ${register
-          ? this.field(
-              t("Benutzername", "Username"),
-              "text",
-              this.username,
-              (v) => (this.username = v),
-              "username",
-            )
+          ? html`
+              ${this.field(
+                t("Benutzername", "Username"),
+                "text",
+                this.username,
+                (v) => (this.username = v),
+                "username",
+                "3-20 Zeichen (A-Z, 0-9, _)",
+              )}
+              ${this.field(
+                t("E-Mail (optional für Double Safe / Recovery)", "Email (optional for Double Safe)"),
+                "email",
+                this.email,
+                (v) => (this.email = v),
+                "email",
+                "deine@email.de",
+                false,
+              )}
+            `
           : this.field(
-              t("Benutzername", "Username"),
+              t("Benutzername oder E-Mail", "Username or Email"),
               "text",
               this.identifier,
               (v) => (this.identifier = v),
@@ -195,6 +376,25 @@ export class AuthForm extends LitElement {
           register ? "new-password" : "current-password",
         )}
 
+        ${!register
+          ? html`
+              <div class="flex justify-end -mt-1">
+                <button
+                  type="button"
+                  @click=${() => {
+                    this.mode = "recover";
+                    this.error = "";
+                    this.successMsg = "";
+                    this.recoveryStep = 1;
+                  }}
+                  class="text-xs text-white/50 hover:text-white hover:underline transition-colors cursor-pointer"
+                >
+                  Passwort vergessen? Account wiederherstellen
+                </button>
+              </div>
+            `
+          : nothing}
+
         ${this.error
           ? html`<div class="text-xs text-red-400 bg-red-500/10 border border-red-500/30 px-3 py-2 rounded-lg">
               ${this.error}
@@ -204,7 +404,7 @@ export class AuthForm extends LitElement {
         <button
           type="submit"
           ?disabled=${this.busy}
-          class="w-full px-6 py-3 text-sm font-bold uppercase tracking-wider rounded-xl bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white transition-colors"
+          class="w-full px-6 py-3 text-sm font-bold uppercase tracking-wider rounded-xl bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white transition-colors shadow-lg shadow-green-600/20"
         >
           ${register
             ? t("Konto erstellen", "Create account")

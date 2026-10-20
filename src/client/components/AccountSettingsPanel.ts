@@ -62,6 +62,15 @@ export class AccountSettingsPanel extends LitElement {
   @property({ attribute: false }) user: UserMeUser | null = null;
 
   @state() private email: string = "";
+  @state() private idCopied = false;
+  @state() private safeEmail = "";
+  @state() private verifyCodeInput = "";
+  @state() private safeBusy = false;
+  @state() private safeCodeSent = false;
+  @state() private safeError = "";
+  @state() private safeSuccess = "";
+  @state() private doubleSafeActive: boolean | null = null;
+  @state() private emailVerifiedActive: boolean | null = null;
   @state() private currentPassword = "";
   @state() private newPassword = "";
   @state() private showCurrentPassword = false;
@@ -105,6 +114,8 @@ export class AccountSettingsPanel extends LitElement {
   render(): TemplateResult {
     return html`
       <div class="flex flex-col gap-6">
+        ${this.renderPlayerIdCard()}
+        ${this.renderDoubleSafeCard()}
         ${this.renderPasswordChangeCard()}
         ${this.renderMarketingCard()} ${this.renderPrivacyCard()}
         <identity-token-card></identity-token-card>
@@ -112,6 +123,325 @@ export class AccountSettingsPanel extends LitElement {
       </div>
     `;
   }
+
+  private renderPlayerIdCard(): TemplateResult {
+    const rawId =
+      this.user?.publicId ||
+      this.player?.publicId ||
+      (this.player as { id?: string } | null)?.id ||
+      "—";
+    return html`
+      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div class="text-white font-medium text-base flex items-center gap-2">
+              <span class="text-xl">🆔</span>
+              <span>${t("Deine Spieler-ID", "Your Player ID")}</span>
+            </div>
+            <div class="text-white/50 text-sm mt-1">
+              ${t(
+                "Sämtliche Statistiken, Match-History (letzte 10 Spiele), Chats und Clans sind dauerhaft an diese eindeutige ID gebunden.",
+                "All stats, match history (last 10 games), chats, and clans are permanently tied to this unique ID.",
+              )}
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <span
+              class="font-mono font-bold text-yellow-300 text-sm sm:text-base bg-black/40 border border-white/20 px-3 py-1.5 rounded-lg tracking-widest select-all"
+            >
+              ${rawId}
+            </span>
+            <button
+              type="button"
+              @click=${() => {
+                if (rawId && rawId !== "—") {
+                  navigator.clipboard.writeText(rawId);
+                  this.idCopied = true;
+                  setTimeout(() => (this.idCopied = false), 2500);
+                }
+              }}
+              class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              ${this.idCopied
+                ? t("Kopiert! ✓", "Copied! ✓")
+                : t("Kopieren", "Copy")}
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderDoubleSafeCard(): TemplateResult {
+    const isVerified =
+      this.emailVerifiedActive ?? (this.user?.emailVerified ?? false);
+    const isDoubleSafe =
+      this.doubleSafeActive ?? (this.user?.doubleSafeEnabled ?? false);
+    const currentEmail = this.safeEmail || this.user?.email || "";
+
+    return html`
+      <div class="bg-white/5 rounded-xl border border-white/10 p-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex-1">
+            <div class="text-white font-medium text-base flex items-center gap-2">
+              <span class="text-xl">🛡️</span>
+              <span>${t("Account-Wiederherstellung & Double Safe", "Account Recovery & Double Safe")}</span>
+            </div>
+            <div class="text-white/50 text-sm mt-1">
+              ${t(
+                "Verknüpfe deine E-Mail-Adresse für Passwort-Reset und aktiviere Double Safe für doppelten Kontoschutz.",
+                "Link your email for password recovery and activate Double Safe for enhanced account protection.",
+              )}
+            </div>
+          </div>
+          ${isVerified
+            ? html`
+                <div class="flex items-center gap-3 bg-black/30 px-3.5 py-2 rounded-xl border border-white/10 shrink-0">
+                  <span class="text-xs text-white/80 font-medium">Double Safe:</span>
+                  <button
+                    role="switch"
+                    aria-checked=${isDoubleSafe ? "true" : "false"}
+                    ?disabled=${this.safeBusy}
+                    @click=${() => this.toggleDoubleSafe(!isDoubleSafe)}
+                    class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 disabled:opacity-60 ${isDoubleSafe
+                      ? "bg-green-600 shadow-md"
+                      : "bg-white/15"}"
+                  >
+                    <span
+                      class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ${isDoubleSafe
+                        ? "translate-x-6"
+                        : "translate-x-1"}"
+                    ></span>
+                  </button>
+                </div>
+              `
+            : nothing}
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-white/10 space-y-3">
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input
+              type="email"
+              .value=${currentEmail}
+              @input=${(e: Event) =>
+                (this.safeEmail = (e.target as HTMLInputElement).value)}
+              placeholder="deine-email@beispiel.de"
+              ?disabled=${this.safeBusy}
+              class="flex-1 px-3.5 py-2.5 bg-white/5 border border-white/15 focus:border-white/50 rounded-xl text-white text-sm outline-none"
+            />
+            <button
+              type="button"
+              ?disabled=${this.safeBusy || !currentEmail}
+              @click=${() => this.handleSendSafeCode(currentEmail)}
+              class="px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white transition-colors"
+            >
+              ${this.safeBusy
+                ? t("Senden...", "Sending...")
+                : t("Code anfordern", "Send Code")}
+            </button>
+          </div>
+
+          ${this.safeCodeSent || !isVerified
+            ? html`
+                <div class="flex flex-col sm:flex-row gap-2 items-center">
+                  <input
+                    type="text"
+                    maxlength="6"
+                    .value=${this.verifyCodeInput}
+                    @input=${(e: Event) =>
+                      (this.verifyCodeInput = (
+                        e.target as HTMLInputElement
+                      ).value)}
+                    placeholder="6-stelliger Code"
+                    class="w-full sm:w-48 px-3.5 py-2.5 font-mono tracking-widest text-center bg-white/5 border border-white/15 focus:border-white/50 rounded-xl text-white text-sm outline-none"
+                  />
+                  <button
+                    type="button"
+                    ?disabled=${this.safeBusy ||
+                    this.verifyCodeInput.trim().length !== 6}
+                    @click=${this.handleVerifySafeCode}
+                    class="w-full sm:w-auto px-4 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white transition-colors"
+                  >
+                    ${t("Code bestätigen", "Verify Code")}
+                  </button>
+                  <span class="text-xs text-white/50">
+                    ${isVerified
+                      ? html`<span class="text-green-400 font-medium"
+                          >✓ ${t("E-Mail verifiziert", "Email verified")}</span
+                        >`
+                      : t(
+                          "E-Mail noch nicht bestätigt",
+                          "Email not verified",
+                        )}
+                  </span>
+                </div>
+              `
+            : html`
+                <div class="text-xs text-green-400 font-medium flex items-center gap-1.5">
+                  <span>✓</span>
+                  <span
+                    >${t(
+                      "E-Mail ist verifiziert und geschützt.",
+                      "Email is verified and secured.",
+                    )}</span
+                  >
+                  ${isDoubleSafe
+                    ? html`<span class="text-blue-300 font-semibold"
+                        >• Double Safe AKTIV</span
+                      >`
+                    : html`<span class="text-yellow-400"
+                        >• Double Safe inaktiv</span
+                      >`}
+                </div>
+              `}
+
+          ${this.safeError
+            ? html`<div
+                class="text-xs text-red-400 bg-red-500/10 border border-red-500/30 px-3 py-2 rounded-lg"
+              >
+                ${this.safeError}
+              </div>`
+            : nothing}
+          ${this.safeSuccess
+            ? html`<div
+                class="text-xs text-green-400 bg-green-500/10 border border-green-500/30 px-3 py-2 rounded-lg"
+              >
+                ${this.safeSuccess}
+              </div>`
+            : nothing}
+        </div>
+      </div>
+    `;
+  }
+
+  private handleSendSafeCode = async (email: string): Promise<void> => {
+    if (!email || !email.includes("@")) {
+      this.safeError = t(
+        "Bitte gib eine gültige E-Mail-Adresse ein.",
+        "Please enter a valid email address.",
+      );
+      return;
+    }
+    const auth = await userAuth();
+    if (!auth) {
+      this.safeError = t("Nicht eingeloggt.", "Not logged in.");
+      return;
+    }
+    this.safeBusy = true;
+    this.safeError = "";
+    this.safeSuccess = "";
+    try {
+      const res = await fetch(`${getApiBase()}/auth/email/send-code`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth.jwt}`,
+        },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        this.safeCodeSent = true;
+        this.safeSuccess = t(
+          data.code
+            ? `Code generiert: ${data.code} (in Server-Logs & für Tests hinterlegt).`
+            : "Bestätigungscode wurde gesendet! Bitte prüfe dein Postfach.",
+          "Verification code sent! Please check your inbox.",
+        );
+      } else {
+        this.safeError = t(
+          "Fehler beim Senden des Codes.",
+          "Failed to send verification code.",
+        );
+      }
+    } catch {
+      this.safeError = t(
+        "Verbindungsfehler zum Server.",
+        "Connection error to server.",
+      );
+    } finally {
+      this.safeBusy = false;
+    }
+  };
+
+  private handleVerifySafeCode = async (): Promise<void> => {
+    const code = this.verifyCodeInput.trim();
+    if (code.length !== 6) {
+      this.safeError = t(
+        "Der Code muss 6 Ziffern lang sein.",
+        "Code must be 6 digits.",
+      );
+      return;
+    }
+    const auth = await userAuth();
+    if (!auth) {
+      this.safeError = t("Nicht eingeloggt.", "Not logged in.");
+      return;
+    }
+    this.safeBusy = true;
+    this.safeError = "";
+    this.safeSuccess = "";
+    try {
+      const res = await fetch(`${getApiBase()}/auth/email/verify-code`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth.jwt}`,
+        },
+        body: JSON.stringify({ code }),
+      });
+      if (res.ok) {
+        this.emailVerifiedActive = true;
+        this.doubleSafeActive = true;
+        this.safeSuccess = t(
+          "E-Mail erfolgreich verifiziert! Double Safe wurde automatisch aktiviert.",
+          "Email successfully verified! Double Safe has been enabled.",
+        );
+        this.verifyCodeInput = "";
+      } else {
+        this.safeError = t(
+          "Ungültiger oder abgelaufener Code.",
+          "Invalid or expired code.",
+        );
+      }
+    } catch {
+      this.safeError = t(
+        "Verbindungsfehler zum Server.",
+        "Connection error to server.",
+      );
+    } finally {
+      this.safeBusy = false;
+    }
+  };
+
+  private toggleDoubleSafe = async (enabled: boolean): Promise<void> => {
+    const auth = await userAuth();
+    if (!auth) return;
+    this.safeBusy = true;
+    try {
+      const res = await fetch(`${getApiBase()}/auth/double-safe/toggle`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth.jwt}`,
+        },
+        body: JSON.stringify({ enabled }),
+      });
+      if (res.ok) {
+        this.doubleSafeActive = enabled;
+        this.safeSuccess = enabled
+          ? t("Double Safe aktiviert.", "Double Safe enabled.")
+          : t("Double Safe deaktiviert.", "Double Safe disabled.");
+      }
+    } catch {
+      this.safeError = t(
+        "Fehler beim Ändern von Double Safe.",
+        "Failed to toggle Double Safe.",
+      );
+    } finally {
+      this.safeBusy = false;
+    }
+  };
 
   // Persistent marketing-consent control (client-driven consent). Mirrors the
   // post-login toast: a player can turn email updates on/off any time here, or

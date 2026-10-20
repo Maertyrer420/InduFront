@@ -1,13 +1,23 @@
 import { randomBytes, randomUUID, scrypt, timingSafeEqual, createHash, createHmac } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { dbDeleteUser, dbLoadUsers, dbUpsertUser } from "./DbStorage";
+
+export interface RecoveryCodeRecord {
+  code: string;
+  expiresAt: number;
+  purpose: "recovery" | "2fa" | "email_verify";
+}
 
 export interface UserRecord {
   id: string; // uuid, becomes the JWT subject / persistent id
-  publicId: string;
+  publicId: string; // permanent unique account identifier (e.g. IF-A1B2C3D4)
   username: string;
   usernameLower: string;
   email: string;
+  emailVerified?: boolean;
+  doubleSafeEnabled?: boolean;
+  recoveryCodes?: RecoveryCodeRecord[];
   passwordHash?: string; // "scrypt$salt$hash", absent for Google-only accounts
   googleId?: string;
   createdAt: number;
@@ -60,25 +70,70 @@ export async function verifyPassword(
 
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
 
-/** Small durable store: one JSON file, written atomically. */
+/** Small durable store: JSON file with atomic write + backup + PostgreSQL sync when DATABASE_URL is set. */
 export class AuthStore {
   private data: Data = { users: [], sessions: [] };
+  private backupFile: string;
 
   constructor(private readonly file: string) {
+    this.backupFile = this.file + ".backup";
     fs.mkdirSync(path.dirname(file), { recursive: true });
+
+    let loaded = false;
     if (fs.existsSync(file)) {
       try {
-        this.data = JSON.parse(fs.readFileSync(file, "utf8")) as Data;
-      } catch {
-        this.data = { users: [], sessions: [] };
+        const raw = fs.readFileSync(file, "utf8");
+        this.data = JSON.parse(raw) as Data;
+        loaded = true;
+      } catch (err) {
+        console.warn(`[auth-store] Failed to parse ${file}, attempting backup...`);
       }
+    }
+
+    if (!loaded && fs.existsSync(this.backupFile)) {
+      try {
+        const raw = fs.readFileSync(this.backupFile, "utf8");
+        this.data = JSON.parse(raw) as Data;
+        console.log(`[auth-store] Restored from backup: ${this.backupFile}`);
+      } catch {}
+    }
+
+    // Try loading / merging from PostgreSQL if DATABASE_URL is provided
+    void this.syncFromDb();
+  }
+
+  private async syncFromDb(): Promise<void> {
+    try {
+      const dbUsers = await dbLoadUsers();
+      if (dbUsers && dbUsers.length > 0) {
+        const byId = new Map(this.data.users.map((u) => [u.id, u]));
+        for (const u of dbUsers) {
+          byId.set(u.id, u);
+        }
+        this.data.users = Array.from(byId.values());
+        this.save(false);
+        console.log(`[auth-store] Synchronized ${dbUsers.length} users from PostgreSQL.`);
+      }
+    } catch (err: any) {
+      console.warn("[auth-store] syncFromDb:", err.message);
     }
   }
 
-  private save(): void {
-    const tmp = this.file + ".tmp";
-    fs.writeFileSync(tmp, JSON.stringify(this.data));
-    fs.renameSync(tmp, this.file);
+  private save(syncDb = true, userToSync?: UserRecord): void {
+    try {
+      const json = JSON.stringify(this.data, null, 2);
+      const tmp = this.file + ".tmp";
+      fs.writeFileSync(tmp, json);
+      fs.renameSync(tmp, this.file);
+      // Keep durable backup
+      fs.writeFileSync(this.backupFile, json);
+    } catch (err) {
+      console.warn("[auth-store] Error writing user file:", err);
+    }
+
+    if (syncDb && userToSync) {
+      dbUpsertUser(userToSync).catch(() => {});
+    }
   }
 
   byId(id: string) {
@@ -99,9 +154,9 @@ export class AuthStore {
     const p = publicId.trim().toLowerCase();
     return this.data.users.find((u) => u.publicId.toLowerCase() === p);
   }
-  /** Resolve a target string by either publicId or username (case-insensitive). */
+  /** Resolve a target string by either publicId, username or email (case-insensitive). */
   byPublicIdOrUsername(target: string) {
-    return this.byPublicId(target) ?? this.byUsername(target);
+    return this.byPublicId(target) ?? this.byUsername(target) ?? this.byEmail(target);
   }
 
   updateUsername(userId: string, newUsername: string): UserRecord | undefined {
@@ -109,7 +164,7 @@ export class AuthStore {
     if (!u) return undefined;
     u.username = newUsername.trim();
     u.usernameLower = u.username.toLowerCase();
-    this.save();
+    this.save(true, u);
     return u;
   }
 
@@ -117,7 +172,7 @@ export class AuthStore {
     const u = this.byId(userId);
     if (!u) return false;
     u.passwordHash = newHash;
-    this.save();
+    this.save(true, u);
     return true;
   }
 
@@ -142,7 +197,8 @@ export class AuthStore {
     if (!this.data.deletedUserIds.includes(userId)) {
       this.data.deletedUserIds.push(userId);
     }
-    this.save();
+    this.save(false);
+    dbDeleteUser(userId).catch(() => {});
     return true;
   }
 
@@ -152,7 +208,7 @@ export class AuthStore {
     u.noticesSeen ??= [];
     if (!u.noticesSeen.includes(notice)) {
       u.noticesSeen.push(notice);
-      this.save();
+      this.save(true, u);
     }
   }
 
@@ -164,7 +220,70 @@ export class AuthStore {
     const u = this.byId(userId);
     if (!u) return;
     u[field] = hidden;
-    this.save();
+    this.save(true, u);
+  }
+
+  // ---- EMAIL & DOUBLE SAFE ----
+  setEmail(userId: string, email: string, verified = false): UserRecord | null {
+    const u = this.byId(userId);
+    if (!u) return null;
+    u.email = email.trim().toLowerCase();
+    u.emailVerified = verified;
+    this.save(true, u);
+    return u;
+  }
+
+  setDoubleSafe(userId: string, enabled: boolean): UserRecord | null {
+    const u = this.byId(userId);
+    if (!u) return null;
+    u.doubleSafeEnabled = enabled;
+    this.save(true, u);
+    return u;
+  }
+
+  createRecoveryCode(
+    identifier: string,
+    purpose: "recovery" | "2fa" | "email_verify" = "recovery",
+  ): { user: UserRecord; code: string } | null {
+    const u = this.byPublicIdOrUsername(identifier);
+    if (!u) return null;
+
+    // Generate secure 6-digit number
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 mins
+
+    u.recoveryCodes ??= [];
+    // Keep at most 5 valid codes
+    u.recoveryCodes = u.recoveryCodes.filter((c) => c.expiresAt > Date.now());
+    u.recoveryCodes.push({ code, expiresAt, purpose });
+
+    this.save(true, u);
+    return { user: u, code };
+  }
+
+  verifyRecoveryCode(
+    identifier: string,
+    code: string,
+    purpose?: "recovery" | "2fa" | "email_verify",
+  ): UserRecord | null {
+    const u = this.byPublicIdOrUsername(identifier);
+    if (!u || !u.recoveryCodes) return null;
+
+    const trimmedCode = code.trim();
+    const now = Date.now();
+    const idx = u.recoveryCodes.findIndex(
+      (c) =>
+        c.code === trimmedCode &&
+        c.expiresAt > now &&
+        (!purpose || c.purpose === purpose),
+    );
+
+    if (idx < 0) return null;
+
+    // Consume the code
+    u.recoveryCodes.splice(idx, 1);
+    this.save(true, u);
+    return u;
   }
 
   sendFriendRequest(
@@ -187,7 +306,7 @@ export class AuthStore {
     target.incomingRequests ??= [];
     target.outgoingRequests ??= [];
 
-    // If the target already requested us, auto-accept!
+    // If target already requested, accept
     const incomingIdx = me.incomingRequests.findIndex(
       (r) => r.publicId === target.publicId,
     );
@@ -198,7 +317,8 @@ export class AuthStore {
       );
       if (!me.friends.includes(target.publicId)) me.friends.push(target.publicId);
       if (!target.friends.includes(me.publicId)) target.friends.push(me.publicId);
-      this.save();
+      this.save(true, me);
+      this.save(true, target);
       return { ok: true, status: "accepted" };
     }
 
@@ -209,7 +329,8 @@ export class AuthStore {
     const now = Date.now();
     me.outgoingRequests.push({ publicId: target.publicId, createdAt: now });
     target.incomingRequests.push({ publicId: me.publicId, createdAt: now });
-    this.save();
+    this.save(true, me);
+    this.save(true, target);
     return { ok: true, status: "requested" };
   }
 
@@ -228,8 +349,9 @@ export class AuthStore {
     me.friends ??= [];
     other.friends ??= [];
     if (!me.friends.includes(other.publicId)) me.friends.push(other.publicId);
-    if (!other.friends.includes(me.publicId)) targetPush(other.friends, me.publicId);
-    this.save();
+    if (!other.friends.includes(me.publicId)) other.friends.push(me.publicId);
+    this.save(true, me);
+    this.save(true, other);
     return true;
   }
 
@@ -237,27 +359,16 @@ export class AuthStore {
     const me = this.byId(userId);
     const other = this.byPublicId(otherPublicId);
     if (!me || !other) return false;
-    const beforeIn = me.incomingRequests?.length ?? 0;
-    const beforeOut = me.outgoingRequests?.length ?? 0;
-    me.incomingRequests = (me.incomingRequests ?? []).filter(
-      (r) => r.publicId !== other.publicId,
-    );
-    me.outgoingRequests = (me.outgoingRequests ?? []).filter(
-      (r) => r.publicId !== other.publicId,
-    );
-    other.incomingRequests = (other.incomingRequests ?? []).filter(
-      (r) => r.publicId !== me.publicId,
-    );
-    other.outgoingRequests = (other.outgoingRequests ?? []).filter(
-      (r) => r.publicId !== me.publicId,
-    );
-    if (
-      me.incomingRequests.length === beforeIn &&
-      me.outgoingRequests.length === beforeOut
-    ) {
-      return false;
-    }
-    this.save();
+    me.incomingRequests ??= [];
+    me.outgoingRequests ??= [];
+    other.incomingRequests ??= [];
+    other.outgoingRequests ??= [];
+    me.incomingRequests = me.incomingRequests.filter((r) => r.publicId !== other.publicId);
+    me.outgoingRequests = me.outgoingRequests.filter((r) => r.publicId !== other.publicId);
+    other.incomingRequests = other.incomingRequests.filter((r) => r.publicId !== me.publicId);
+    other.outgoingRequests = other.outgoingRequests.filter((r) => r.publicId !== me.publicId);
+    this.save(true, me);
+    this.save(true, other);
     return true;
   }
 
@@ -270,7 +381,8 @@ export class AuthStore {
     if (!me.friends.includes(other.publicId)) return false;
     me.friends = me.friends.filter((f) => f !== other.publicId);
     other.friends = other.friends.filter((f) => f !== me.publicId);
-    this.save();
+    this.save(true, me);
+    this.save(true, other);
     return true;
   }
 
@@ -290,21 +402,29 @@ export class AuthStore {
       existing.usernameLower = p.username.trim().toLowerCase();
       existing.email = p.email.trim().toLowerCase();
       if (p.passwordHash) existing.passwordHash = p.passwordHash;
-      this.save();
+      this.save(true, existing);
       return existing;
     }
+
+    // Generate unique permanent player ID with IF- prefix
+    const publicId =
+      p.publicId ??
+      `IF-${randomBytes(4).toString("hex").toUpperCase()}`;
+
     const user: UserRecord = {
       id,
-      publicId: p.publicId ?? randomBytes(5).toString("hex"),
+      publicId,
       username: p.username.trim(),
       usernameLower: p.username.trim().toLowerCase(),
       email: p.email.trim().toLowerCase(),
+      emailVerified: false,
+      doubleSafeEnabled: false,
       passwordHash: p.passwordHash,
       googleId: p.googleId,
       createdAt: p.createdAt ?? Date.now(),
     };
     this.data.users.push(user);
-    this.save();
+    this.save(true, user);
     return user;
   }
 
@@ -312,7 +432,7 @@ export class AuthStore {
     const u = this.byId(userId);
     if (u) {
       u.googleId = googleId;
-      this.save();
+      this.save(true, u);
     }
   }
 
@@ -331,7 +451,7 @@ export class AuthStore {
       userId,
       expiresAt,
     });
-    this.save();
+    this.save(false);
     return token;
   }
 
@@ -348,13 +468,14 @@ export class AuthStore {
     if (parts.length === 3) {
       const [userId, expStr, sig] = parts;
       const expiresAt = parseInt(expStr, 10);
-      if (expiresAt > now) {
+      if (Number.isFinite(expiresAt) && expiresAt >= now) {
         const authSecret = process.env.AUTH_SECRET ?? "indufront_persistent_auth_secret_v1_2026";
         const expectedSig = createHmac("sha256", authSecret)
           .update(`${userId}:${expiresAt}`)
           .digest("base64url");
         if (sig === expectedSig) {
-          return this.byId(userId);
+          const u = this.byId(userId);
+          if (u) return u;
         }
       }
     }
@@ -364,15 +485,11 @@ export class AuthStore {
   deleteSession(token: string): void {
     const h = sha(token);
     this.data.sessions = this.data.sessions.filter((s) => s.tokenHash !== h);
-    this.save();
+    this.save(false);
   }
 
   deleteAllSessions(userId: string): void {
     this.data.sessions = this.data.sessions.filter((s) => s.userId !== userId);
-    this.save();
+    this.save(false);
   }
-}
-
-function targetPush(arr: string[], item: string) {
-  if (!arr.includes(item)) arr.push(item);
 }

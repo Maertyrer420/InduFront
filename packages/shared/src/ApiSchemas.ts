@@ -539,6 +539,9 @@ export const UserMeResponseSchema = z.object({
     google: GoogleUserSchema.optional(),
     email: z.string().optional(),
     steam: SteamUserSchema.optional(),
+    publicId: z.string().optional(),
+    emailVerified: z.boolean().optional(),
+    doubleSafeEnabled: z.boolean().optional(),
   }),
   // The caller's active account ban, shown to them (localized client-side), or
   // null. `category` is a server enum but kept as a string here so an

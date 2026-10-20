@@ -5,22 +5,14 @@ import { ClientEnv } from "./ClientEnv";
 // import cycle; Api.ts re-exports both for its existing importers.
 
 export function getApiBase() {
-  const domainname = getAudience();
-
-  if (domainname === "localhost") {
-    const apiDomain = process.env.API_DOMAIN;
-    if (apiDomain) {
-      return `https://${apiDomain}`;
-    }
+  if (typeof localStorage !== "undefined") {
     const override = localStorage.getItem("apiHost");
     if (override) return override;
-    // Self-hosted auth server (src/server/auth), reached through the page's
-    // own origin (vite proxies /idp to :8787) so friends on a LAN or behind
-    // a tunnel need only the one URL, and the session cookie is same-site.
+  }
+  if (typeof window !== "undefined" && window.location) {
     return `${window.location.origin}/idp`;
   }
-
-  return `https://api.${domainname}`;
+  return "http://localhost:8787";
 }
 
 export function getAudience() {

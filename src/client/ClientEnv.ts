@@ -245,14 +245,14 @@ export class ClientEnv {
     return ClientEnv.get().gitCommit;
   }
   static jwtIssuer(): string {
+    if (typeof window !== "undefined" && window.location) {
+      return `${window.location.origin}/idp`;
+    }
     const audience = ClientEnv.jwtAudience();
     if (audience === "localhost") {
-      if (typeof window !== "undefined" && window.location) {
-        return `${window.location.origin}/idp`;
-      }
       return "http://localhost:8787";
     }
-    return `https://api.${audience}`;
+    return `https://${audience}/idp`;
   }
   static async jwkPublicKey(): Promise<JWK> {
     if (ClientEnv.publicKey) return ClientEnv.publicKey;
