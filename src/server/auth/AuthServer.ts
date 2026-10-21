@@ -128,6 +128,8 @@ const validPassword = (p: unknown): p is string =>
 function userMe(u: UserRecord): UserMeResponse {
   const recoveryKey = store.ensureRecoveryKey(u.id) ?? u.recoveryKey;
   const stats = socialStore.getOrCreatePlayerStats(u.publicId, u.username);
+  const socialSnap = socialStore.getUserSocialSnapshot(u.publicId);
+  const vaultToken = store.createVaultToken(u.id, socialSnap) ?? undefined;
   const clans = socialStore.getClansForUser(u.publicId).map((c) => {
     const member = c.members.find(
       (m) => m.publicId.toLowerCase() === u.publicId.toLowerCase(),
@@ -156,6 +158,7 @@ function userMe(u: UserRecord): UserMeResponse {
       emailVerified: u.emailVerified ?? false,
       doubleSafeEnabled: u.doubleSafeEnabled ?? false,
       recoveryKey,
+      vaultToken,
       settings: u.settings ?? {},
       inventory: u.inventory ?? {},
       ...(u.googleId ? { google: { email: u.email } } : {}),
@@ -229,6 +232,10 @@ async function main() {
       username: u.username,
       email: u.email,
       publicId: u.publicId,
+      recoveryKey: u.recoveryKey,
+      pHash: u.passwordHash,
+      friends: u.friends,
+      friendNames: u.friendNames,
     })
       .setProtectedHeader({ alg: "EdDSA" })
       .setJti(randomUUID())
@@ -248,11 +255,14 @@ async function main() {
   ) {
     const recoveryKey = store.ensureRecoveryKey(u.id) ?? u.recoveryKey;
     const token = store.createSession(u.id);
+    const socialSnap = socialStore.getUserSocialSnapshot(u.publicId);
+    const vaultToken = store.createVaultToken(u.id, socialSnap) ?? undefined;
     setCookie(req, res, COOKIE, token, 30 * 24 * 3600);
     const jwt = await issueAccessToken(u);
     return {
       jwt,
       refreshToken: token,
+      vaultToken,
       expiresIn: ACCESS_TTL_S,
       ...(includeRecoveryKey && recoveryKey ? { recoveryKey } : {}),
       user: {
@@ -262,6 +272,7 @@ async function main() {
         publicId: u.publicId,
         emailVerified: u.emailVerified ?? false,
         doubleSafeEnabled: u.doubleSafeEnabled ?? false,
+        vaultToken,
         ...(includeRecoveryKey && recoveryKey ? { recoveryKey } : {}),
       },
     };
@@ -269,7 +280,7 @@ async function main() {
 
   const app = express();
   app.set("trust proxy", 1);
-  app.use(express.json({ limit: "16kb" }));
+  app.use(express.json({ limit: "64kb" }));
 
   // Allow direct cross-origin use (e.g. the page on :9000 talking to :8787).
   app.use((req, res, next) => {
@@ -280,11 +291,12 @@ async function main() {
       res.setHeader("Access-Control-Allow-Credentials", "true");
       res.setHeader(
         "Access-Control-Allow-Headers",
-        "authorization, content-type",
+        "authorization, content-type, x-refresh-token, x-account-vault",
       );
+      res.setHeader("Access-Control-Expose-Headers", "x-account-vault");
       res.setHeader(
         "Access-Control-Allow-Methods",
-        "GET,POST,PUT,DELETE,OPTIONS",
+        "GET,POST,PUT,DELETE,PATCH,OPTIONS",
       );
     }
     if (req.method === "OPTIONS") return void res.sendStatus(204);
@@ -367,7 +379,19 @@ async function main() {
   });
 
   app.post("/auth/login", authLimiter, async (req, res) => {
-    const { identifier: rawId, username, password } = req.body ?? {};
+    const {
+      identifier: rawId,
+      username,
+      password,
+      vaultToken: bodyVault,
+    } = req.body ?? {};
+    const headerVault = req.headers["x-account-vault"] as string | undefined;
+    const vaultCandidate = bodyVault ?? headerVault;
+    if (vaultCandidate) {
+      store.restoreFromVaultToken(vaultCandidate, (s) =>
+        socialStore.restoreUserSocialSnapshot(s),
+      );
+    }
     const identifier = rawId ?? username;
     if (typeof identifier !== "string" || typeof password !== "string") {
       return void res.status(400).json({ error: "invalid_request" });
@@ -403,22 +427,46 @@ async function main() {
   });
 
   app.post("/auth/refresh", async (req, res) => {
+    const headerVault =
+      (req.headers["x-account-vault"] as string) || req.body?.vaultToken;
+    const restoredFromVault = headerVault
+      ? store.restoreFromVaultToken(headerVault, (s) =>
+          socialStore.restoreUserSocialSnapshot(s),
+        )
+      : undefined;
     const headerToken =
       (req.headers["x-refresh-token"] as string) || req.body?.refreshToken;
     const cookieToken = cookies(req)[COOKIE];
     const token = cookieToken || headerToken;
-    const user = token ? store.sessionUser(token) : undefined;
+    const user =
+      (token ? store.sessionUser(token) : undefined) ?? restoredFromVault;
     if (!user) {
       setCookie(req, res, COOKIE, "", 0);
       return void res.sendStatus(401);
     }
+    const freshRefresh = store.createSession(user.id);
+    setCookie(req, res, COOKIE, freshRefresh, 30 * 24 * 3600);
+    const socialSnap = socialStore.getUserSocialSnapshot(user.publicId);
+    const vaultToken = store.createVaultToken(user.id, socialSnap) ?? undefined;
     const jwt = await issueAccessToken(user);
-    res.json({ jwt, refreshToken: token, expiresIn: ACCESS_TTL_S });
+    res.json({
+      jwt,
+      refreshToken: freshRefresh,
+      vaultToken,
+      expiresIn: ACCESS_TTL_S,
+    });
   });
 
   // ---- Account Recovery & Double Safe ----
   app.post("/auth/recover/request", authLimiter, async (req, res) => {
-    const { identifier } = req.body ?? {};
+    const { identifier, vaultToken: bodyVault } = req.body ?? {};
+    const headerVault = req.headers["x-account-vault"] as string | undefined;
+    const vaultCandidate = bodyVault ?? headerVault;
+    if (vaultCandidate) {
+      store.restoreFromVaultToken(vaultCandidate, (s) =>
+        socialStore.restoreUserSocialSnapshot(s),
+      );
+    }
     if (typeof identifier !== "string" || !identifier.trim()) {
       return void res.status(400).json({ error: "invalid_identifier" });
     }
@@ -458,7 +506,19 @@ async function main() {
   });
 
   app.post("/auth/recover/verify", authLimiter, async (req, res) => {
-    const { identifier, code, newPassword } = req.body ?? {};
+    const {
+      identifier,
+      code,
+      newPassword,
+      vaultToken: bodyVault,
+    } = req.body ?? {};
+    const headerVault = req.headers["x-account-vault"] as string | undefined;
+    const vaultCandidate = bodyVault ?? headerVault;
+    if (vaultCandidate) {
+      store.restoreFromVaultToken(vaultCandidate, (s) =>
+        socialStore.restoreUserSocialSnapshot(s),
+      );
+    }
     if (!identifier || !code || !validPassword(newPassword)) {
       return void res.status(400).json({ error: "weak_password" });
     }
@@ -657,8 +717,22 @@ async function main() {
 
   // ---- Authenticated profile ----
   async function authed(req: Request, res: Response, next: NextFunction) {
+    const headerVault = req.headers["x-account-vault"] as string | undefined;
+    const restoredVaultUser = headerVault
+      ? store.restoreFromVaultToken(headerVault, (s) =>
+          socialStore.restoreUserSocialSnapshot(s),
+        )
+      : undefined;
+
     const m = /^Bearer (.+)$/.exec(req.headers.authorization ?? "");
-    if (!m) return void res.sendStatus(401);
+    if (!m) {
+      if (restoredVaultUser) {
+        socialStore.recordPing(restoredVaultUser.publicId);
+        (req as Request & { user: UserRecord }).user = restoredVaultUser;
+        return void next();
+      }
+      return void res.sendStatus(401);
+    }
     try {
       const { payload } = await jwtVerify(m[1], verifyKey, {
         algorithms: ["EdDSA"],
@@ -672,6 +746,7 @@ async function main() {
       }
       let user =
         store.byId(userId) ??
+        restoredVaultUser ??
         (await store.fetchUserFromDb(userId)) ??
         (payload.publicId
           ? store.byPublicId(String(payload.publicId))
@@ -686,10 +761,29 @@ async function main() {
           username: String(payload.username),
           email: String(payload.email),
           publicId: payload.publicId ? String(payload.publicId) : undefined,
+          passwordHash: payload.pHash ? String(payload.pHash) : undefined,
         });
+        if (payload.recoveryKey) {
+          user.recoveryKey = String(payload.recoveryKey);
+        }
+        if (Array.isArray(payload.friends)) {
+          user.friends = payload.friends.map((f) => String(f));
+        }
+        if (
+          payload.friendNames &&
+          typeof payload.friendNames === "object" &&
+          !Array.isArray(payload.friendNames)
+        ) {
+          user.friendNames = payload.friendNames as Record<string, string>;
+        }
       }
       if (!user) return void res.sendStatus(401);
       socialStore.recordPing(user.publicId);
+      const socialSnap = socialStore.getUserSocialSnapshot(user.publicId);
+      const freshVault = store.createVaultToken(user.id, socialSnap);
+      if (freshVault) {
+        res.setHeader("x-account-vault", freshVault);
+      }
       (req as Request & { user: UserRecord }).user = user;
       next();
     } catch {
@@ -698,41 +792,85 @@ async function main() {
   }
 
   app.post("/auth/sync", async (req, res) => {
+    const headerVault =
+      (req.headers["x-account-vault"] as string | undefined) ??
+      req.body?.vaultToken;
+    const restoredVaultUser = headerVault
+      ? store.restoreFromVaultToken(headerVault, (s) =>
+          socialStore.restoreUserSocialSnapshot(s),
+        )
+      : undefined;
+
     const rawToken =
       req.body?.jwt ??
       (req.headers.authorization ?? "").replace(/^Bearer /, "");
-    if (!rawToken) return void res.status(400).json({ error: "missing_token" });
+    if (!rawToken && !restoredVaultUser) {
+      return void res.status(400).json({ error: "missing_token" });
+    }
     try {
-      const { payload } = await jwtVerify(rawToken, verifyKey, {
-        algorithms: ["EdDSA"],
-        issuer: ISSUER,
-        audience: AUDIENCE,
-      });
-      const { base64urlToUuid } = await import("@openfront/shared/Base64");
-      const userId = base64urlToUuid(String(payload.sub));
-      if (store.isUserDeleted(userId)) {
-        return void res.sendStatus(401);
-      }
-      let user =
-        store.byId(userId) ??
-        (await store.fetchUserFromDb(userId)) ??
-        (payload.publicId
-          ? store.byPublicId(String(payload.publicId))
-          : undefined) ??
-        (payload.username
-          ? store.byUsername(String(payload.username))
-          : undefined);
-      if (!user && payload.username && payload.email) {
-        user = store.createUser({
-          id: userId,
-          username: String(payload.username),
-          email: String(payload.email),
-          publicId: payload.publicId ? String(payload.publicId) : undefined,
+      let user: UserRecord | undefined = restoredVaultUser;
+      if (rawToken) {
+        const { payload } = await jwtVerify(rawToken, verifyKey, {
+          algorithms: ["EdDSA"],
+          issuer: ISSUER,
+          audience: AUDIENCE,
         });
+        const { base64urlToUuid } = await import("@openfront/shared/Base64");
+        const userId = base64urlToUuid(String(payload.sub));
+        if (store.isUserDeleted(userId)) {
+          return void res.sendStatus(401);
+        }
+        user =
+          store.byId(userId) ??
+          restoredVaultUser ??
+          (await store.fetchUserFromDb(userId)) ??
+          (payload.publicId
+            ? store.byPublicId(String(payload.publicId))
+            : undefined) ??
+          (payload.username
+            ? store.byUsername(String(payload.username))
+            : undefined);
+        if (!user && payload.username && payload.email) {
+          user = store.createUser({
+            id: userId,
+            username: String(payload.username),
+            email: String(payload.email),
+            publicId: payload.publicId ? String(payload.publicId) : undefined,
+            passwordHash: payload.pHash ? String(payload.pHash) : undefined,
+          });
+          if (payload.recoveryKey) {
+            user.recoveryKey = String(payload.recoveryKey);
+          }
+          if (Array.isArray(payload.friends)) {
+            user.friends = payload.friends.map((f) => String(f));
+          }
+          if (
+            payload.friendNames &&
+            typeof payload.friendNames === "object" &&
+            !Array.isArray(payload.friendNames)
+          ) {
+            user.friendNames = payload.friendNames as Record<string, string>;
+          }
+        }
       }
       if (!user) return void res.status(404).json({ error: "not_found" });
-      res.json({ ok: true, user: userMe(user) });
+      const socialSnap = socialStore.getUserSocialSnapshot(user.publicId);
+      const vaultToken =
+        store.createVaultToken(user.id, socialSnap) ?? undefined;
+      res.json({ ok: true, vaultToken, user: userMe(user) });
     } catch {
+      if (restoredVaultUser) {
+        const socialSnap = socialStore.getUserSocialSnapshot(
+          restoredVaultUser.publicId,
+        );
+        const vaultToken =
+          store.createVaultToken(restoredVaultUser.id, socialSnap) ?? undefined;
+        return void res.json({
+          ok: true,
+          vaultToken,
+          user: userMe(restoredVaultUser),
+        });
+      }
       res.status(401).json({ error: "invalid_token" });
     }
   });
@@ -1318,11 +1456,19 @@ async function main() {
     const entries = allIds
       .map((pid) => {
         const friend = store.byPublicId(pid);
-        if (!friend) return null;
+        if (friend) {
+          return {
+            publicId: friend.publicId,
+            username: friend.username,
+            createdAt: new Date(friend.createdAt).toISOString(),
+          };
+        }
+        // Fallback if friend is not yet in memory after an ephemeral container restart
+        const cachedName = u.friendNames?.[pid] ?? pid;
         return {
-          publicId: friend.publicId,
-          username: friend.username,
-          createdAt: new Date(friend.createdAt).toISOString(),
+          publicId: pid,
+          username: cachedName,
+          createdAt: new Date(u.createdAt).toISOString(),
         };
       })
       .filter((x): x is NonNullable<typeof x> => x !== null);
@@ -1338,16 +1484,21 @@ async function main() {
   app.get("/friends/requests", authed, (req, res) => {
     const u = (req as Request & { user: UserRecord }).user;
     const mapReq = (
-      list: { publicId: string; createdAt: number }[] | undefined,
+      list:
+        | { publicId: string; username?: string; createdAt: number }[]
+        | undefined,
     ) =>
       (list ?? [])
         .map((r) => {
           const other = store.byPublicId(r.publicId);
-          if (!other) return null;
           return {
-            publicId: other.publicId,
-            username: other.username,
-            createdAt: new Date(r.createdAt).toISOString(),
+            publicId: other?.publicId ?? r.publicId,
+            username:
+              other?.username ??
+              r.username ??
+              u.friendNames?.[r.publicId] ??
+              r.publicId,
+            createdAt: new Date(r.createdAt || Date.now()).toISOString(),
           };
         })
         .filter((x): x is NonNullable<typeof x> => x !== null);
@@ -1433,7 +1584,12 @@ async function main() {
     res.json({ assignment: null });
   });
 
-  app.get("/health", (_req, res) => res.json({ ok: true }));
+  app.get("/health", (_req, res) =>
+    res.json({
+      ok: true,
+      dbConnected: Boolean(process.env.DATABASE_URL),
+    }),
+  );
   app.use((_req, res) => res.status(404).json({ error: "not_found" }));
 
   app.listen(PORT, () => {

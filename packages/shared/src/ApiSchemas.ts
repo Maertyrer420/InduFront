@@ -543,6 +543,7 @@ export const UserMeResponseSchema = z.object({
     emailVerified: z.boolean().optional(),
     doubleSafeEnabled: z.boolean().optional(),
     recoveryKey: z.string().optional(),
+    vaultToken: z.string().optional(),
     settings: z.record(z.string(), z.string()).optional(),
     inventory: z
       .object({

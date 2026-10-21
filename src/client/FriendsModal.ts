@@ -1,5 +1,6 @@
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { getLocalVaultToken, saveLocalVaultToken } from "./AccountVault";
 import { getApiBase } from "./Api";
 import { getAuthHeader } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
@@ -97,14 +98,30 @@ export class FriendsModal extends BaseModal {
     }
   }
 
+  private async authHeaders(
+    extra: Record<string, string> = {},
+  ): Promise<Record<string, string>> {
+    const vault =
+      typeof getLocalVaultToken === "function" ? getLocalVaultToken() : null;
+    const h: Record<string, string> = {
+      Authorization: await getAuthHeader(),
+      ...extra,
+    };
+    if (vault) h["x-account-vault"] = vault;
+    return h;
+  }
+
+  private captureVault(res: Response) {
+    const v = res.headers?.get?.("x-account-vault");
+    if (v && typeof saveLocalVaultToken === "function") saveLocalVaultToken(v);
+  }
+
   private async refreshPresence() {
     try {
       const res = await fetch(`${getApiBase()}/presence/summary`, {
-        headers: {
-          Accept: "application/json",
-          Authorization: await getAuthHeader(),
-        },
+        headers: await this.authHeaders({ Accept: "application/json" }),
       });
+      this.captureVault(res);
       if (res.ok) {
         const data = await res.json();
         const onlineList = data.onlineFriends ?? [];
@@ -129,12 +146,10 @@ export class FriendsModal extends BaseModal {
       const res = await fetch(
         `${getApiBase()}/friends/chat/${encodeURIComponent(friendId)}`,
         {
-          headers: {
-            Accept: "application/json",
-            Authorization: await getAuthHeader(),
-          },
+          headers: await this.authHeaders({ Accept: "application/json" }),
         },
       );
+      this.captureVault(res);
       if (res.ok) {
         const data = await res.json();
         this.chatMessages = data.messages ?? [];
@@ -162,13 +177,13 @@ export class FriendsModal extends BaseModal {
         `${getApiBase()}/friends/chat/${encodeURIComponent(this.activeFriendChat.publicId)}`,
         {
           method: "POST",
-          headers: {
+          headers: await this.authHeaders({
             "Content-Type": "application/json",
-            Authorization: await getAuthHeader(),
-          },
+          }),
           body: JSON.stringify({ text }),
         },
       );
+      this.captureVault(res);
       if (res.ok) {
         this.chatInput = "";
         await this.fetchDirectChat(this.activeFriendChat.publicId, false);

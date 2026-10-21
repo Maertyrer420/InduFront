@@ -342,6 +342,86 @@ export class GameSocialStore {
     );
   }
 
+  public getUserSocialSnapshot(publicId: string): {
+    stats: PlayerStatsRecord | undefined;
+    clans: ClanRecord[];
+    directChat: DirectChatMessage[];
+  } {
+    const p = publicId.toLowerCase();
+    const stats = this.data.playerStats[p];
+    const clans = this.getClansForUser(publicId).map((c) => ({
+      ...c,
+      chat: (c.chat ?? []).slice(-50),
+    }));
+    const directChat = this.data.directChat
+      .filter((m) => m.fromId.toLowerCase() === p || m.toId.toLowerCase() === p)
+      .slice(-50);
+    return { stats, clans, directChat };
+  }
+
+  public restoreUserSocialSnapshot(snap?: {
+    stats?: PlayerStatsRecord;
+    clans?: ClanRecord[];
+    directChat?: DirectChatMessage[];
+  }): void {
+    if (!snap) return;
+    let changed = false;
+
+    if (snap.stats?.publicId) {
+      const key = snap.stats.publicId.toLowerCase();
+      const existing = this.data.playerStats[key];
+      if (!existing || (snap.stats.games ?? 0) > (existing.games ?? 0)) {
+        this.data.playerStats[key] = snap.stats;
+        changed = true;
+      }
+    }
+
+    for (const incomingClan of snap.clans ?? []) {
+      if (!incomingClan?.tag) continue;
+      const existing = this.getClan(incomingClan.tag);
+      if (!existing) {
+        this.data.clans.push(incomingClan);
+        changed = true;
+      } else {
+        // Merge members & chat
+        const memberMap = new Map<string, ClanMemberRecord>();
+        for (const m of existing.members ?? []) {
+          memberMap.set(m.publicId.toLowerCase(), m);
+        }
+        for (const m of incomingClan.members ?? []) {
+          if (!memberMap.has(m.publicId.toLowerCase())) {
+            memberMap.set(m.publicId.toLowerCase(), m);
+            changed = true;
+          }
+        }
+        existing.members = Array.from(memberMap.values());
+        const chatMap = new Map<string, ClanChatMessage>();
+        for (const msg of [
+          ...(existing.chat ?? []),
+          ...(incomingClan.chat ?? []),
+        ]) {
+          if (msg?.id) chatMap.set(msg.id, msg);
+        }
+        existing.chat = Array.from(chatMap.values()).slice(-500);
+      }
+    }
+
+    if (Array.isArray(snap.directChat) && snap.directChat.length > 0) {
+      const dmMap = new Map<string, DirectChatMessage>();
+      for (const m of [...this.data.directChat, ...snap.directChat]) {
+        if (m?.id) dmMap.set(m.id, m);
+      }
+      if (dmMap.size !== this.data.directChat.length) {
+        this.data.directChat = Array.from(dmMap.values()).slice(-1000);
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      this.save();
+    }
+  }
+
   public createClan(
     user: UserRecord,
     opts: { tag: string; name: string; description: string; isOpen?: boolean },

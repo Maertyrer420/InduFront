@@ -27,6 +27,12 @@ let __inMemoryPublicId: string | null = null;
 let __inMemoryPublicIdSub: string | null = null;
 
 export const INDUFRONT_JWT_KEY = "indufront_jwt";
+export {
+  getLocalVaultToken,
+  saveLocalVaultToken,
+  INDUFRONT_VAULT_KEY,
+} from "./AccountVault";
+import { getLocalVaultToken, saveLocalVaultToken } from "./AccountVault";
 
 let __jwt: string | null = null;
 let __refreshPromise: Promise<void> | null = null;
@@ -541,9 +547,13 @@ async function doRefreshJwt(): Promise<void> {
       typeof localStorage !== "undefined"
         ? localStorage.getItem("indufront_refresh_token")
         : null;
+    const localVault = getLocalVaultToken();
     const headers: Record<string, string> = {};
     if (localRefresh) {
       headers["x-refresh-token"] = localRefresh;
+    }
+    if (localVault) {
+      headers["x-account-vault"] = localVault;
     }
 
     const response = await fetch(getApiBase() + "/auth/refresh", {
@@ -569,7 +579,7 @@ async function doRefreshJwt(): Promise<void> {
       return;
     }
     const json = await response.json();
-    const { jwt, expiresIn, refreshToken } = json;
+    const { jwt, expiresIn, refreshToken, vaultToken } = json;
     __expiresAt = Date.now() + expiresIn * 1000;
     console.log("Refresh succeeded");
     __jwt = jwt;
@@ -577,6 +587,9 @@ async function doRefreshJwt(): Promise<void> {
       localStorage.setItem(INDUFRONT_JWT_KEY, jwt);
       if (refreshToken) {
         localStorage.setItem("indufront_refresh_token", refreshToken);
+      }
+      if (vaultToken) {
+        saveLocalVaultToken(vaultToken);
       }
     } catch {
       /* ignore storage errors */

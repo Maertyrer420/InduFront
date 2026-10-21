@@ -123,6 +123,8 @@ export function authMockFactory() {
   return {
     getAuthHeader: vi.fn(async () => "Bearer test-token"),
     userAuth: vi.fn(async () => ({ jwt: "test-token", claims: {} })),
+    getLocalVaultToken: vi.fn(() => null),
+    saveLocalVaultToken: vi.fn(),
   };
 }
 

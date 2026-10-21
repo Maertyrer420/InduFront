@@ -25,6 +25,7 @@ import {
   DiscordInviteResponseSchema,
   JoinClanResponseSchema,
 } from "@openfront/shared/ClanApiSchemas";
+import { getLocalVaultToken, saveLocalVaultToken } from "./AccountVault";
 import { getApiBase, getUserMe } from "./Api";
 import { getAuthHeader } from "./Auth";
 
@@ -59,14 +60,25 @@ async function clanFetch(
   options?: RequestInit,
 ): Promise<Response> {
   const url = `${getApiBase()}${path}`;
-  return fetch(url, {
+  const vault =
+    typeof getLocalVaultToken === "function" ? getLocalVaultToken() : null;
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...(options?.headers as Record<string, string>),
+    Authorization: await getAuthHeader(),
+  };
+  if (vault) {
+    headers["x-account-vault"] = vault;
+  }
+  const res = await fetch(url, {
     ...options,
-    headers: {
-      Accept: "application/json",
-      ...options?.headers,
-      Authorization: await getAuthHeader(),
-    },
+    headers,
   });
+  const freshVault = res.headers?.get?.("x-account-vault");
+  if (freshVault && typeof saveLocalVaultToken === "function") {
+    saveLocalVaultToken(freshVault);
+  }
+  return res;
 }
 
 export async function fetchClanLeaderboard(): Promise<

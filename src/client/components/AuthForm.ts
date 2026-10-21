@@ -91,12 +91,19 @@ export class AuthForm extends LitElement {
 
     const register = this.mode === "register";
     try {
+      const localVault = localStorage.getItem("indufront_vault_token");
+      const reqHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (localVault) {
+        reqHeaders["x-account-vault"] = localVault;
+      }
       const res = await fetch(
         `${getApiBase()}/auth/${register ? "register" : "login"}`,
         {
           method: "POST",
           credentials: "include",
-          headers: { "Content-Type": "application/json" },
+          headers: reqHeaders,
           body: JSON.stringify(
             register
               ? {
@@ -104,7 +111,11 @@ export class AuthForm extends LitElement {
                   password: this.password,
                   email: this.email.trim() || undefined,
                 }
-              : { identifier: this.identifier.trim(), password: this.password },
+              : {
+                  identifier: this.identifier.trim(),
+                  password: this.password,
+                  vaultToken: localVault ?? undefined,
+                },
           ),
         },
       );
@@ -115,6 +126,10 @@ export class AuthForm extends LitElement {
         }
         if (body?.refreshToken) {
           localStorage.setItem("indufront_refresh_token", body.refreshToken);
+        }
+        const vault = body?.vaultToken ?? body?.user?.vaultToken;
+        if (vault) {
+          localStorage.setItem("indufront_vault_token", String(vault));
         }
         const effectiveName = register
           ? this.username.trim()
@@ -158,10 +173,20 @@ export class AuthForm extends LitElement {
         return;
       }
       try {
+        const localVault = localStorage.getItem("indufront_vault_token");
+        const reqHeaders: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        if (localVault) {
+          reqHeaders["x-account-vault"] = localVault;
+        }
         const res = await fetch(`${getApiBase()}/auth/recover/request`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ identifier: this.identifier.trim() }),
+          headers: reqHeaders,
+          body: JSON.stringify({
+            identifier: this.identifier.trim(),
+            vaultToken: localVault ?? undefined,
+          }),
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
@@ -192,13 +217,21 @@ export class AuthForm extends LitElement {
         return;
       }
       try {
+        const localVault = localStorage.getItem("indufront_vault_token");
+        const reqHeaders: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        if (localVault) {
+          reqHeaders["x-account-vault"] = localVault;
+        }
         const res = await fetch(`${getApiBase()}/auth/recover/verify`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: reqHeaders,
           body: JSON.stringify({
             identifier: this.identifier.trim(),
             code: this.recoveryCode.trim(),
             newPassword: this.newPassword,
+            vaultToken: localVault ?? undefined,
           }),
         });
         const data = await res.json().catch(() => ({}));
@@ -211,6 +244,11 @@ export class AuthForm extends LitElement {
               "indufront_refresh_token",
               data.session.refreshToken,
             );
+          }
+          const vault =
+            data.session.vaultToken ?? data.session.user?.vaultToken;
+          if (vault) {
+            localStorage.setItem("indufront_vault_token", String(vault));
           }
           if (data.session.user?.username) {
             localStorage.setItem("username", data.session.user.username);

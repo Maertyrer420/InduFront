@@ -54,6 +54,7 @@ import {
 import newsItemsFallback from "resources/news.json";
 import streamsFallback from "resources/streams.json";
 import { z } from "zod";
+import { getLocalVaultToken, saveLocalVaultToken } from "./AccountVault";
 import { getApiBase, getAudience } from "./ApiBase";
 import {
   getAuthHeader,
@@ -235,10 +236,16 @@ async function requestUserMe(): Promise<{
     // the session — cosmetics, store, inventory, the multiplayer join path —
     // awaits that same promise. An abort lands in the catch below, which
     // returns false, the same answer a signed-out player already gets.
+    const localVault =
+      typeof getLocalVaultToken === "function" ? getLocalVaultToken() : null;
+    const meHeaders: Record<string, string> = {
+      authorization: `Bearer ${jwt}`,
+    };
+    if (localVault) {
+      meHeaders["x-account-vault"] = localVault;
+    }
     let response = await fetch(getApiBase() + "/users/@me", {
-      headers: {
-        authorization: `Bearer ${jwt}`,
-      },
+      headers: meHeaders,
       signal: AbortSignal.timeout(10_000),
     });
     if (response.status === 401) {
@@ -248,13 +255,20 @@ async function requestUserMe(): Promise<{
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            authorization: `Bearer ${jwt}`,
+            ...meHeaders,
           },
-          body: JSON.stringify({ jwt }),
+          body: JSON.stringify({ jwt, vaultToken: localVault ?? undefined }),
         });
         if (syncRes.ok) {
+          const syncJson = await syncRes.json().catch(() => ({}));
+          if (
+            syncJson?.vaultToken &&
+            typeof saveLocalVaultToken === "function"
+          ) {
+            saveLocalVaultToken(syncJson.vaultToken);
+          }
           response = await fetch(getApiBase() + "/users/@me", {
-            headers: { authorization: `Bearer ${jwt}` },
+            headers: meHeaders,
             signal: AbortSignal.timeout(10_000),
           });
         }
@@ -281,12 +295,22 @@ async function requestUserMe(): Promise<{
       return { profile: false, aborted: false };
     }
     if (response.status !== 200) return { profile: false, aborted: false };
+    const headerVault = response.headers?.get?.("x-account-vault");
+    if (headerVault && typeof saveLocalVaultToken === "function") {
+      saveLocalVaultToken(headerVault);
+    }
     const body = await response.json();
     const result = UserMeResponseSchema.safeParse(body);
     if (!result.success) {
       const error = z.prettifyError(result.error);
       console.error("Invalid response", error);
       return { profile: false, aborted: false };
+    }
+    if (
+      result.data.user.vaultToken &&
+      typeof saveLocalVaultToken === "function"
+    ) {
+      saveLocalVaultToken(result.data.user.vaultToken);
     }
     // Activate this player's cosmetic selections (and adopt any made while
     // logged out) before the profile is handed to callers — but not if the

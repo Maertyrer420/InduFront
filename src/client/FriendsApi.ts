@@ -6,6 +6,7 @@ import {
   type SendFriendRequestResponse,
   SendFriendRequestResponseSchema,
 } from "@openfront/shared/ApiSchemas";
+import { getLocalVaultToken, saveLocalVaultToken } from "./AccountVault";
 import { getApiBase } from "./Api";
 import { getAuthHeader } from "./Auth";
 
@@ -13,14 +14,25 @@ async function friendsFetch(
   path: string,
   options?: RequestInit,
 ): Promise<Response> {
-  return fetch(`${getApiBase()}${path}`, {
+  const vault =
+    typeof getLocalVaultToken === "function" ? getLocalVaultToken() : null;
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...(options?.headers as Record<string, string>),
+    Authorization: await getAuthHeader(),
+  };
+  if (vault) {
+    headers["x-account-vault"] = vault;
+  }
+  const res = await fetch(`${getApiBase()}${path}`, {
     ...options,
-    headers: {
-      Accept: "application/json",
-      ...options?.headers,
-      Authorization: await getAuthHeader(),
-    },
+    headers,
   });
+  const freshVault = res.headers?.get?.("x-account-vault");
+  if (freshVault && typeof saveLocalVaultToken === "function") {
+    saveLocalVaultToken(freshVault);
+  }
+  return res;
 }
 
 export type FriendActionError =
@@ -52,15 +64,9 @@ export async function fetchFriends(
   limit: number,
 ): Promise<FriendsListResponse | false> {
   try {
-    const url = new URL(`${getApiBase()}/friends`);
-    url.searchParams.set("page", String(page));
-    url.searchParams.set("limit", String(limit));
-    const res = await fetch(url.toString(), {
-      headers: {
-        Accept: "application/json",
-        Authorization: await getAuthHeader(),
-      },
-    });
+    const res = await friendsFetch(
+      `/friends?page=${encodeURIComponent(String(page))}&limit=${encodeURIComponent(String(limit))}`,
+    );
     if (!res.ok) return false;
     const parsed = FriendsListResponseSchema.safeParse(await res.json());
     if (!parsed.success) {

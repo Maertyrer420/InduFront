@@ -8,6 +8,7 @@ import {
 } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import zlib from "node:zlib";
 import {
   dbDeleteAllUserSessions,
   dbDeleteSession,
@@ -52,8 +53,17 @@ export interface UserRecord {
   createdAt: number;
   updatedAt?: number;
   friends?: string[]; // publicIds of accepted friends
-  incomingRequests?: { publicId: string; createdAt: number }[];
-  outgoingRequests?: { publicId: string; createdAt: number }[];
+  friendNames?: Record<string, string>; // publicId -> last known username of friends/requesters
+  incomingRequests?: {
+    publicId: string;
+    username?: string;
+    createdAt: number;
+  }[];
+  outgoingRequests?: {
+    publicId: string;
+    username?: string;
+    createdAt: number;
+  }[];
   noticesSeen?: string[];
   levelHidden?: boolean;
   searchHidden?: boolean;
@@ -112,19 +122,31 @@ function mergeStringArrays(a?: string[], b?: string[]): string[] {
 }
 
 function mergeRequestLists(
-  a?: { publicId: string; createdAt: number }[],
-  b?: { publicId: string; createdAt: number }[],
-): { publicId: string; createdAt: number }[] {
-  const map = new Map<string, { publicId: string; createdAt: number }>();
+  a?: { publicId: string; username?: string; createdAt: number }[],
+  b?: { publicId: string; username?: string; createdAt: number }[],
+): { publicId: string; username?: string; createdAt: number }[] {
+  const map = new Map<
+    string,
+    { publicId: string; username?: string; createdAt: number }
+  >();
   for (const item of [...(a ?? []), ...(b ?? [])]) {
     if (item && item.publicId) {
-      map.set(item.publicId.toUpperCase(), item);
+      const key = item.publicId.toUpperCase();
+      const prev = map.get(key);
+      map.set(key, {
+        publicId: item.publicId,
+        username: item.username ?? prev?.username,
+        createdAt: item.createdAt ?? prev?.createdAt ?? Date.now(),
+      });
     }
   }
   return Array.from(map.values());
 }
 
-function mergeUsers(localUser: UserRecord, dbUser: UserRecord): UserRecord {
+export function mergeUsers(
+  localUser: UserRecord,
+  dbUser: UserRecord,
+): UserRecord {
   const newer =
     (dbUser.updatedAt ?? dbUser.createdAt ?? 0) >=
     (localUser.updatedAt ?? localUser.createdAt ?? 0)
@@ -135,7 +157,7 @@ function mergeUsers(localUser: UserRecord, dbUser: UserRecord): UserRecord {
   return {
     ...older,
     ...newer,
-    id: newer.id,
+    id: newer.id || older.id,
     publicId: newer.publicId || older.publicId,
     username: newer.username || older.username,
     usernameLower: (newer.username || older.username).toLowerCase(),
@@ -150,6 +172,10 @@ function mergeUsers(localUser: UserRecord, dbUser: UserRecord): UserRecord {
     recoveryKey:
       newer.recoveryKey ?? older.recoveryKey ?? generateRecoveryKey(),
     friends: mergeStringArrays(localUser.friends, dbUser.friends),
+    friendNames: {
+      ...(older.friendNames ?? {}),
+      ...(newer.friendNames ?? {}),
+    },
     incomingRequests: mergeRequestLists(
       localUser.incomingRequests,
       dbUser.incomingRequests,
@@ -607,6 +633,10 @@ export class AuthStore {
 
     me.friends ??= [];
     target.friends ??= [];
+    me.friendNames ??= {};
+    target.friendNames ??= {};
+    me.friendNames[target.publicId] = target.username;
+    target.friendNames[me.publicId] = me.username;
     if (me.friends.includes(target.publicId))
       return { ok: false, code: "conflict" };
 
@@ -638,8 +668,16 @@ export class AuthStore {
     }
 
     const now = Date.now();
-    me.outgoingRequests.push({ publicId: target.publicId, createdAt: now });
-    target.incomingRequests.push({ publicId: me.publicId, createdAt: now });
+    me.outgoingRequests.push({
+      publicId: target.publicId,
+      username: target.username,
+      createdAt: now,
+    });
+    target.incomingRequests.push({
+      publicId: me.publicId,
+      username: me.username,
+      createdAt: now,
+    });
     this.save(true, me);
     this.save(true, target);
     return { ok: true, status: "requested" };
@@ -647,63 +685,83 @@ export class AuthStore {
 
   acceptFriendRequest(userId: string, fromPublicId: string): boolean {
     const me = this.byId(userId);
-    const other = this.byPublicId(fromPublicId);
-    if (!me || !other) return false;
+    if (!me) return false;
     me.incomingRequests ??= [];
-    other.outgoingRequests ??= [];
     const idx = me.incomingRequests.findIndex(
-      (r) => r.publicId === other.publicId,
+      (r) => r.publicId.toLowerCase() === fromPublicId.trim().toLowerCase(),
     );
     if (idx < 0) return false;
+    const reqEntry = me.incomingRequests[idx];
+    const targetPub = reqEntry.publicId;
     me.incomingRequests.splice(idx, 1);
-    other.outgoingRequests = other.outgoingRequests.filter(
-      (r) => r.publicId !== me.publicId,
-    );
     me.friends ??= [];
-    other.friends ??= [];
-    if (!me.friends.includes(other.publicId)) me.friends.push(other.publicId);
-    if (!other.friends.includes(me.publicId)) other.friends.push(me.publicId);
+    me.friendNames ??= {};
+    if (reqEntry.username) {
+      me.friendNames[targetPub] = reqEntry.username;
+    }
+    if (!me.friends.includes(targetPub)) me.friends.push(targetPub);
+
+    const other = this.byPublicId(targetPub);
+    if (other) {
+      other.outgoingRequests ??= [];
+      other.outgoingRequests = other.outgoingRequests.filter(
+        (r) => r.publicId.toLowerCase() !== me.publicId.toLowerCase(),
+      );
+      other.friends ??= [];
+      other.friendNames ??= {};
+      other.friendNames[me.publicId] = me.username;
+      me.friendNames[other.publicId] = other.username;
+      if (!other.friends.includes(me.publicId)) other.friends.push(me.publicId);
+      this.save(true, other);
+    }
     this.save(true, me);
-    this.save(true, other);
     return true;
   }
 
   deleteFriendRequest(userId: string, otherPublicId: string): boolean {
     const me = this.byId(userId);
-    const other = this.byPublicId(otherPublicId);
-    if (!me || !other) return false;
+    if (!me) return false;
+    const norm = otherPublicId.trim().toLowerCase();
     me.incomingRequests ??= [];
     me.outgoingRequests ??= [];
-    other.incomingRequests ??= [];
-    other.outgoingRequests ??= [];
     me.incomingRequests = me.incomingRequests.filter(
-      (r) => r.publicId !== other.publicId,
+      (r) => r.publicId.toLowerCase() !== norm,
     );
     me.outgoingRequests = me.outgoingRequests.filter(
-      (r) => r.publicId !== other.publicId,
+      (r) => r.publicId.toLowerCase() !== norm,
     );
-    other.incomingRequests = other.incomingRequests.filter(
-      (r) => r.publicId !== me.publicId,
-    );
-    other.outgoingRequests = other.outgoingRequests.filter(
-      (r) => r.publicId !== me.publicId,
-    );
+    const other = this.byPublicId(otherPublicId);
+    if (other) {
+      other.incomingRequests ??= [];
+      other.outgoingRequests ??= [];
+      other.incomingRequests = other.incomingRequests.filter(
+        (r) => r.publicId.toLowerCase() !== me.publicId.toLowerCase(),
+      );
+      other.outgoingRequests = other.outgoingRequests.filter(
+        (r) => r.publicId.toLowerCase() !== me.publicId.toLowerCase(),
+      );
+      this.save(true, other);
+    }
     this.save(true, me);
-    this.save(true, other);
     return true;
   }
 
   removeFriend(userId: string, friendPublicId: string): boolean {
     const me = this.byId(userId);
-    const other = this.byPublicId(friendPublicId);
-    if (!me || !other) return false;
+    if (!me) return false;
+    const norm = friendPublicId.trim().toLowerCase();
     me.friends ??= [];
-    other.friends ??= [];
-    if (!me.friends.includes(other.publicId)) return false;
-    me.friends = me.friends.filter((f) => f !== other.publicId);
-    other.friends = other.friends.filter((f) => f !== me.publicId);
+    if (!me.friends.some((f) => f.toLowerCase() === norm)) return false;
+    me.friends = me.friends.filter((f) => f.toLowerCase() !== norm);
+    const other = this.byPublicId(friendPublicId);
+    if (other) {
+      other.friends ??= [];
+      other.friends = other.friends.filter(
+        (f) => f.toLowerCase() !== me.publicId.toLowerCase(),
+      );
+      this.save(true, other);
+    }
     this.save(true, me);
-    this.save(true, other);
     return true;
   }
 
@@ -765,16 +823,208 @@ export class AuthStore {
     }
   }
 
+  /**
+   * Builds a cryptographically signed, compressed account & friends vault token
+   * so that if an ephemeral container restarts without DATABASE_URL, the client
+   * can immediately restore its full UserRecord + friend stubs on next request.
+   */
+  createVaultToken(userId: string, extraSocial?: unknown): string | null {
+    const u = this.byId(userId);
+    if (!u) return null;
+    const friendStubs: {
+      id: string;
+      publicId: string;
+      username: string;
+      email: string;
+      createdAt: number;
+    }[] = [];
+    const relatedPids = new Set<string>([
+      ...(u.friends ?? []),
+      ...(u.incomingRequests ?? []).map((r) => r.publicId),
+      ...(u.outgoingRequests ?? []).map((r) => r.publicId),
+    ]);
+    u.friendNames ??= {};
+    for (const pid of relatedPids) {
+      const f = this.byPublicId(pid);
+      if (f) {
+        u.friendNames[f.publicId] = f.username;
+        friendStubs.push({
+          id: f.id,
+          publicId: f.publicId,
+          username: f.username,
+          email: f.email,
+          createdAt: f.createdAt,
+        });
+      }
+    }
+    const payloadObj = {
+      v: 1,
+      ts: Date.now(),
+      user: {
+        ...u,
+        recoveryCodes: undefined,
+      },
+      friendStubs,
+      social: extraSocial,
+    };
+    const compressed = zlib
+      .deflateRawSync(Buffer.from(JSON.stringify(payloadObj), "utf8"))
+      .toString("base64url");
+    const authSecret =
+      process.env.AUTH_SECRET ?? "indufront_persistent_auth_secret_v1_2026";
+    const sig = createHmac("sha256", authSecret)
+      .update(`vault:${compressed}`)
+      .digest("base64url");
+    return `v1.${compressed}.${sig}`;
+  }
+
+  /**
+   * Verifies and merges a server-signed vault token back into AuthStore.
+   */
+  restoreFromVaultToken(
+    vaultToken: string | undefined | null,
+    onSocial?: (social: any) => void,
+  ): UserRecord | undefined {
+    if (!vaultToken || typeof vaultToken !== "string") return undefined;
+    try {
+      const parts = vaultToken.split(".");
+      if (parts.length !== 3 || parts[0] !== "v1") return undefined;
+      const [, compressed, sig] = parts;
+      const authSecret =
+        process.env.AUTH_SECRET ?? "indufront_persistent_auth_secret_v1_2026";
+      const expectedSig = createHmac("sha256", authSecret)
+        .update(`vault:${compressed}`)
+        .digest("base64url");
+      if (sig !== expectedSig) return undefined;
+
+      const rawJson = zlib
+        .inflateRawSync(Buffer.from(compressed, "base64url"))
+        .toString("utf8");
+      const parsed = JSON.parse(rawJson) as {
+        v: number;
+        ts: number;
+        user: UserRecord;
+        friendStubs?: {
+          id: string;
+          publicId: string;
+          username: string;
+          email: string;
+          createdAt: number;
+        }[];
+        social?: unknown;
+      };
+      if (!parsed?.user?.id || this.isUserDeleted(parsed.user.id)) {
+        return undefined;
+      }
+      if (parsed.social && onSocial) {
+        try {
+          onSocial(parsed.social);
+        } catch {
+          /* ignore social restore error */
+        }
+      }
+
+      // 1. Restore any missing friend stub records so friends immediately appear
+      let changed = false;
+      for (const stub of parsed.friendStubs ?? []) {
+        if (!stub?.publicId || !stub?.username) continue;
+        if (this.isUserDeleted(stub.id)) continue;
+        const existingFriend =
+          this.byId(stub.id) ??
+          this.byPublicId(stub.publicId) ??
+          this.byUsername(stub.username);
+        if (!existingFriend) {
+          this.data.users.push({
+            id: stub.id || randomUUID(),
+            publicId: stub.publicId,
+            username: stub.username,
+            usernameLower: stub.username.toLowerCase(),
+            email:
+              stub.email || `${stub.username.toLowerCase()}@indufront.local`,
+            emailVerified: false,
+            doubleSafeEnabled: false,
+            recoveryKey: generateRecoveryKey(),
+            createdAt: stub.createdAt || Date.now(),
+            updatedAt: Date.now(),
+            friends: [parsed.user.publicId],
+            friendNames: { [parsed.user.publicId]: parsed.user.username },
+            settings: {},
+            inventory: {},
+          });
+          changed = true;
+        } else if (
+          parsed.user.friends?.includes(existingFriend.publicId) &&
+          !existingFriend.friends?.includes(parsed.user.publicId)
+        ) {
+          existingFriend.friends ??= [];
+          existingFriend.friends.push(parsed.user.publicId);
+          existingFriend.friendNames ??= {};
+          existingFriend.friendNames[parsed.user.publicId] =
+            parsed.user.username;
+          changed = true;
+        }
+      }
+
+      // 2. Restore or merge the main user record
+      const existing =
+        this.byId(parsed.user.id) ??
+        this.byPublicId(parsed.user.publicId) ??
+        this.byUsername(parsed.user.username);
+      let finalUser: UserRecord;
+      if (existing) {
+        finalUser = mergeUsers(existing, parsed.user);
+        const idx = this.data.users.findIndex((x) => x.id === existing.id);
+        if (idx >= 0) this.data.users[idx] = finalUser;
+      } else {
+        finalUser = {
+          ...parsed.user,
+          usernameLower: parsed.user.username.toLowerCase(),
+          recoveryKey: parsed.user.recoveryKey ?? generateRecoveryKey(),
+        };
+        this.data.users.push(finalUser);
+      }
+      this.save(true, finalUser);
+      if (changed) {
+        this.save(false);
+      }
+      return finalUser;
+    } catch {
+      return undefined;
+    }
+  }
+
   /** Returns the signed refresh token; works both in-memory, PostgreSQL, and statelessly across server restarts. */
   createSession(userId: string): string {
     const now = Date.now();
     const expiresAt = now + SESSION_TTL_MS;
     const authSecret =
       process.env.AUTH_SECRET ?? "indufront_persistent_auth_secret_v1_2026";
+    const u = this.byId(userId);
+    const snapObj = u
+      ? {
+          id: u.id,
+          publicId: u.publicId,
+          username: u.username,
+          email: u.email,
+          emailVerified: u.emailVerified,
+          doubleSafeEnabled: u.doubleSafeEnabled,
+          recoveryKey: u.recoveryKey,
+          passwordHash: u.passwordHash,
+          googleId: u.googleId,
+          createdAt: u.createdAt,
+          friends: u.friends,
+          friendNames: u.friendNames,
+          incomingRequests: u.incomingRequests,
+          outgoingRequests: u.outgoingRequests,
+        }
+      : { id: userId };
+    const snapB64 = zlib
+      .deflateRawSync(Buffer.from(JSON.stringify(snapObj), "utf8"))
+      .toString("base64url");
     const hmacSig = createHmac("sha256", authSecret)
-      .update(`${userId}:${expiresAt}`)
+      .update(`${userId}:${expiresAt}:${snapB64}`)
       .digest("base64url");
-    const token = `${userId}.${expiresAt}.${hmacSig}`;
+    const token = `${userId}.${expiresAt}.${snapB64}.${hmacSig}`;
     const session: SessionRecord = {
       tokenHash: sha(token),
       userId,
@@ -795,14 +1045,82 @@ export class AuthStore {
       const u = this.byId(s.userId);
       if (u) return u;
     }
-    // Stateless fallback verification if server was restarted
+    const authSecret =
+      process.env.AUTH_SECRET ?? "indufront_persistent_auth_secret_v1_2026";
     const parts = token.split(".");
+    // Format v2 (4 parts with embedded compressed snapshot)
+    if (parts.length === 4) {
+      const [userId, expStr, snapB64, sig] = parts;
+      const expiresAt = parseInt(expStr, 10);
+      if (
+        Number.isFinite(expiresAt) &&
+        expiresAt >= now &&
+        !this.isUserDeleted(userId)
+      ) {
+        const expectedSig = createHmac("sha256", authSecret)
+          .update(`${userId}:${expiresAt}:${snapB64}`)
+          .digest("base64url");
+        if (sig === expectedSig) {
+          let u = this.byId(userId);
+          if (!u) {
+            try {
+              const raw = zlib
+                .inflateRawSync(Buffer.from(snapB64, "base64url"))
+                .toString("utf8");
+              const snap = JSON.parse(raw) as Partial<UserRecord>;
+              if (snap.username && snap.publicId) {
+                u = this.createUser({
+                  id: userId,
+                  publicId: snap.publicId,
+                  username: snap.username,
+                  email:
+                    snap.email ??
+                    `${snap.username.toLowerCase()}@indufront.local`,
+                  passwordHash: snap.passwordHash,
+                  googleId: snap.googleId,
+                  createdAt: snap.createdAt,
+                });
+                if (snap.recoveryKey) u.recoveryKey = snap.recoveryKey;
+                if (snap.emailVerified !== undefined)
+                  u.emailVerified = snap.emailVerified;
+                if (snap.doubleSafeEnabled !== undefined)
+                  u.doubleSafeEnabled = snap.doubleSafeEnabled;
+                if (snap.friends)
+                  u.friends = mergeStringArrays(u.friends, snap.friends);
+                if (snap.friendNames)
+                  u.friendNames = {
+                    ...(u.friendNames ?? {}),
+                    ...snap.friendNames,
+                  };
+                if (snap.incomingRequests)
+                  u.incomingRequests = mergeRequestLists(
+                    u.incomingRequests,
+                    snap.incomingRequests,
+                  );
+                if (snap.outgoingRequests)
+                  u.outgoingRequests = mergeRequestLists(
+                    u.outgoingRequests,
+                    snap.outgoingRequests,
+                  );
+                this.save(true, u);
+              }
+            } catch {
+              /* ignore snapshot decode error */
+            }
+          }
+          if (u) return u;
+        }
+      }
+    }
+    // Legacy format v1 (3 parts)
     if (parts.length === 3) {
       const [userId, expStr, sig] = parts;
       const expiresAt = parseInt(expStr, 10);
-      if (Number.isFinite(expiresAt) && expiresAt >= now) {
-        const authSecret =
-          process.env.AUTH_SECRET ?? "indufront_persistent_auth_secret_v1_2026";
+      if (
+        Number.isFinite(expiresAt) &&
+        expiresAt >= now &&
+        !this.isUserDeleted(userId)
+      ) {
         const expectedSig = createHmac("sha256", authSecret)
           .update(`${userId}:${expiresAt}`)
           .digest("base64url");
