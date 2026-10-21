@@ -33,12 +33,13 @@ export class FluentSlider extends LitElement {
 
   private handleSliderInput(e: Event) {
     const target = e.target as HTMLInputElement;
-    this.value = target.valueAsNumber;
+    this.value = Number(target.value);
+    this.dispatchValueChange();
   }
 
   private handleSliderChange(e: Event) {
     const target = e.target as HTMLInputElement;
-    this.value = target.valueAsNumber;
+    this.value = Number(target.value);
     this.dispatchValueChange();
   }
 
@@ -82,10 +83,10 @@ export class FluentSlider extends LitElement {
       >
         <input
           type="range"
-          .min=${this.min}
-          .max=${this.max}
-          .step=${this.step}
-          .valueAsNumber=${this.value}
+          min=${this.min}
+          max=${this.max}
+          step=${this.step}
+          .value=${String(this.value)}
           style="background: linear-gradient(to right, var(--color-malibu-blue) 0%, var(--color-malibu-blue) ${percentage}%, rgba(255, 255, 255, 0.15) ${percentage}%, rgba(255, 255, 255, 0.15) 100%); background-size: 100% 6px; background-repeat: no-repeat; background-position: center; border-radius: 9999px;"
           class="w-full h-6 p-0 m-0 bg-transparent appearance-none cursor-pointer focus:outline-none 
                  [&::-webkit-slider-runnable-track]:w-full [&::-webkit-slider-runnable-track]:h-[6px] [&::-webkit-slider-runnable-track]:cursor-pointer [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:transition-colors

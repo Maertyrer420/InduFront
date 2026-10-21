@@ -390,8 +390,7 @@ describe("the upcoming heading (the route to the lobby browser)", () => {
  */
 describe("grid placement", () => {
   const section = () => selector.querySelector("section")!;
-  const heroSlot = () =>
-    selector.querySelector(":scope > div > div.sm\\:col-start-1");
+  const heroSlot = () => selector.querySelector("div.sm\\:col-start-1");
 
   it("keeps the upcoming column beside the spinner while loading", () => {
     expect(heroSlot()).not.toBeNull();

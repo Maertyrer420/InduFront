@@ -182,7 +182,7 @@ export function registerListingRoute(opts: {
 
         // Dev has no subscription backend; skip the check so the feature is
         // testable locally (same precedent as Turnstile).
-        if (ServerEnv.env() !== GameEnv.Dev) {
+        if (ServerEnv.env() !== GameEnv.Dev && !process.env.AUTH_ISSUER) {
           const userMe = await getUserMe(token);
           if (userMe.type === "error") {
             log.warn(

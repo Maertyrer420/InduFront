@@ -113,6 +113,8 @@ export class ServerEnv {
     return process.env.CDN_BASE ?? "";
   }
   static jwtIssuer(): string {
+    const explicit = process.env.AUTH_ISSUER;
+    if (explicit && explicit.length > 0) return explicit;
     const audience = ServerEnv.jwtAudience();
     return audience === "localhost"
       ? "http://localhost:8787"

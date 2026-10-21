@@ -430,6 +430,7 @@ export class MasterLobbyService {
   }
 
   private async maybeScheduleLobby() {
+    if (process.env.DISABLE_SCHEDULED_LOBBIES === "true") return;
     // Coordinated: the site's queue depth and countdowns are the
     // coordinator's; adding our own here would double-schedule.
     if (this.isCoordinated()) return;

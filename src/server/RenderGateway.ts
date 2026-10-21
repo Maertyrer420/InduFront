@@ -41,6 +41,7 @@ const env: NodeJS.ProcessEnv = {
   ADMIN_BOT_API_KEY:
     process.env.ADMIN_BOT_API_KEY ??
     "WARNING_DEV_ADMIN_BOT_KEY_DO_NOT_USE_IN_PRODUCTION",
+  DISABLE_SCHEDULED_LOBBIES: process.env.DISABLE_SCHEDULED_LOBBIES ?? "true",
 };
 
 const children: ChildProcess[] = [];

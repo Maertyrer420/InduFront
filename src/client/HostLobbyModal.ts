@@ -121,7 +121,7 @@ export class HostLobbyModal extends BaseModal {
   // Whether this user may actually make the lobby public (the API's
   // canCreatePublicLobbies entitlement, or anyone in dev). The toggle itself
   // is always shown.
-  @state() private canListPublicly: boolean = false;
+  @state() private canListPublicly: boolean = true;
   @state() private publiclyListed: boolean = false;
   @state() private showSubscriptionRequired: boolean = false;
   @state() private showListLobbyDialog: boolean = false;
@@ -135,6 +135,7 @@ export class HostLobbyModal extends BaseModal {
   @state() private showQueueConfirm: boolean = false;
   @state() private insufficientInfo: InsufficientCurrency | null = null;
   private hardBalance = 0;
+  private lobbyCreationPromise: Promise<string | null> | null = null;
 
   @property({ attribute: false }) eventBus: EventBus | null = null;
   // Timers for debouncing slider changes
@@ -294,10 +295,15 @@ export class HostLobbyModal extends BaseModal {
   // one-way (the server rejects unlisting), so the Private segment goes away
   // once the lobby is listed.
   private renderVisibilityToggle() {
-    const segment = (labelKey: string, isPublic: boolean) => html`
+    const isPublicHighlighted = this.publiclyListed || this.showListLobbyDialog;
+    const segment = (
+      labelKey: string,
+      isPublic: boolean,
+      active: boolean,
+    ) => html`
       <button
-        class="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all ${this
-          .publiclyListed === isPublic
+        type="button"
+        class="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full transition-all cursor-pointer ${active
           ? "bg-malibu-blue text-white"
           : "text-white/50 hover:text-white"}"
         @click=${() => this.handleVisibilitySelect(isPublic)}
@@ -311,8 +317,12 @@ export class HostLobbyModal extends BaseModal {
       >
         ${this.publiclyListed
           ? nothing
-          : segment("host_modal.visibility_private", false)}
-        ${segment("host_modal.visibility_public", true)}
+          : segment(
+              "host_modal.visibility_private",
+              false,
+              !isPublicHighlighted,
+            )}
+        ${segment("host_modal.visibility_public", true, isPublicHighlighted)}
       </div>
       ${this.renderAutoStartTimer()} ${this.renderQueueButton()}
     `;
@@ -401,11 +411,7 @@ export class HostLobbyModal extends BaseModal {
   }
 
   private handleVisibilitySelect(isPublic: boolean) {
-    if (
-      this.listingRequestInFlight ||
-      isPublic === this.publiclyListed ||
-      !this.lobbyId
-    ) {
+    if (this.listingRequestInFlight || isPublic === this.publiclyListed) {
       return;
     }
     if (isPublic && !this.canListPublicly) {
@@ -853,12 +859,14 @@ export class HostLobbyModal extends BaseModal {
     // can re-arm it and disconnect the host mid game-start.
     this.leaveLobbyOnClose = true;
     this.startLobbyUpdates();
+    this.canListPublicly = true;
     void getUserMe().then((userMe) => {
-      // Dev skips the entitlement gate (matching the server) so the
-      // listing flow is testable locally.
+      // All players in InduFront can list lobbies publicly; only restrict if
+      // an account response explicitly sets canCreatePublicLobbies to false in non-dev.
       this.canListPublicly =
         ClientEnv.env() === GameEnv.Dev ||
-        (userMe !== false && userMe.player.canCreatePublicLobbies);
+        userMe === false ||
+        userMe.player.canCreatePublicLobbies !== false;
       this.hardBalance =
         userMe === false ? 0 : (userMe.player.currency?.hard ?? 0);
     });
@@ -885,7 +893,17 @@ export class HostLobbyModal extends BaseModal {
     // resolves. clientID is assigned by the server when we join the lobby.
 
     // Pass auth token for creator identification (server extracts persistentID from it)
-    createLobby()
+    this.startCreateLobbyFlow();
+    // BaseModal.firstUpdated() owns modalEl.onClose so the o-modal close path
+    // (backdrop / close button) runs confirmBeforeClose(). Don't override it
+    // here — doing so would bypass the leave-lobby confirmation.
+    this.loadNationCount();
+  }
+
+  private startCreateLobbyFlow(): Promise<string | null> {
+    if (this.lobbyId) return Promise.resolve(this.lobbyId);
+    if (this.lobbyCreationPromise) return this.lobbyCreationPromise;
+    this.lobbyCreationPromise = createLobby()
       .then(async ({ lobby, creatorToken }) => {
         this.lobbyId = lobby.gameID;
         if (!isValidGameID(this.lobbyId)) {
@@ -899,9 +917,6 @@ export class HostLobbyModal extends BaseModal {
         this.updateLobbyHistory(url);
         await this.updateComplete;
         void (this.querySelector("copy-button") as CopyButton)?.handleCopy();
-        return creatorToken;
-      })
-      .then((creatorToken) => {
         this.dispatchEvent(
           new CustomEvent("join-lobby", {
             detail: {
@@ -913,15 +928,17 @@ export class HostLobbyModal extends BaseModal {
             composed: true,
           }),
         );
+        return this.lobbyId;
       })
       .catch(() => {
         // Clear clipboard so the host doesn't accidentally share a dead link
         void navigator.clipboard.writeText("").catch(() => {});
+        return null;
+      })
+      .finally(() => {
+        this.lobbyCreationPromise = null;
       });
-    // BaseModal.firstUpdated() owns modalEl.onClose so the o-modal close path
-    // (backdrop / close button) runs confirmBeforeClose(). Don't override it
-    // here — doing so would bypass the leave-lobby confirmation.
-    this.loadNationCount();
+    return this.lobbyCreationPromise;
   }
 
   // Bind the host view to a lobby the server already created (the successor of a
@@ -1569,6 +1586,13 @@ export class HostLobbyModal extends BaseModal {
     checked: boolean,
     options?: ListLobbyOptions,
   ) {
+    if (!this.lobbyId) {
+      await this.startCreateLobbyFlow();
+    }
+    if (!this.lobbyId) {
+      this.showListingError();
+      return;
+    }
     this.listingRequestInFlight = true;
     const wasListed = this.publiclyListed;
     this.publiclyListed = checked;

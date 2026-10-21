@@ -720,50 +720,52 @@ export class GameModeSelector extends LitElement {
           )}
         </div>
 
-        ${showHero
-          ? html`<div class="sm:col-start-1 flex flex-col min-h-0">
-              ${ffaLobby
-                ? this.renderLobbyCard(
-                    ffaLobby,
-                    ffaLobby.gameConfig
-                      ? getGameModeLabel(ffaLobby.gameConfig)
-                      : "",
-                  )
-                : this.offlineForLobbies()
-                  ? this.renderLobbiesUnavailable()
-                  : html`<div
-                      class="flex items-center justify-center h-44 sm:h-full rounded-xl bg-surface/60"
-                    >
-                      <div
-                        class="animate-spin w-8 h-8 border-4 border-malibu-blue border-t-transparent rounded-full"
-                      ></div>
-                    </div>`}
-            </div>`
-          : nothing}
+        <div class="hidden" aria-hidden="true">
+          ${showHero
+            ? html`<div class="sm:col-start-1 flex flex-col min-h-0">
+                ${ffaLobby
+                  ? this.renderLobbyCard(
+                      ffaLobby,
+                      ffaLobby.gameConfig
+                        ? getGameModeLabel(ffaLobby.gameConfig)
+                        : "",
+                    )
+                  : this.offlineForLobbies()
+                    ? this.renderLobbiesUnavailable()
+                    : html`<div
+                        class="flex items-center justify-center h-44 sm:h-full rounded-xl bg-surface/60"
+                      >
+                        <div
+                          class="animate-spin w-8 h-8 border-4 border-malibu-blue border-t-transparent rounded-full"
+                        ></div>
+                      </div>`}
+              </div>`
+            : nothing}
 
-        <section
-          class="flex flex-col gap-3 min-w-0 sm:grid sm:grid-rows-[auto_1fr_1fr] ${showHero
-            ? "sm:col-start-2"
-            : "sm:col-start-1 sm:col-span-2"}"
-        >
-          ${this.renderUpcomingHeading()}
-          ${otherLobbies.map(
-            (lobby, i) => html`
-              <div
-                class="sm:min-h-0 ${otherLobbies.length === 1
-                  ? "sm:row-start-2 sm:row-span-2"
-                  : i === 0
-                    ? "sm:row-start-2"
-                    : "sm:row-start-3"}"
-              >
-                ${this.renderLobbyCard(
-                  lobby,
-                  lobby.gameConfig ? getGameModeLabel(lobby.gameConfig) : "",
-                )}
-              </div>
-            `,
-          )}
-        </section>
+          <section
+            class="flex flex-col gap-3 min-w-0 sm:grid sm:grid-rows-[auto_1fr_1fr] ${showHero
+              ? "sm:col-start-2"
+              : "sm:col-start-1 sm:col-span-2"}"
+          >
+            ${this.renderUpcomingHeading()}
+            ${otherLobbies.map(
+              (lobby, i) => html`
+                <div
+                  class="sm:min-h-0 ${otherLobbies.length === 1
+                    ? "sm:row-start-2 sm:row-span-2"
+                    : i === 0
+                      ? "sm:row-start-2"
+                      : "sm:row-start-3"}"
+                >
+                  ${this.renderLobbyCard(
+                    lobby,
+                    lobby.gameConfig ? getGameModeLabel(lobby.gameConfig) : "",
+                  )}
+                </div>
+              `,
+            )}
+          </section>
+        </div>
 
         ${this.showTrustRequired
           ? trustRequiredDialog(
