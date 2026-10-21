@@ -181,7 +181,7 @@ export class AccountSettingsPanel extends LitElement {
   }
 
   private renderDoubleSafeCard(): TemplateResult | typeof nothing {
-    if (isSteamPrimaryUser(this.user)) return nothing;
+    if (!this.user || isSteamPrimaryUser(this.user)) return nothing;
     const isVerified =
       this.emailVerifiedActive ?? this.user?.emailVerified ?? false;
     const isDoubleSafe =
@@ -691,7 +691,7 @@ export class AccountSettingsPanel extends LitElement {
   }
 
   private renderPasswordChangeCard(): TemplateResult | typeof nothing {
-    if (isSteamPrimaryUser(this.user)) return nothing;
+    if (!this.user || isSteamPrimaryUser(this.user)) return nothing;
     return html`
       <div class="bg-white/5 rounded-xl border border-white/10 p-6">
         <div class="text-white font-medium text-base">

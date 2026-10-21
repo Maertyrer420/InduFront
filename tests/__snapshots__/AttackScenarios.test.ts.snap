@@ -2,100 +2,100 @@
 
 exports[`attack scenarios > big_plains equal 20k tiles each, 1M vs 1M, attack 200k 1`] = `
 {
-  "attackerLossPerSecond": 10200,
-  "attackerLossPerTile": 105.2,
+  "attackerLossPerSecond": 8097,
+  "attackerLossPerTile": 80.1,
   "attackerTiles": 20000,
   "attackerTroopsLost": 200000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 4852,
+  "defenderLossPerSecond": 5055,
   "defenderLossPerTile": 50,
   "defenderTiles": 20000,
-  "defenderTroopsLost": 95100,
+  "defenderTroopsLost": 124850,
   "finished": true,
-  "ticks": 196,
-  "tilesConquered": 1902,
-  "tilesPerSecond": 97.04,
+  "ticks": 247,
+  "tilesConquered": 2497,
+  "tilesPerSecond": 101.1,
 }
 `;
 
 exports[`attack scenarios > big_plains equal 20k tiles each, 200k vs 200k, attack 40k 1`] = `
 {
   "attackerLossPerSecond": 7407,
-  "attackerLossPerTile": 80.16,
+  "attackerLossPerTile": 79.84,
   "attackerTiles": 20000,
   "attackerTroopsLost": 40000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 924.1,
+  "defenderLossPerSecond": 927.8,
   "defenderLossPerTile": 10,
   "defenderTiles": 20000,
-  "defenderTroopsLost": 4990,
+  "defenderTroopsLost": 5010,
   "finished": true,
   "ticks": 54,
-  "tilesConquered": 499,
-  "tilesPerSecond": 92.41,
+  "tilesConquered": 501,
+  "tilesPerSecond": 92.78,
 }
 `;
 
 exports[`attack scenarios > giant 1M vs 600k tiles, 8M troops all-in vs 1M defender 1`] = `
 {
-  "attackerLossPerSecond": 87810,
-  "attackerLossPerTile": 8.125,
+  "attackerLossPerSecond": 362000,
+  "attackerLossPerTile": 25.24,
   "attackerTiles": 1010406,
-  "attackerTroopsLost": 3749349,
+  "attackerTroopsLost": 8000000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 17320,
-  "defenderLossPerTile": 1.603,
+  "defenderLossPerSecond": 20380,
+  "defenderLossPerTile": 1.421,
   "defenderTiles": 591663,
-  "defenderTroopsLost": 739638,
+  "defenderTroopsLost": 450470,
   "finished": true,
-  "ticks": 427,
-  "tilesConquered": 461482,
-  "tilesPerSecond": 10810,
+  "ticks": 221,
+  "tilesConquered": 316898,
+  "tilesPerSecond": 14340,
 }
 `;
 
 exports[`attack scenarios > giant 1M vs 600k tiles, 8M vs 8M troops, attack 2M 1`] = `
 {
-  "attackerLossPerSecond": 62310,
-  "attackerLossPerTile": 32.2,
+  "attackerLossPerSecond": 42280,
+  "attackerLossPerTile": 23.96,
   "attackerTiles": 1010406,
   "attackerTroopsLost": 2000000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 25160,
+  "defenderLossPerSecond": 22950,
   "defenderLossPerTile": 13,
   "defenderTiles": 591663,
-  "defenderTroopsLost": 807560,
+  "defenderTroopsLost": 1085331,
   "finished": true,
-  "ticks": 321,
-  "tilesConquered": 62120,
-  "tilesPerSecond": 1935,
+  "ticks": 473,
+  "tilesConquered": 83487,
+  "tilesPerSecond": 1765,
 }
 `;
 
 exports[`attack scenarios > giant 1M-tile attacker, 8M troops, attack 2M vs 400-tile turtle with 4M (10k/tile) 1`] = `
 {
-  "attackerLossPerSecond": 1555000,
-  "attackerLossPerTile": 4810,
+  "attackerLossPerSecond": 359300,
+  "attackerLossPerTile": 555.7,
   "attackerTiles": 1010018,
-  "attackerTroopsLost": 1866286,
+  "attackerTroopsLost": 215604,
   "defenderEliminated": true,
-  "defenderLossPerSecond": 2483000,
+  "defenderLossPerSecond": 4966000,
   "defenderLossPerTile": 7679,
   "defenderTiles": 388,
   "defenderTroopsLost": 2979310,
   "finished": true,
-  "ticks": 12,
+  "ticks": 6,
   "tilesConquered": 388,
-  "tilesPerSecond": 323.3,
+  "tilesPerSecond": 646.7,
 }
 `;
 
 exports[`attack scenarios > giant 1M-tile attacker, 8M troops, attack 2M vs 400-tile turtle with 400k (1k/tile) 1`] = `
 {
-  "attackerLossPerSecond": 144800,
-  "attackerLossPerTile": 149.3,
+  "attackerLossPerSecond": 19200,
+  "attackerLossPerTile": 19.79,
   "attackerTiles": 1010018,
-  "attackerTroopsLost": 57911,
+  "attackerTroopsLost": 7679,
   "defenderEliminated": true,
   "defenderLossPerSecond": 744800,
   "defenderLossPerTile": 767.9,
@@ -110,55 +110,55 @@ exports[`attack scenarios > giant 1M-tile attacker, 8M troops, attack 2M vs 400-
 
 exports[`attack scenarios > giant 400-tile attacker, 1M troops all-in vs 1M-tile defender with 1M 1`] = `
 {
-  "attackerLossPerSecond": 20490,
-  "attackerLossPerTile": 42.93,
+  "attackerLossPerSecond": 18050,
+  "attackerLossPerTile": 57.21,
   "attackerTiles": 388,
   "attackerTroopsLost": 1000000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 272.1,
-  "defenderLossPerTile": 0.57,
+  "defenderLossPerSecond": 315.5,
+  "defenderLossPerTile": 1,
   "defenderTiles": 1010018,
-  "defenderTroopsLost": 13278,
+  "defenderTroopsLost": 17478,
   "finished": true,
-  "ticks": 488,
-  "tilesConquered": 23296,
-  "tilesPerSecond": 477.4,
+  "ticks": 554,
+  "tilesConquered": 17478,
+  "tilesPerSecond": 315.5,
 }
 `;
 
 exports[`attack scenarios > giant 400-tile attacker, 100k troops, attack 50k vs 1M-tile sparse defender with 1M 1`] = `
 {
-  "attackerLossPerSecond": 1497,
-  "attackerLossPerTile": 53.48,
+  "attackerLossPerSecond": 1582,
+  "attackerLossPerTile": 57.08,
   "attackerTiles": 388,
   "attackerTroopsLost": 50000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 0,
-  "defenderLossPerTile": 0,
+  "defenderLossPerSecond": 27.72,
+  "defenderLossPerTile": 1,
   "defenderTiles": 1010018,
-  "defenderTroopsLost": 0,
+  "defenderTroopsLost": 876,
   "finished": true,
-  "ticks": 334,
-  "tilesConquered": 935,
-  "tilesPerSecond": 27.99,
+  "ticks": 316,
+  "tilesConquered": 876,
+  "tilesPerSecond": 27.72,
 }
 `;
 
 exports[`attack scenarios > giant 600k vs 1M tiles, 1M troops attack 500k vs 8M defender 1`] = `
 {
-  "attackerLossPerSecond": 13300,
-  "attackerLossPerTile": 33.68,
+  "attackerLossPerSecond": 11360,
+  "attackerLossPerTile": 29.51,
   "attackerTiles": 591663,
   "attackerTroopsLost": 500000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 2764,
+  "defenderLossPerSecond": 2695,
   "defenderLossPerTile": 7,
   "defenderTiles": 1010406,
-  "defenderTroopsLost": 103929,
+  "defenderTroopsLost": 118587,
   "finished": true,
-  "ticks": 376,
-  "tilesConquered": 14847,
-  "tilesPerSecond": 394.9,
+  "ticks": 440,
+  "tilesConquered": 16941,
+  "tilesPerSecond": 385,
 }
 `;
 
@@ -182,10 +182,28 @@ exports[`attack scenarios > plains 1-troop attack vs 50k defender 1`] = `
 
 exports[`attack scenarios > plains 10M-troop attack vs defender with 1 troop 1`] = `
 {
-  "attackerLossPerSecond": 14720,
-  "attackerLossPerTile": 21.78,
+  "attackerLossPerSecond": 673,
+  "attackerLossPerTile": 0.996,
   "attackerTiles": 5000,
-  "attackerTroopsLost": 108913,
+  "attackerTroopsLost": 4980,
+  "defenderEliminated": true,
+  "defenderLossPerSecond": 0.1351,
+  "defenderLossPerTile": 0.0002,
+  "defenderTiles": 5000,
+  "defenderTroopsLost": 1,
+  "finished": true,
+  "ticks": 74,
+  "tilesConquered": 5000,
+  "tilesPerSecond": 675.7,
+}
+`;
+
+exports[`attack scenarios > plains 50k attack vs defender with 0 troops 1`] = `
+{
+  "attackerLossPerSecond": 662.3,
+  "attackerLossPerTile": 0.9802,
+  "attackerTiles": 5000,
+  "attackerTroopsLost": 4901,
   "defenderEliminated": true,
   "defenderLossPerSecond": 0,
   "defenderLossPerTile": 0,
@@ -198,30 +216,12 @@ exports[`attack scenarios > plains 10M-troop attack vs defender with 1 troop 1`]
 }
 `;
 
-exports[`attack scenarios > plains 50k attack vs defender with 0 troops 1`] = `
-{
-  "attackerLossPerSecond": 14290,
-  "attackerLossPerTile": 22.22,
-  "attackerTiles": 5000,
-  "attackerTroopsLost": 50000,
-  "defenderEliminated": false,
-  "defenderLossPerSecond": 0,
-  "defenderLossPerTile": 0,
-  "defenderTiles": 5000,
-  "defenderTroopsLost": 0,
-  "finished": true,
-  "ticks": 35,
-  "tilesConquered": 2250,
-  "tilesPerSecond": 642.9,
-}
-`;
-
 exports[`attack scenarios > plains 100-tile turtle, 1M troops: conquered outright after one tile 1`] = `
 {
-  "attackerLossPerSecond": 31580,
-  "attackerLossPerTile": 63.15,
+  "attackerLossPerSecond": 200500,
+  "attackerLossPerTile": 400.9,
   "attackerTiles": 9900,
-  "attackerTroopsLost": 6315,
+  "attackerTroopsLost": 40095,
   "defenderEliminated": true,
   "defenderLossPerSecond": 50000,
   "defenderLossPerTile": 100,
@@ -254,28 +254,28 @@ exports[`attack scenarios > plains 100-troop attack vs 1M defender 1`] = `
 
 exports[`attack scenarios > plains 400-tile turtle, 4M troops (10k/tile) under a defense post, attacked with 1M 1`] = `
 {
-  "attackerLossPerSecond": 588200,
-  "attackerLossPerTile": 31250,
+  "attackerLossPerSecond": 1111000,
+  "attackerLossPerTile": 55560,
   "attackerTiles": 9600,
   "attackerTroopsLost": 1000000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 188200,
+  "defenderLossPerSecond": 200000,
   "defenderLossPerTile": 10000,
   "defenderTiles": 400,
-  "defenderTroopsLost": 320000,
+  "defenderTroopsLost": 180000,
   "finished": true,
-  "ticks": 17,
-  "tilesConquered": 32,
-  "tilesPerSecond": 18.82,
+  "ticks": 9,
+  "tilesConquered": 18,
+  "tilesPerSecond": 20,
 }
 `;
 
 exports[`attack scenarios > plains 400-tile turtle, 400k troops (1k/tile), attacked with 400k 1`] = `
 {
-  "attackerLossPerSecond": 77570,
-  "attackerLossPerTile": 193.9,
+  "attackerLossPerSecond": 31320,
+  "attackerLossPerTile": 78.3,
   "attackerTiles": 9600,
-  "attackerTroopsLost": 77569,
+  "attackerTroopsLost": 31318,
   "defenderEliminated": true,
   "defenderLossPerSecond": 301000,
   "defenderLossPerTile": 752.5,
@@ -291,18 +291,18 @@ exports[`attack scenarios > plains 400-tile turtle, 400k troops (1k/tile), attac
 exports[`attack scenarios > plains big attacker (9500 tiles) vs small defender (500 tiles) 1`] = `
 {
   "attackerLossPerSecond": 7143,
-  "attackerLossPerTile": 135.1,
+  "attackerLossPerTile": 104.2,
   "attackerTiles": 9500,
   "attackerTroopsLost": 10000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 5286,
+  "defenderLossPerSecond": 6857,
   "defenderLossPerTile": 100,
   "defenderTiles": 500,
-  "defenderTroopsLost": 7400,
+  "defenderTroopsLost": 9600,
   "finished": true,
   "ticks": 14,
-  "tilesConquered": 74,
-  "tilesPerSecond": 52.86,
+  "tilesConquered": 96,
+  "tilesPerSecond": 68.57,
 }
 `;
 
@@ -326,8 +326,8 @@ exports[`attack scenarios > plains bot vs human defender 1`] = `
 
 exports[`attack scenarios > plains bot vs terra nullius, attack 2k 1`] = `
 {
-  "attackerLossPerSecond": 400,
-  "attackerLossPerTile": 8,
+  "attackerLossPerSecond": 53.05,
+  "attackerLossPerTile": 1,
   "attackerTiles": 1000,
   "attackerTroopsLost": 2000,
   "defenderEliminated": false,
@@ -336,9 +336,9 @@ exports[`attack scenarios > plains bot vs terra nullius, attack 2k 1`] = `
   "defenderTiles": 0,
   "defenderTroopsLost": 0,
   "finished": true,
-  "ticks": 50,
-  "tilesConquered": 250,
-  "tilesPerSecond": 50,
+  "ticks": 377,
+  "tilesConquered": 2000,
+  "tilesPerSecond": 53.05,
 }
 `;
 
@@ -380,73 +380,73 @@ exports[`attack scenarios > plains defender with one defense post at the border 
 
 exports[`attack scenarios > plains dense defender (200k on 5k tiles, 40/tile, ~half the no-city cap), stack 1.67x their army 1`] = `
 {
-  "attackerLossPerSecond": 19680,
-  "attackerLossPerTile": 29.12,
+  "attackerLossPerSecond": 37950,
+  "attackerLossPerTile": 80.06,
   "attackerTiles": 5000,
-  "attackerTroopsLost": 145611,
-  "defenderEliminated": true,
-  "defenderLossPerSecond": 26490,
-  "defenderLossPerTile": 39.21,
+  "attackerTroopsLost": 334000,
+  "defenderEliminated": false,
+  "defenderLossPerSecond": 18960,
+  "defenderLossPerTile": 40,
   "defenderTiles": 5000,
-  "defenderTroopsLost": 196040,
+  "defenderTroopsLost": 166880,
   "finished": true,
-  "ticks": 74,
-  "tilesConquered": 5000,
-  "tilesPerSecond": 675.7,
+  "ticks": 88,
+  "tilesConquered": 4172,
+  "tilesPerSecond": 474.1,
 }
 `;
 
 exports[`attack scenarios > plains dense defender (200k on 5k tiles, 40/tile, ~half the no-city cap), stack 1/4 their army 1`] = `
 {
-  "attackerLossPerSecond": 6173,
-  "attackerLossPerTile": 99.01,
+  "attackerLossPerSecond": 5263,
+  "attackerLossPerTile": 80.39,
   "attackerTiles": 5000,
   "attackerTroopsLost": 50000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 2494,
+  "defenderLossPerSecond": 2619,
   "defenderLossPerTile": 40,
   "defenderTiles": 5000,
-  "defenderTroopsLost": 20200,
+  "defenderTroopsLost": 24880,
   "finished": true,
-  "ticks": 81,
-  "tilesConquered": 505,
-  "tilesPerSecond": 62.35,
+  "ticks": 95,
+  "tilesConquered": 622,
+  "tilesPerSecond": 65.47,
 }
 `;
 
 exports[`attack scenarios > plains dense defender (200k on 5k tiles, 40/tile, ~half the no-city cap), stack 1x their army 1`] = `
 {
-  "attackerLossPerSecond": 19230,
-  "attackerLossPerTile": 65.72,
+  "attackerLossPerSecond": 17090,
+  "attackerLossPerTile": 80.1,
   "attackerTiles": 5000,
   "attackerTroopsLost": 200000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 11700,
+  "defenderLossPerSecond": 8537,
   "defenderLossPerTile": 40,
   "defenderTiles": 5000,
-  "defenderTroopsLost": 121720,
+  "defenderTroopsLost": 99880,
   "finished": true,
-  "ticks": 104,
-  "tilesConquered": 3043,
-  "tilesPerSecond": 292.6,
+  "ticks": 117,
+  "tilesConquered": 2497,
+  "tilesPerSecond": 213.4,
 }
 `;
 
 exports[`attack scenarios > plains dense defender (200k on 5k tiles, 40/tile, ~half the no-city cap), stack 3/4 their army 1`] = `
 {
-  "attackerLossPerSecond": 14020,
-  "attackerLossPerTile": 88.18,
+  "attackerLossPerSecond": 12300,
+  "attackerLossPerTile": 80.13,
   "attackerTiles": 5000,
   "attackerTroopsLost": 150000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 6359,
+  "defenderLossPerSecond": 6138,
   "defenderLossPerTile": 40,
   "defenderTiles": 5000,
-  "defenderTroopsLost": 68040,
+  "defenderTroopsLost": 74880,
   "finished": true,
-  "ticks": 107,
-  "tilesConquered": 1701,
-  "tilesPerSecond": 159,
+  "ticks": 122,
+  "tilesConquered": 1872,
+  "tilesPerSecond": 153.4,
 }
 `;
 
@@ -471,61 +471,61 @@ exports[`attack scenarios > plains equal 50k vs 50k, attack 10k 1`] = `
 exports[`attack scenarios > plains equal 50k vs 50k, attack 25k 1`] = `
 {
   "attackerLossPerSecond": 7353,
-  "attackerLossPerTile": 80.13,
+  "attackerLossPerTile": 79.87,
   "attackerTiles": 5000,
   "attackerTroopsLost": 25000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 917.6,
+  "defenderLossPerSecond": 920.6,
   "defenderLossPerTile": 10,
   "defenderTiles": 5000,
-  "defenderTroopsLost": 3120,
+  "defenderTroopsLost": 3130,
   "finished": true,
   "ticks": 34,
-  "tilesConquered": 312,
-  "tilesPerSecond": 91.76,
+  "tilesConquered": 313,
+  "tilesPerSecond": 92.06,
 }
 `;
 
 exports[`attack scenarios > plains equal 50k vs 50k, attack 50k (all-in) 1`] = `
 {
-  "attackerLossPerSecond": 11630,
-  "attackerLossPerTile": 62.11,
+  "attackerLossPerSecond": 12500,
+  "attackerLossPerTile": 79.87,
   "attackerTiles": 5000,
   "attackerTroopsLost": 50000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 1872,
+  "defenderLossPerSecond": 1565,
   "defenderLossPerTile": 10,
   "defenderTiles": 5000,
-  "defenderTroopsLost": 8050,
+  "defenderTroopsLost": 6260,
   "finished": true,
-  "ticks": 43,
-  "tilesConquered": 805,
-  "tilesPerSecond": 187.2,
+  "ticks": 40,
+  "tilesConquered": 626,
+  "tilesPerSecond": 156.5,
 }
 `;
 
 exports[`attack scenarios > plains human vs bot defender 1`] = `
 {
   "attackerLossPerSecond": 2941,
-  "attackerLossPerTile": 56.18,
+  "attackerLossPerTile": 55.87,
   "attackerTiles": 5000,
   "attackerTroopsLost": 10000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 523.5,
+  "defenderLossPerSecond": 526.5,
   "defenderLossPerTile": 10,
   "defenderTiles": 5000,
-  "defenderTroopsLost": 1780,
+  "defenderTroopsLost": 1790,
   "finished": true,
   "ticks": 34,
-  "tilesConquered": 178,
-  "tilesPerSecond": 52.35,
+  "tilesConquered": 179,
+  "tilesPerSecond": 52.65,
 }
 `;
 
 exports[`attack scenarios > plains human vs terra nullius, attack 2k 1`] = `
 {
-  "attackerLossPerSecond": 800,
-  "attackerLossPerTile": 16,
+  "attackerLossPerSecond": 53.05,
+  "attackerLossPerTile": 1,
   "attackerTiles": 1000,
   "attackerTroopsLost": 2000,
   "defenderEliminated": false,
@@ -534,144 +534,144 @@ exports[`attack scenarios > plains human vs terra nullius, attack 2k 1`] = `
   "defenderTiles": 0,
   "defenderTroopsLost": 0,
   "finished": true,
-  "ticks": 25,
-  "tilesConquered": 125,
-  "tilesPerSecond": 50,
+  "ticks": 377,
+  "tilesConquered": 2000,
+  "tilesPerSecond": 53.05,
 }
 `;
 
 exports[`attack scenarios > plains human vs terra nullius, attack 20k 1`] = `
 {
-  "attackerLossPerSecond": 3571,
-  "attackerLossPerTile": 16,
+  "attackerLossPerSecond": 412.8,
+  "attackerLossPerTile": 1,
   "attackerTiles": 1000,
-  "attackerTroopsLost": 20000,
+  "attackerTroopsLost": 9000,
   "defenderEliminated": false,
   "defenderLossPerSecond": 0,
   "defenderLossPerTile": 0,
   "defenderTiles": 0,
   "defenderTroopsLost": 0,
   "finished": true,
-  "ticks": 56,
-  "tilesConquered": 1250,
-  "tilesPerSecond": 223.2,
+  "ticks": 218,
+  "tilesConquered": 9000,
+  "tilesPerSecond": 412.8,
 }
 `;
 
 exports[`attack scenarios > plains nation vs bot defender 1`] = `
 {
   "attackerLossPerSecond": 2941,
-  "attackerLossPerTile": 56.18,
+  "attackerLossPerTile": 55.87,
   "attackerTiles": 5000,
   "attackerTroopsLost": 10000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 523.5,
+  "defenderLossPerSecond": 526.5,
   "defenderLossPerTile": 10,
   "defenderTiles": 5000,
-  "defenderTroopsLost": 1780,
+  "defenderTroopsLost": 1790,
   "finished": true,
   "ticks": 34,
-  "tilesConquered": 178,
-  "tilesPerSecond": 52.35,
+  "tilesConquered": 179,
+  "tilesPerSecond": 52.65,
 }
 `;
 
 exports[`attack scenarios > plains outmatched 20k vs 200k, attack 4k 1`] = `
 {
-  "attackerLossPerSecond": 1481,
-  "attackerLossPerTile": 97.56,
+  "attackerLossPerSecond": 1379,
+  "attackerLossPerTile": 86.96,
   "attackerTiles": 5000,
   "attackerTroopsLost": 4000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 607.4,
+  "defenderLossPerSecond": 634.5,
   "defenderLossPerTile": 40,
   "defenderTiles": 5000,
-  "defenderTroopsLost": 1640,
+  "defenderTroopsLost": 1840,
   "finished": true,
-  "ticks": 27,
-  "tilesConquered": 41,
-  "tilesPerSecond": 15.19,
+  "ticks": 29,
+  "tilesConquered": 46,
+  "tilesPerSecond": 15.86,
 }
 `;
 
 exports[`attack scenarios > plains outmatched 20k vs 200k, attack 20k (all-in) 1`] = `
 {
-  "attackerLossPerSecond": 3922,
-  "attackerLossPerTile": 99.01,
+  "attackerLossPerSecond": 3448,
+  "attackerLossPerTile": 81.3,
   "attackerTiles": 5000,
   "attackerTroopsLost": 20000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 1584,
+  "defenderLossPerSecond": 1697,
   "defenderLossPerTile": 40,
   "defenderTiles": 5000,
-  "defenderTroopsLost": 8080,
+  "defenderTroopsLost": 9840,
   "finished": true,
-  "ticks": 51,
-  "tilesConquered": 202,
-  "tilesPerSecond": 39.61,
+  "ticks": 58,
+  "tilesConquered": 246,
+  "tilesPerSecond": 42.41,
 }
 `;
 
 exports[`attack scenarios > plains overwhelming 200k vs 20k, attack 40k 1`] = `
 {
-  "attackerLossPerSecond": 13330,
-  "attackerLossPerTile": 33.78,
+  "attackerLossPerSecond": 19050,
+  "attackerLossPerTile": 79.84,
   "attackerTiles": 5000,
   "attackerTroopsLost": 40000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 1579,
+  "defenderLossPerSecond": 954.3,
   "defenderLossPerTile": 4,
   "defenderTiles": 5000,
-  "defenderTroopsLost": 4736,
+  "defenderTroopsLost": 2004,
   "finished": true,
-  "ticks": 30,
-  "tilesConquered": 1184,
-  "tilesPerSecond": 394.7,
+  "ticks": 21,
+  "tilesConquered": 501,
+  "tilesPerSecond": 238.6,
 }
 `;
 
 exports[`attack scenarios > plains small attacker (500 tiles) vs big defender (9500 tiles) 1`] = `
 {
-  "attackerLossPerSecond": 3846,
-  "attackerLossPerTile": 76.92,
+  "attackerLossPerSecond": 4167,
+  "attackerLossPerTile": 80,
   "attackerTiles": 500,
   "attackerTroopsLost": 10000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 250,
+  "defenderLossPerSecond": 260.4,
   "defenderLossPerTile": 5,
   "defenderTiles": 9500,
-  "defenderTroopsLost": 650,
+  "defenderTroopsLost": 625,
   "finished": true,
-  "ticks": 26,
-  "tilesConquered": 130,
-  "tilesPerSecond": 50,
+  "ticks": 24,
+  "tilesConquered": 125,
+  "tilesPerSecond": 52.08,
 }
 `;
 
 exports[`attack scenarios > plains traitor defender 1`] = `
 {
   "attackerLossPerSecond": 2564,
-  "attackerLossPerTile": 40.16,
+  "attackerLossPerTile": 40,
   "attackerTiles": 5000,
   "attackerTroopsLost": 10000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 638.5,
+  "defenderLossPerSecond": 641,
   "defenderLossPerTile": 10,
   "defenderTiles": 5000,
-  "defenderTroopsLost": 2490,
+  "defenderTroopsLost": 2500,
   "finished": true,
   "ticks": 39,
-  "tilesConquered": 249,
-  "tilesPerSecond": 63.85,
+  "tilesConquered": 250,
+  "tilesPerSecond": 64.1,
 }
 `;
 
 exports[`attack scenarios > plains very dense defender (650k on 5k tiles, 130/tile, ~1 city over cap), stack 1.67x their army 1`] = `
 {
-  "attackerLossPerSecond": 30840,
-  "attackerLossPerTile": 45.64,
+  "attackerLossPerSecond": 52980,
+  "attackerLossPerTile": 78.41,
   "attackerTiles": 5000,
-  "attackerTroopsLost": 228183,
+  "attackerTroopsLost": 392051,
   "defenderEliminated": true,
   "defenderLossPerSecond": 86100,
   "defenderLossPerTile": 127.4,
@@ -686,116 +686,116 @@ exports[`attack scenarios > plains very dense defender (650k on 5k tiles, 130/ti
 
 exports[`attack scenarios > plains very dense defender (650k on 5k tiles, 130/tile, ~1 city over cap), stack 1/4 their army 1`] = `
 {
-  "attackerLossPerSecond": 10160,
-  "attackerLossPerTile": 155.1,
+  "attackerLossPerSecond": 6660,
+  "attackerLossPerTile": 82.03,
   "attackerTiles": 5000,
   "attackerTroopsLost": 162500,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 8515,
+  "defenderLossPerSecond": 10550,
   "defenderLossPerTile": 130,
   "defenderTiles": 5000,
-  "defenderTroopsLost": 136240,
+  "defenderTroopsLost": 257530,
   "finished": true,
-  "ticks": 160,
-  "tilesConquered": 1048,
-  "tilesPerSecond": 65.5,
+  "ticks": 244,
+  "tilesConquered": 1981,
+  "tilesPerSecond": 81.19,
 }
 `;
 
 exports[`attack scenarios > plains very dense defender (650k on 5k tiles, 130/tile, ~1 city over cap), stack 1x their army 1`] = `
 {
-  "attackerLossPerSecond": 35860,
-  "attackerLossPerTile": 55.95,
+  "attackerLossPerSecond": 49630,
+  "attackerLossPerTile": 78.41,
   "attackerTiles": 5000,
-  "attackerTroopsLost": 279743,
+  "attackerTroopsLost": 392051,
   "defenderEliminated": true,
-  "defenderLossPerSecond": 81680,
+  "defenderLossPerSecond": 80650,
   "defenderLossPerTile": 127.4,
   "defenderTiles": 5000,
   "defenderTroopsLost": 637130,
   "finished": true,
-  "ticks": 78,
+  "ticks": 79,
   "tilesConquered": 5000,
-  "tilesPerSecond": 641,
+  "tilesPerSecond": 632.9,
 }
 `;
 
 exports[`attack scenarios > plains very dense defender (650k on 5k tiles, 130/tile, ~1 city over cap), stack 3/4 their army 1`] = `
 {
-  "attackerLossPerSecond": 32720,
-  "attackerLossPerTile": 119.3,
+  "attackerLossPerSecond": 39210,
+  "attackerLossPerTile": 78.41,
   "attackerTiles": 5000,
-  "attackerTroopsLost": 487500,
-  "defenderEliminated": false,
-  "defenderLossPerSecond": 35650,
-  "defenderLossPerTile": 130,
+  "attackerTroopsLost": 392051,
+  "defenderEliminated": true,
+  "defenderLossPerSecond": 63710,
+  "defenderLossPerTile": 127.4,
   "defenderTiles": 5000,
-  "defenderTroopsLost": 531180,
+  "defenderTroopsLost": 637130,
   "finished": true,
-  "ticks": 149,
-  "tilesConquered": 4086,
-  "tilesPerSecond": 274.2,
+  "ticks": 100,
+  "tilesConquered": 5000,
+  "tilesPerSecond": 500,
 }
 `;
 
 exports[`attack scenarios > world highland/mountain region, 100k vs 100k, attack 20k 1`] = `
 {
-  "attackerLossPerSecond": 5000,
-  "attackerLossPerTile": 115.6,
+  "attackerLossPerSecond": 4651,
+  "attackerLossPerTile": 108.1,
   "attackerTiles": 5000,
   "attackerTroopsLost": 20000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 865,
+  "defenderLossPerSecond": 860.5,
   "defenderLossPerTile": 20,
   "defenderTiles": 5000,
-  "defenderTroopsLost": 3460,
+  "defenderTroopsLost": 3700,
   "finished": true,
-  "ticks": 40,
-  "tilesConquered": 173,
-  "tilesPerSecond": 43.25,
+  "ticks": 43,
+  "tilesConquered": 185,
+  "tilesPerSecond": 43.02,
 }
 `;
 
 exports[`attack scenarios > world huge empires (~150k tiles each), 2M vs 2M, attack 400k 1`] = `
 {
-  "attackerLossPerSecond": 11400,
-  "attackerLossPerTile": 87.45,
+  "attackerLossPerSecond": 10640,
+  "attackerLossPerTile": 82.12,
   "attackerTiles": 108968,
   "attackerTroopsLost": 400000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 2085,
+  "defenderLossPerSecond": 2073,
   "defenderLossPerTile": 16,
   "defenderTiles": 121741,
-  "defenderTroopsLost": 73184,
+  "defenderTroopsLost": 77936,
   "finished": true,
-  "ticks": 351,
-  "tilesConquered": 4574,
-  "tilesPerSecond": 130.3,
+  "ticks": 376,
+  "tilesConquered": 4871,
+  "tilesPerSecond": 129.5,
 }
 `;
 
 exports[`attack scenarios > world mountain region, 100k vs 100k, attack 20k 1`] = `
 {
-  "attackerLossPerSecond": 4878,
-  "attackerLossPerTile": 121.2,
+  "attackerLossPerSecond": 4545,
+  "attackerLossPerTile": 112.4,
   "attackerTiles": 5000,
   "attackerTroopsLost": 20000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 804.9,
+  "defenderLossPerSecond": 809.1,
   "defenderLossPerTile": 20,
   "defenderTiles": 5000,
-  "defenderTroopsLost": 3300,
+  "defenderTroopsLost": 3560,
   "finished": true,
-  "ticks": 41,
-  "tilesConquered": 165,
-  "tilesPerSecond": 40.24,
+  "ticks": 44,
+  "tilesConquered": 178,
+  "tilesPerSecond": 40.45,
 }
 `;
 
 exports[`attack scenarios > world mountain region, human vs terra nullius, attack 20k 1`] = `
 {
-  "attackerLossPerSecond": 11760,
-  "attackerLossPerTile": 22,
+  "attackerLossPerSecond": 1156,
+  "attackerLossPerTile": 1,
   "attackerTiles": 5000,
   "attackerTroopsLost": 20000,
   "defenderEliminated": false,
@@ -804,26 +804,26 @@ exports[`attack scenarios > world mountain region, human vs terra nullius, attac
   "defenderTiles": 0,
   "defenderTroopsLost": 0,
   "finished": true,
-  "ticks": 17,
-  "tilesConquered": 909,
-  "tilesPerSecond": 534.7,
+  "ticks": 173,
+  "tilesConquered": 20000,
+  "tilesPerSecond": 1156,
 }
 `;
 
 exports[`attack scenarios > world plains-ish region, 100k vs 100k, attack 20k 1`] = `
 {
-  "attackerLossPerSecond": 4762,
-  "attackerLossPerTile": 93.9,
+  "attackerLossPerSecond": 4545,
+  "attackerLossPerTile": 87.34,
   "attackerTiles": 5000,
   "attackerTroopsLost": 20000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 1014,
+  "defenderLossPerSecond": 1041,
   "defenderLossPerTile": 20,
   "defenderTiles": 5000,
-  "defenderTroopsLost": 4260,
+  "defenderTroopsLost": 4580,
   "finished": true,
-  "ticks": 42,
-  "tilesConquered": 213,
-  "tilesPerSecond": 50.71,
+  "ticks": 44,
+  "tilesConquered": 229,
+  "tilesPerSecond": 52.05,
 }
 `;
