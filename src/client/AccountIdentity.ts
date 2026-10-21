@@ -28,7 +28,8 @@ export function hasLinkedIdentity(
     user.discord !== undefined ||
     user.google !== undefined ||
     user.steam !== undefined ||
-    (user.email ?? "") !== ""
+    (user.email ?? "") !== "" ||
+    (user.publicId ?? "") !== ""
   );
 }
 

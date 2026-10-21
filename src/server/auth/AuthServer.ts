@@ -599,14 +599,18 @@ async function main() {
   });
 
   app.post("/auth/logout", (req, res) => {
-    const token = cookies(req)[COOKIE];
+    const token =
+      cookies(req)[COOKIE] ??
+      (req.headers["x-refresh-token"] as string | undefined);
     if (token) store.deleteSession(token);
     setCookie(req, res, COOKIE, "", 0);
     res.sendStatus(200);
   });
 
   app.post("/auth/revoke", (req, res) => {
-    const token = cookies(req)[COOKIE];
+    const token =
+      cookies(req)[COOKIE] ??
+      (req.headers["x-refresh-token"] as string | undefined);
     const user = token ? store.sessionUser(token) : undefined;
     if (user) store.deleteAllSessions(user.id);
     setCookie(req, res, COOKIE, "", 0);

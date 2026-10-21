@@ -32,7 +32,11 @@ export {
   saveLocalVaultToken,
   INDUFRONT_VAULT_KEY,
 } from "./AccountVault";
-import { getLocalVaultToken, saveLocalVaultToken } from "./AccountVault";
+import {
+  getLocalVaultToken,
+  saveLocalVaultToken,
+  INDUFRONT_VAULT_KEY,
+} from "./AccountVault";
 
 let __jwt: string | null = null;
 let __refreshPromise: Promise<void> | null = null;
@@ -306,11 +310,20 @@ export async function getAuthHeader(): Promise<string> {
 
 export async function logOut(allSessions: boolean = false): Promise<boolean> {
   try {
+    const localRefresh =
+      typeof localStorage !== "undefined"
+        ? localStorage.getItem("indufront_refresh_token")
+        : null;
+    const headers: Record<string, string> = {};
+    if (localRefresh) {
+      headers["x-refresh-token"] = localRefresh;
+    }
     const response = await fetch(
       getApiBase() + (allSessions ? "/auth/revoke" : "/auth/logout"),
       {
         method: "POST",
         credentials: "include",
+        headers,
       },
     );
 
@@ -350,12 +363,20 @@ function announceLoggedOut(): void {
 export function clearLocalSession(): void {
   const hadSession = __jwt !== null;
   __jwt = null;
+  __expiresAt = 0;
+  __refreshPromise = null;
   try {
     localStorage.removeItem(INDUFRONT_JWT_KEY);
     localStorage.removeItem("indufront_refresh_token");
+    localStorage.removeItem(INDUFRONT_VAULT_KEY);
+    localStorage.removeItem("indufront_vault_token");
+    localStorage.removeItem("username");
+    localStorage.removeItem("user_id");
+    localStorage.removeItem("cached_public_id");
   } catch {
     /* ignore storage errors */
   }
+  saveLocalVaultToken(null);
   updateUserSettingsForJwt(null);
   localStorage.removeItem(PERSISTENT_ID_KEY);
   // Switch cosmetics back to the logged-out scope (via updateUserSettingsForJwt).
