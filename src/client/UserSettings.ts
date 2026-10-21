@@ -348,7 +348,11 @@ export class UserSettings {
   private getCached(key: string): string | null {
     const storageKey = this.storageKey(key);
     if (!UserSettings.cache.has(storageKey)) {
-      UserSettings.cache.set(storageKey, localStorage.getItem(storageKey));
+      const value =
+        typeof localStorage !== "undefined"
+          ? localStorage.getItem(storageKey)
+          : null;
+      UserSettings.cache.set(storageKey, value);
     }
     return UserSettings.cache.get(storageKey) ?? null;
   }

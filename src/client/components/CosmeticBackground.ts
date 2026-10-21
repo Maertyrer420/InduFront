@@ -50,11 +50,15 @@ export class CosmeticBackground extends LitElement {
 
   private async load() {
     const gen = ++this.loadGen; // overlapping loads: only the newest may apply
-    const c = await getPlayerCosmetics();
-    if (gen !== this.loadGen || !this.isConnected) return;
-    this.pattern = c.pattern ?? null;
-    this.skin = c.skin ?? null;
-    this.color = c.color?.color ?? null;
+    try {
+      const c = await getPlayerCosmetics();
+      if (gen !== this.loadGen || !this.isConnected) return;
+      this.pattern = c.pattern ?? null;
+      this.skin = c.skin ?? null;
+      this.color = c.color?.color ?? null;
+    } catch {
+      // Ignore if environment tore down while resolving
+    }
   }
 
   render() {
