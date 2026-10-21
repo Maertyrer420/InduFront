@@ -542,6 +542,20 @@ export const UserMeResponseSchema = z.object({
     publicId: z.string().optional(),
     emailVerified: z.boolean().optional(),
     doubleSafeEnabled: z.boolean().optional(),
+    recoveryKey: z.string().optional(),
+    settings: z.record(z.string(), z.string()).optional(),
+    inventory: z
+      .object({
+        flares: z.array(z.string()).optional(),
+        equippedPattern: z.string().nullable().optional(),
+        equippedFlag: z.string().nullable().optional(),
+        equippedCrown: z.string().nullable().optional(),
+        equippedColor: z.string().nullable().optional(),
+        equippedEffects: z.record(z.string(), z.string()).optional(),
+        loadouts: z.array(z.unknown()).optional(),
+        activeLoadout: z.string().nullable().optional(),
+      })
+      .optional(),
   }),
   // The caller's active account ban, shown to them (localized client-side), or
   // null. `category` is a server enum but kept as a string here so an

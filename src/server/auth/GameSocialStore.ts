@@ -2,7 +2,13 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { UserRecord } from "./AuthStore";
-import { dbLoadSocialData, dbSaveSocialData } from "./DbStorage";
+import {
+  dbDeleteClan,
+  dbInsertChat,
+  dbInsertMatch,
+  dbLoadSocialData,
+  dbSaveSocialData,
+} from "./DbStorage";
 
 export type ClanRole = "Owner" | "Admin" | "Supporter" | "Mitglied";
 
@@ -180,6 +186,7 @@ export class GameSocialStore {
   // In-memory heartbeat tracker: publicId -> timestamp
   private presence = new Map<string, number>();
   private backupPath: string;
+  private initPromise: Promise<void>;
 
   constructor(private readonly filePath: string) {
     this.backupPath = this.filePath + ".backup";
@@ -215,29 +222,60 @@ export class GameSocialStore {
     this.data.directChat ??= [];
 
     this.seedDefaultBotTribes();
-    void this.syncFromDb();
+    this.initPromise = this.syncFromDb();
+  }
+
+  public async init(): Promise<void> {
+    await this.initPromise;
   }
 
   private async syncFromDb(): Promise<void> {
     try {
       const dbData = await dbLoadSocialData();
       if (dbData) {
-        if (dbData.clans && dbData.clans.length > 0)
-          this.data.clans = dbData.clans;
+        const clanMap = new Map<string, ClanRecord>();
+        for (const c of this.data.clans) {
+          clanMap.set(c.tag.toUpperCase(), c);
+        }
+        for (const c of dbData.clans ?? []) {
+          clanMap.set(c.tag.toUpperCase(), c);
+        }
+        this.data.clans = Array.from(clanMap.values());
+
         if (dbData.playerStats && Object.keys(dbData.playerStats).length > 0) {
           this.data.playerStats = {
             ...this.data.playerStats,
             ...dbData.playerStats,
           };
         }
-        if (dbData.matches && dbData.matches.length > 0)
-          this.data.matches = dbData.matches;
-        if (dbData.globalChat && dbData.globalChat.length > 0)
-          this.data.globalChat = dbData.globalChat;
-        if (dbData.directChat && dbData.directChat.length > 0)
-          this.data.directChat = dbData.directChat;
+
+        const matchMap = new Map<string, MatchRecord>();
+        for (const m of [...this.data.matches, ...(dbData.matches ?? [])]) {
+          if (m && m.gameId) matchMap.set(m.gameId, m);
+        }
+        this.data.matches = Array.from(matchMap.values()).slice(-1000);
+
+        const globalMap = new Map<string, GlobalChatMessage>();
+        for (const msg of [
+          ...this.data.globalChat,
+          ...(dbData.globalChat ?? []),
+        ]) {
+          if (msg && msg.id) globalMap.set(msg.id, msg);
+        }
+        this.data.globalChat = Array.from(globalMap.values()).slice(-500);
+
+        const directMap = new Map<string, DirectChatMessage>();
+        for (const msg of [
+          ...this.data.directChat,
+          ...(dbData.directChat ?? []),
+        ]) {
+          if (msg && msg.id) directMap.set(msg.id, msg);
+        }
+        this.data.directChat = Array.from(directMap.values()).slice(-1000);
+
         this.save(false);
-        console.log("[social-store] Synchronized social data from PostgreSQL.");
+        await dbSaveSocialData(this.data);
+        console.log("[social-store] Synchronized social data with PostgreSQL.");
       }
     } catch (err: any) {
       console.warn("[social-store] syncFromDb:", err.message);
@@ -653,6 +691,7 @@ export class GameSocialStore {
 
     this.data.clans = this.data.clans.filter((c) => c.tag !== clan.tag);
     this.save();
+    dbDeleteClan(clan.tag).catch(() => {});
     return { ok: true };
   }
 
@@ -731,6 +770,7 @@ export class GameSocialStore {
       this.data.globalChat = this.data.globalChat.slice(-500);
     }
     this.save();
+    dbInsertChat("global", msg.id, user.publicId, null, msg).catch(() => {});
     return msg;
   }
 
@@ -774,6 +814,9 @@ export class GameSocialStore {
       this.data.directChat = this.data.directChat.slice(-1000);
     }
     this.save();
+    dbInsertChat("direct", msg.id, user.publicId, targetPublicId, msg).catch(
+      () => {},
+    );
     return msg;
   }
 
@@ -815,6 +858,7 @@ export class GameSocialStore {
     if (this.data.matches.length > 1000) {
       this.data.matches = this.data.matches.slice(-1000);
     }
+    dbInsertMatch(match).catch(() => {});
 
     // Update player records
     for (const p of match.players) {

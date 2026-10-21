@@ -296,6 +296,11 @@ async function requestUserMe(): Promise<{
       const publicId = result.data.player.publicId;
       rememberPublicId(claims.sub, publicId);
       UserSettings.setPlayerId(publicId);
+      UserSettings.hydrateFromServerProfile(
+        publicId,
+        result.data.user.settings,
+        result.data.user.inventory,
+      );
     }
     return { profile: result.data, aborted: false };
   } catch (e) {

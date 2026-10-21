@@ -3,7 +3,7 @@ import { customElement, state } from "lit/decorators.js";
 import { getApiBase } from "../ApiBase";
 import { googleLogin } from "../Auth";
 
-type Mode = "login" | "register" | "recover";
+type Mode = "login" | "register" | "recover" | "recovery_key_created";
 
 const de = (navigator.language || "en").toLowerCase().startsWith("de");
 const t = (deText: string, enText: string) => (de ? deText : enText);
@@ -34,12 +34,12 @@ const ERRORS: Record<string, [string, string]> = {
     "Too many attempts. Try again later.",
   ],
   invalid_code: [
-    "Der 6-stellige Code ist ungültig oder abgelaufen.",
-    "The 6-digit code is invalid or expired.",
+    "Der Sicherheitscode oder Wiederherstellungsschlüssel ist ungültig oder abgelaufen.",
+    "The security code or recovery key is invalid or expired.",
   ],
 };
 
-/** Username & password sign-in, registration, and email account recovery with visibility toggle. */
+/** Username & password sign-in, registration, and secure email/recovery-key account recovery. */
 @customElement("auth-form")
 export class AuthForm extends LitElement {
   @state() private mode: Mode = "login";
@@ -57,6 +57,10 @@ export class AuthForm extends LitElement {
   @state() private recoveryStep = 1;
   @state() private recoveryCode = "";
   @state() private newPassword = "";
+
+  // New account backup recovery key display
+  @state() private generatedRecoveryKey = "";
+  @state() private keyCopied = false;
 
   createRenderRoot() {
     return this;
@@ -119,6 +123,13 @@ export class AuthForm extends LitElement {
           localStorage.setItem("username", effectiveName);
         }
         localStorage.setItem("useVerifiedName", "true");
+
+        const recKey = body?.recoveryKey ?? body?.user?.recoveryKey;
+        if (register && recKey) {
+          this.generatedRecoveryKey = String(recKey);
+          this.mode = "recovery_key_created";
+          return;
+        }
         window.location.reload();
         return;
       }
@@ -141,8 +152,8 @@ export class AuthForm extends LitElement {
     if (this.recoveryStep === 1) {
       if (!this.identifier.trim()) {
         this.error = t(
-          "Bitte Benutzername oder E-Mail eingeben.",
-          "Please enter username or email.",
+          "Bitte Benutzername, Spieler-ID oder E-Mail eingeben.",
+          "Please enter username, player ID, or email.",
         );
         return;
       }
@@ -155,16 +166,18 @@ export class AuthForm extends LitElement {
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
           this.recoveryStep = 2;
-          this.successMsg = t(
-            `Wiederherstellungscode erstellt! ${data.code ? `Code: ${data.code}` : "Bitte Code eingeben."}`,
-            `Recovery code created! ${data.code ? `Code: ${data.code}` : "Please enter the code."}`,
-          );
+          this.successMsg =
+            data.message ??
+            t(
+              "Falls eine E-Mail verknüpft ist, wurde ein 6-stelliger Sicherheitscode gesendet. Alternativ kannst du deinen persönlichen Backup-Schlüssel (IF-REC-...) eingeben.",
+              "If an email is linked, a 6-digit security code was sent. Alternatively, enter your personal Backup Recovery Key (IF-REC-...).",
+            );
         } else {
           this.error =
             data.error ??
             t(
-              "Fehler beim Anfordern des Codes.",
-              "Error requesting recovery code.",
+              "Fehler beim Anfordern der Wiederherstellung.",
+              "Error requesting account recovery.",
             );
         }
       } catch {
@@ -173,8 +186,8 @@ export class AuthForm extends LitElement {
     } else {
       if (!this.recoveryCode.trim() || !this.newPassword) {
         this.error = t(
-          "Bitte Code und neues Passwort eingeben.",
-          "Please enter code and new password.",
+          "Bitte E-Mail-Code / Backup-Schlüssel und neues Passwort eingeben.",
+          "Please enter email code / backup key and new password.",
         );
         return;
       }
@@ -203,14 +216,23 @@ export class AuthForm extends LitElement {
             localStorage.setItem("username", data.session.user.username);
           }
           localStorage.setItem("useVerifiedName", "true");
+          const recKey =
+            data.recoveryKey ??
+            data.session?.recoveryKey ??
+            data.session?.user?.recoveryKey;
+          if (recKey) {
+            this.generatedRecoveryKey = String(recKey);
+            this.mode = "recovery_key_created";
+            return;
+          }
           window.location.reload();
           return;
         } else {
           this.error =
             data.error === "invalid_code"
               ? t(
-                  "Der Code ist falsch oder abgelaufen.",
-                  "The code is invalid or expired.",
+                  "Der Code oder Backup-Schlüssel ist falsch oder abgelaufen.",
+                  "The code or backup key is invalid or expired.",
                 )
               : t(
                   "Passwort muss mindestens 8 Zeichen lang sein.",
@@ -311,6 +333,57 @@ export class AuthForm extends LitElement {
   }
 
   render() {
+    if (this.mode === "recovery_key_created") {
+      return html`
+        <div class="space-y-4">
+          <div class="border-b border-white/10 pb-3">
+            <span class="text-sm font-bold text-emerald-400"
+              >🛡️
+              ${t(
+                "Dein persönlicher Backup-Schlüssel",
+                "Your Personal Backup Recovery Key",
+              )}</span
+            >
+          </div>
+          <p class="text-xs text-white/70 leading-relaxed">
+            ${t(
+              "Speichere diesen persönlichen Wiederherstellungsschlüssel sicher ab! Falls du dein Passwort jemals vergisst, kannst du deinen Account damit jederzeit sofort wiederherstellen (auch ohne E-Mail). Du findest ihn auch später in deinen Account-Einstellungen.",
+              "Save this personal recovery key in a safe place! If you ever forget your password, you can recover your account immediately with it. You can also view it later in Account Settings.",
+            )}
+          </p>
+          <div
+            class="flex items-center justify-between gap-2 bg-black/50 border border-yellow-400/40 rounded-xl px-4 py-3"
+          >
+            <span
+              class="font-mono font-bold text-yellow-300 text-sm tracking-widest select-all"
+            >
+              ${this.generatedRecoveryKey}
+            </span>
+            <button
+              type="button"
+              @click=${() => {
+                navigator.clipboard.writeText(this.generatedRecoveryKey);
+                this.keyCopied = true;
+                setTimeout(() => (this.keyCopied = false), 2500);
+              }}
+              class="px-3 py-1.5 text-xs font-bold rounded-lg bg-white/15 hover:bg-white/25 text-white transition-colors shrink-0"
+            >
+              ${this.keyCopied
+                ? t("Kopiert! ✓", "Copied! ✓")
+                : t("Kopieren", "Copy")}
+            </button>
+          </div>
+          <button
+            type="button"
+            @click=${() => window.location.reload()}
+            class="w-full px-6 py-3 text-sm font-bold uppercase tracking-wider rounded-xl bg-green-600 hover:bg-green-500 text-white transition-colors"
+          >
+            ${t("Gespeichert & Weiter zum Spiel", "Saved & Continue to Game")}
+          </button>
+        </div>
+      `;
+    }
+
     if (this.mode === "recover") {
       return html`
         <form class="space-y-4" @submit=${(e: Event) => this.submit(e)}>
@@ -337,24 +410,35 @@ export class AuthForm extends LitElement {
           ${this.recoveryStep === 1
             ? html`
                 <p class="text-xs text-white/60 leading-relaxed">
-                  Gib deinen Benutzernamen oder deine E-Mail-Adresse ein, um
-                  einen 6-stelligen Wiederherstellungscode zu erhalten.
+                  Gib deinen Benutzernamen, deine Spieler-ID oder deine
+                  E-Mail-Adresse ein. Wir senden dir einen 6-stelligen Code per
+                  E-Mail – oder nutze direkt deinen persönlichen
+                  Backup-Schlüssel (<code class="text-yellow-300"
+                    >IF-REC-...</code
+                  >).
                 </p>
                 ${this.field(
-                  t("Benutzername oder E-Mail", "Username or Email"),
+                  t(
+                    "Benutzername, Spieler-ID oder E-Mail",
+                    "Username, Player ID or Email",
+                  ),
                   "text",
                   this.identifier,
                   (v) => (this.identifier = v),
                   "username",
-                  "z.B. Player123",
+                  "z.B. Dev oder IF-A1B2C3D4",
                 )}
-                <button
-                  type="submit"
-                  ?disabled=${this.busy || !this.identifier.trim()}
-                  class="w-full px-6 py-3 text-sm font-bold uppercase tracking-wider rounded-xl bg-malibu-blue hover:bg-aquarius disabled:opacity-50 text-white transition-colors"
-                >
-                  ${this.busy ? "Sende Code..." : "Code anfordern"}
-                </button>
+                <div class="flex flex-col gap-2">
+                  <button
+                    type="submit"
+                    ?disabled=${this.busy || !this.identifier.trim()}
+                    class="w-full px-6 py-3 text-sm font-bold uppercase tracking-wider rounded-xl bg-malibu-blue hover:bg-aquarius disabled:opacity-50 text-white transition-colors"
+                  >
+                    ${this.busy
+                      ? "Prüfe Account..."
+                      : "Weiter zur Wiederherstellung"}
+                  </button>
+                </div>
               `
             : html`
                 <p
@@ -364,14 +448,14 @@ export class AuthForm extends LitElement {
                 </p>
                 ${this.field(
                   t(
-                    "6-stelliger Wiederherstellungscode",
-                    "6-digit Recovery Code",
+                    "6-stelliger E-Mail-Code ODER Backup-Schlüssel (IF-REC-...)",
+                    "6-digit Email Code OR Backup Key (IF-REC-...)",
                   ),
                   "text",
                   this.recoveryCode,
                   (v) => (this.recoveryCode = v),
                   "one-time-code",
-                  "z.B. 123456",
+                  "123456 oder IF-REC-XXXX-XXXX-XXXX",
                 )}
                 ${this.passwordField(
                   t("Neues Passwort", "New Password"),

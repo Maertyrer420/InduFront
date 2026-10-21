@@ -293,6 +293,166 @@ export class UserSettings {
   private static playerId: string | null = null;
   /** Set while applyLoadout writes, to stop the mirror writing back. */
   private static applyingLoadout = false;
+  /** Set while hydrating from the database so we do not trigger a redundant push. */
+  private static hydratingFromServer = false;
+  private static remotePushTimer: ReturnType<typeof setTimeout> | null = null;
+  private static pendingRemoteSettings: Record<string, string | null> = {};
+
+  /**
+   * Hydrates user settings and cosmetic inventory from the server's /users/@me payload,
+   * and pushes any local customizations back to the database so they are permanently stored.
+   */
+  static hydrateFromServerProfile(
+    playerId: string,
+    remoteSettings?: Record<string, string>,
+    remoteInventory?: {
+      equippedPattern?: string | null;
+      equippedFlag?: string | null;
+      equippedCrown?: string | null;
+      equippedColor?: string | null;
+      equippedEffects?: Record<string, string>;
+      loadouts?: unknown[];
+      activeLoadout?: string | null;
+    },
+  ): void {
+    if (typeof localStorage === "undefined") return;
+    UserSettings.hydratingFromServer = true;
+    const settings = new UserSettings();
+    try {
+      if (remoteSettings && typeof remoteSettings === "object") {
+        for (const [k, v] of Object.entries(remoteSettings)) {
+          if (typeof v !== "string") continue;
+          const targetKey = PER_PLAYER_KEYS.includes(k)
+            ? `${k}:${playerId}`
+            : k;
+          // Restore from DB if not locally overridden yet
+          if (localStorage.getItem(targetKey) === null) {
+            localStorage.setItem(targetKey, v);
+            UserSettings.cache.set(targetKey, v);
+            settings.emitChange(k, v);
+          }
+        }
+      }
+      if (remoteInventory && typeof remoteInventory === "object") {
+        const applySlot = (baseKey: string, val: string | null | undefined) => {
+          if (!val) return;
+          const scoped = `${baseKey}:${playerId}`;
+          if (localStorage.getItem(scoped) === null) {
+            localStorage.setItem(scoped, val);
+            UserSettings.cache.set(scoped, val);
+            settings.emitChange(baseKey, val);
+          }
+        };
+        applySlot(PATTERN_KEY, remoteInventory.equippedPattern);
+        applySlot(FLAG_KEY, remoteInventory.equippedFlag);
+        applySlot(CROWN_KEY, remoteInventory.equippedCrown);
+        applySlot(COLOR_KEY, remoteInventory.equippedColor);
+        if (
+          remoteInventory.equippedEffects &&
+          Object.keys(remoteInventory.equippedEffects).length > 0
+        ) {
+          applySlot(
+            EFFECTS_KEY,
+            JSON.stringify(remoteInventory.equippedEffects),
+          );
+        }
+        if (
+          Array.isArray(remoteInventory.loadouts) &&
+          remoteInventory.loadouts.length > 0
+        ) {
+          applySlot(LOADOUTS_KEY, JSON.stringify(remoteInventory.loadouts));
+        }
+        applySlot(ACTIVE_LOADOUT_KEY, remoteInventory.activeLoadout);
+      }
+    } finally {
+      UserSettings.hydratingFromServer = false;
+    }
+
+    // Also push current local settings & inventory snapshot to the server so DB has everything
+    UserSettings.scheduleRemoteSync();
+  }
+
+  private static scheduleRemoteSync(
+    changedKey?: string,
+    changedVal?: string | null,
+  ): void {
+    if (
+      UserSettings.hydratingFromServer ||
+      UserSettings.playerId === null ||
+      typeof localStorage === "undefined"
+    ) {
+      return;
+    }
+    if (changedKey !== undefined) {
+      UserSettings.pendingRemoteSettings[changedKey] = changedVal ?? null;
+    }
+    if (UserSettings.remotePushTimer !== null) {
+      clearTimeout(UserSettings.remotePushTimer);
+    }
+    UserSettings.remotePushTimer = setTimeout(() => {
+      UserSettings.remotePushTimer = null;
+      void UserSettings.flushRemoteSync();
+    }, 800);
+  }
+
+  private static async flushRemoteSync(): Promise<void> {
+    if (
+      UserSettings.playerId === null ||
+      typeof localStorage === "undefined" ||
+      typeof fetch === "undefined"
+    ) {
+      return;
+    }
+    const jwt = localStorage.getItem("indufront_jwt");
+    if (!jwt) return;
+
+    const pid = UserSettings.playerId;
+    const settingsPayload: Record<string, string | null> = {
+      ...UserSettings.pendingRemoteSettings,
+    };
+    UserSettings.pendingRemoteSettings = {};
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (!k) continue;
+      if (k.startsWith("settings.")) {
+        const baseKey = k.endsWith(`:${pid}`)
+          ? k.slice(0, -(pid.length + 1))
+          : k;
+        if (!baseKey.includes(":")) {
+          settingsPayload[baseKey] = localStorage.getItem(k);
+        }
+      }
+    }
+
+    const s = new UserSettings();
+    const inventoryPayload = {
+      equippedPattern: s.getCached(PATTERN_KEY),
+      equippedFlag: s.getCached(FLAG_KEY),
+      equippedCrown: s.getCached(CROWN_KEY),
+      equippedColor: s.getCached(COLOR_KEY),
+      equippedEffects: s.getSelectedEffects(),
+      loadouts: s.getLoadouts(),
+      activeLoadout: s.getActiveLoadout(),
+    };
+
+    try {
+      const { getApiBase } = await import("./ApiBase");
+      await fetch(`${getApiBase()}/users/@me/settings`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${jwt}`,
+        },
+        body: JSON.stringify({
+          settings: settingsPayload,
+          inventory: inventoryPayload,
+        }),
+      });
+    } catch {
+      // Ignore transient network errors; localStorage remains intact
+    }
+  }
 
   /**
    * Sets which player's cosmetic selections are active. Called with the
@@ -361,20 +521,26 @@ export class UserSettings {
   // exported key constants, not the per-player storage key.
   private setCached(key: string, value: string, emitChange: boolean = true) {
     const storageKey = this.storageKey(key);
-    localStorage.setItem(storageKey, value);
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(storageKey, value);
+    }
     UserSettings.cache.set(storageKey, value);
     if (emitChange) {
       this.emitChange(key, value);
     }
+    UserSettings.scheduleRemoteSync(key, value);
   }
 
   public removeCached(key: string, emitChange: boolean = true) {
     const storageKey = this.storageKey(key);
-    localStorage.removeItem(storageKey);
+    if (typeof localStorage !== "undefined") {
+      localStorage.removeItem(storageKey);
+    }
     UserSettings.cache.set(storageKey, null);
     if (emitChange) {
       this.emitChange(key, null);
     }
+    UserSettings.scheduleRemoteSync(key, null);
   }
 
   private getBool(key: string, defaultValue: boolean): boolean {

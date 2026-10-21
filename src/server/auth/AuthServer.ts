@@ -19,6 +19,7 @@ import {
   UserRecord,
   verifyPassword,
 } from "./AuthStore";
+import { sendAuthEmail } from "./DbStorage";
 import {
   GameSocialStore,
   ClanRole,
@@ -125,21 +126,38 @@ const validPassword = (p: unknown): p is string =>
   typeof p === "string" && p.length >= 8 && p.length <= 128;
 
 function userMe(u: UserRecord): UserMeResponse {
+  const recoveryKey = store.ensureRecoveryKey(u.id) ?? u.recoveryKey;
   const stats = socialStore.getOrCreatePlayerStats(u.publicId, u.username);
-  const clans = socialStore.getClansForUser(u.publicId).map((c) => ({
-    tag: c.tag,
-    name: c.name,
-    role:
-      c.members.find(
-        (m) => m.publicId.toLowerCase() === u.publicId.toLowerCase(),
-      )?.role ?? "Mitglied",
-  }));
+  const clans = socialStore.getClansForUser(u.publicId).map((c) => {
+    const member = c.members.find(
+      (m) => m.publicId.toLowerCase() === u.publicId.toLowerCase(),
+    );
+    const rawRole = member?.role ?? "Mitglied";
+    const schemaRole: "leader" | "officer" | "member" =
+      rawRole === "Owner"
+        ? "leader"
+        : rawRole === "Admin" || rawRole === "Supporter"
+          ? "officer"
+          : "member";
+    return {
+      tag: c.tag,
+      name: c.name,
+      role: schemaRole,
+      joinedAt: member?.joinedAt ?? c.createdAt ?? new Date().toISOString(),
+      memberCount: Math.max(1, c.members.length),
+      softBalance: "0",
+      hardBalance: "0",
+    };
+  });
   return {
     user: {
       publicId: u.publicId,
       email: u.email,
       emailVerified: u.emailVerified ?? false,
       doubleSafeEnabled: u.doubleSafeEnabled ?? false,
+      recoveryKey,
+      settings: u.settings ?? {},
+      inventory: u.inventory ?? {},
       ...(u.googleId ? { google: { email: u.email } } : {}),
     },
     steamLicence: false,
@@ -154,6 +172,7 @@ function userMe(u: UserRecord): UserMeResponse {
       usernameBase: u.username,
       usernameDiscriminator: "0001",
       usernameStatus: "premium",
+      flares: u.inventory?.flares ?? [],
       achievements: { singleplayerMap: [], player: [] },
       friends: u.friends ?? [],
       clans: clans as any,
@@ -198,6 +217,7 @@ function playerProfile(u: UserRecord) {
 }
 
 async function main() {
+  await Promise.all([store.init(), socialStore.init()]);
   const keys = await loadKeys();
   const signKey = await importJWK(keys.privateJwk, "EdDSA");
   const verifyKey = await importJWK(keys.publicJwk, "EdDSA");
@@ -220,7 +240,13 @@ async function main() {
       .sign(signKey);
   }
 
-  async function startSession(req: Request, res: Response, u: UserRecord) {
+  async function startSession(
+    req: Request,
+    res: Response,
+    u: UserRecord,
+    includeRecoveryKey = false,
+  ) {
+    const recoveryKey = store.ensureRecoveryKey(u.id) ?? u.recoveryKey;
     const token = store.createSession(u.id);
     setCookie(req, res, COOKIE, token, 30 * 24 * 3600);
     const jwt = await issueAccessToken(u);
@@ -228,6 +254,7 @@ async function main() {
       jwt,
       refreshToken: token,
       expiresIn: ACCESS_TTL_S,
+      ...(includeRecoveryKey && recoveryKey ? { recoveryKey } : {}),
       user: {
         id: u.id,
         username: u.username,
@@ -235,6 +262,7 @@ async function main() {
         publicId: u.publicId,
         emailVerified: u.emailVerified ?? false,
         doubleSafeEnabled: u.doubleSafeEnabled ?? false,
+        ...(includeRecoveryKey && recoveryKey ? { recoveryKey } : {}),
       },
     };
   }
@@ -289,10 +317,43 @@ async function main() {
       return void res.status(400).json({ error: "weak_password" });
     if (email && !validEmail(email))
       return void res.status(400).json({ error: "invalid_email" });
-    if (email && store.byEmail(email))
+
+    const existingByUsername = store.byUsername(username);
+    const existingByEmail = email ? store.byEmail(email) : undefined;
+
+    // Self-healing for "zombie" accounts that were reconstructed from JWT without passwordHash
+    if (
+      existingByUsername &&
+      !existingByUsername.passwordHash &&
+      !existingByUsername.googleId
+    ) {
+      const hashed = await hashPassword(password);
+      store.updatePassword(existingByUsername.id, hashed);
+      if (email && validEmail(email)) {
+        store.setEmail(existingByUsername.id, email, false);
+      }
+      store.ensureRecoveryKey(existingByUsername.id);
+      return void res.json(
+        await startSession(req, res, existingByUsername, true),
+      );
+    }
+
+    // If username already exists AND password matches, log them right in seamlessly
+    if (existingByUsername && existingByUsername.passwordHash) {
+      const matches = await verifyPassword(
+        password,
+        existingByUsername.passwordHash,
+      );
+      if (matches) {
+        return void res.json(await startSession(req, res, existingByUsername));
+      }
+    }
+
+    if (existingByEmail && existingByEmail.id !== existingByUsername?.id)
       return void res.status(409).json({ error: "email_taken" });
-    if (store.byUsername(username))
+    if (existingByUsername)
       return void res.status(409).json({ error: "username_taken" });
+
     const effectiveEmail =
       typeof email === "string" && email.trim()
         ? email.trim()
@@ -302,7 +363,7 @@ async function main() {
       username,
       passwordHash: await hashPassword(password),
     });
-    res.json(await startSession(req, res, user));
+    res.json(await startSession(req, res, user, true));
   });
 
   app.post("/auth/login", authLimiter, async (req, res) => {
@@ -313,7 +374,24 @@ async function main() {
     }
     const user = identifier.includes("@")
       ? store.byEmail(identifier)
-      : store.byUsername(identifier);
+      : store.byPublicIdOrUsername(identifier);
+
+    // Self-healing for "zombie" accounts reconstructed from JWT after container restart without passwordHash:
+    if (
+      user &&
+      !user.passwordHash &&
+      !user.googleId &&
+      validPassword(password)
+    ) {
+      const newHash = await hashPassword(password);
+      store.updatePassword(user.id, newHash);
+      store.ensureRecoveryKey(user.id);
+      console.log(
+        `[auth] Self-healed missing passwordHash for existing account ${user.username} (${user.publicId})`,
+      );
+      return void res.json(await startSession(req, res, user, true));
+    }
+
     // Same work and same answer whether or not the account exists.
     const ok =
       user?.passwordHash !== undefined
@@ -339,7 +417,7 @@ async function main() {
   });
 
   // ---- Account Recovery & Double Safe ----
-  app.post("/auth/recover/request", authLimiter, (req, res) => {
+  app.post("/auth/recover/request", authLimiter, async (req, res) => {
     const { identifier } = req.body ?? {};
     if (typeof identifier !== "string" || !identifier.trim()) {
       return void res.status(400).json({ error: "invalid_identifier" });
@@ -348,18 +426,34 @@ async function main() {
     if (!recovery) {
       return void res.json({
         ok: true,
+        emailSent: false,
         message:
-          "Falls dieser Account existiert, wurde ein 6-stelliger Wiederherstellungscode erstellt.",
+          "Falls eine verifizierte E-Mail hinterlegt ist, wurde ein 6-stelliger Code gesendet. Alternativ kannst du deinen persönlichen Wiederherstellungsschlüssel (IF-REC-...) verwenden.",
       });
     }
-    console.log(
-      `[auth] Account recovery requested for ${recovery.user.username} (${recovery.user.email}). Code: ${recovery.code}`,
-    );
+
+    const hasRealEmail =
+      recovery.user.email &&
+      !recovery.user.email.endsWith("@indufront.local") &&
+      validEmail(recovery.user.email);
+
+    let emailDelivered = false;
+    if (hasRealEmail) {
+      const mailResult = await sendAuthEmail({
+        to: recovery.user.email,
+        subject: "InduFront - Dein Passwort-Wiederherstellungscode",
+        text: `Hallo ${recovery.user.username},\n\nDein 6-stelliger Sicherheitscode zum Zurücksetzen deines Passworts lautet:\n\n${recovery.code}\n\nDieser Code ist 15 Minuten lang gültig.\nAlternativ kannst du jederzeit deinen persönlichen Backup-Wiederherstellungsschlüssel (IF-REC-...) verwenden.\n\nViele Grüße,\nDein InduFront Team`,
+      });
+      emailDelivered = mailResult.delivered;
+    }
+
+    // NEVER return recovery.code in the HTTP response!
     res.json({
       ok: true,
-      message:
-        "Wiederherstellungscode generiert. Bitte Code und neues Passwort eingeben.",
-      code: recovery.code,
+      emailSent: emailDelivered,
+      message: emailDelivered
+        ? "Ein 6-stelliger Sicherheitscode wurde an deine hinterlegte E-Mail-Adresse gesendet. Alternativ kannst du deinen Backup-Schlüssel (IF-REC-...) eingeben."
+        : "Bitte gib den 6-stelligen E-Mail-Code oder deinen persönlichen Wiederherstellungsschlüssel (IF-REC-XXXX-XXXX-XXXX) ein.",
     });
   });
 
@@ -378,28 +472,48 @@ async function main() {
     }
     store.updatePassword(user.id, await hashPassword(newPassword));
     store.deleteAllSessions(user.id);
-    const session = await startSession(req, res, user);
-    res.json({ ok: true, session });
+    const session = await startSession(req, res, user, true);
+    res.json({ ok: true, session, recoveryKey: user.recoveryKey });
   });
 
-  app.post("/auth/magic-link", authLimiter, (req, res) => {
+  app.post("/auth/magic-link", authLimiter, async (req, res) => {
     const { email } = req.body ?? {};
     if (!email) return void res.status(400).json({ error: "missing_email" });
     const recovery = store.createRecoveryCode(String(email), "recovery");
-    res.json({ ok: true, sent: true, code: recovery?.code });
+    if (recovery && validEmail(recovery.user.email)) {
+      await sendAuthEmail({
+        to: recovery.user.email,
+        subject: "InduFront - Account-Wiederherstellung",
+        text: `Hallo ${recovery.user.username},\n\nDein Wiederherstellungscode lautet: ${recovery.code}\n(Gültig für 15 Minuten).`,
+      });
+    }
+    // NEVER return code in HTTP response
+    res.json({ ok: true, sent: true });
   });
 
-  app.post("/auth/email/send-code", authed, (req, res) => {
+  app.post("/auth/email/send-code", authed, async (req, res) => {
     const u = (req as Request & { user: UserRecord }).user;
     const { email } = req.body ?? {};
     if (!validEmail(email))
       return void res.status(400).json({ error: "invalid_email" });
     store.setEmail(u.id, email, false);
     const recovery = store.createRecoveryCode(u.id, "email_verify");
-    console.log(
-      `[auth] Email verification code for ${u.username} (${email}): ${recovery?.code}`,
-    );
-    res.json({ ok: true, message: "Code gesendet", code: recovery?.code });
+    let emailDelivered = false;
+    if (recovery) {
+      const mailResult = await sendAuthEmail({
+        to: email,
+        subject: "InduFront - E-Mail bestätigen & Double Safe",
+        text: `Hallo ${u.username},\n\nDein 6-stelliger Bestätigungscode für InduFront Double Safe lautet:\n\n${recovery.code}\n\nDieser Code ist 15 Minuten gültig.`,
+      });
+      emailDelivered = mailResult.delivered;
+    }
+    res.json({
+      ok: true,
+      emailSent: emailDelivered,
+      message: emailDelivered
+        ? "Bestätigungscode wurde an deine E-Mail-Adresse gesendet!"
+        : "E-Mail-Adresse gespeichert. Bitte gib den Bestätigungscode aus deinem Postfach ein.",
+    });
   });
 
   app.post("/auth/email/verify-code", authed, (req, res) => {
@@ -556,7 +670,15 @@ async function main() {
       if (store.isUserDeleted(userId)) {
         return void res.sendStatus(401);
       }
-      let user = store.byId(userId);
+      let user =
+        store.byId(userId) ??
+        (await store.fetchUserFromDb(userId)) ??
+        (payload.publicId
+          ? store.byPublicId(String(payload.publicId))
+          : undefined) ??
+        (payload.username
+          ? store.byUsername(String(payload.username))
+          : undefined);
       // Ephemeral disk reboot recovery: reconstruct user record from cryptographically verified token
       if (!user && payload.username && payload.email) {
         user = store.createUser({
@@ -591,7 +713,15 @@ async function main() {
       if (store.isUserDeleted(userId)) {
         return void res.sendStatus(401);
       }
-      let user = store.byId(userId);
+      let user =
+        store.byId(userId) ??
+        (await store.fetchUserFromDb(userId)) ??
+        (payload.publicId
+          ? store.byPublicId(String(payload.publicId))
+          : undefined) ??
+        (payload.username
+          ? store.byUsername(String(payload.username))
+          : undefined);
       if (!user && payload.username && payload.email) {
         user = store.createUser({
           id: userId,
@@ -692,6 +822,61 @@ async function main() {
     const hidden = Boolean(req.body?.hidden);
     store.setVisibility(u.id, "searchHidden", hidden);
     res.json({ hidden });
+  });
+
+  // ---- Persistent User Settings, Inventory & Recovery Key Endpoints ----
+  app.get("/auth/recovery-key", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const recoveryKey = store.ensureRecoveryKey(u.id);
+    res.json({ ok: true, recoveryKey });
+  });
+
+  app.post("/auth/recovery-key/regenerate", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const recoveryKey = store.regenerateRecoveryKey(u.id);
+    res.json({ ok: true, recoveryKey });
+  });
+
+  app.get("/users/@me/settings", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    res.json({
+      ok: true,
+      settings: u.settings ?? {},
+      inventory: u.inventory ?? {},
+    });
+  });
+
+  app.put("/users/@me/settings", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const { settings, inventory } = req.body ?? {};
+    if (settings && typeof settings === "object" && !Array.isArray(settings)) {
+      store.updateUserSettings(u.id, settings);
+    }
+    if (
+      inventory &&
+      typeof inventory === "object" &&
+      !Array.isArray(inventory)
+    ) {
+      store.updateUserInventory(u.id, inventory);
+    }
+    res.json({
+      ok: true,
+      settings: u.settings ?? {},
+      inventory: u.inventory ?? {},
+    });
+  });
+
+  app.put("/users/@me/inventory", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const inventory = req.body?.inventory ?? req.body ?? {};
+    if (
+      inventory &&
+      typeof inventory === "object" &&
+      !Array.isArray(inventory)
+    ) {
+      store.updateUserInventory(u.id, inventory);
+    }
+    res.json({ ok: true, inventory: u.inventory ?? {} });
   });
 
   // ---- Player profiles & game history ----

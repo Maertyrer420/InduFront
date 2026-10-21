@@ -8,12 +8,33 @@ import {
 } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { dbDeleteUser, dbLoadUsers, dbUpsertUser } from "./DbStorage";
+import {
+  dbDeleteAllUserSessions,
+  dbDeleteSession,
+  dbDeleteUser,
+  dbLoadDeletedUsers,
+  dbLoadSessions,
+  dbLoadUserById,
+  dbLoadUsers,
+  dbUpsertSession,
+  dbUpsertUser,
+} from "./DbStorage";
 
 export interface RecoveryCodeRecord {
   code: string;
   expiresAt: number;
   purpose: "recovery" | "2fa" | "email_verify";
+}
+
+export interface UserInventoryRecord {
+  flares?: string[];
+  equippedPattern?: string | null;
+  equippedFlag?: string | null;
+  equippedCrown?: string | null;
+  equippedColor?: string | null;
+  equippedEffects?: Record<string, string>;
+  loadouts?: unknown[];
+  activeLoadout?: string | null;
 }
 
 export interface UserRecord {
@@ -24,19 +45,23 @@ export interface UserRecord {
   email: string;
   emailVerified?: boolean;
   doubleSafeEnabled?: boolean;
+  recoveryKey?: string; // personal Backup Recovery Key (e.g. IF-REC-XXXX-XXXX-XXXX)
   recoveryCodes?: RecoveryCodeRecord[];
   passwordHash?: string; // "scrypt$salt$hash", absent for Google-only accounts
   googleId?: string;
   createdAt: number;
+  updatedAt?: number;
   friends?: string[]; // publicIds of accepted friends
   incomingRequests?: { publicId: string; createdAt: number }[];
   outgoingRequests?: { publicId: string; createdAt: number }[];
   noticesSeen?: string[];
   levelHidden?: boolean;
   searchHidden?: boolean;
+  settings?: Record<string, string>;
+  inventory?: UserInventoryRecord;
 }
 
-interface SessionRecord {
+export interface SessionRecord {
   tokenHash: string;
   userId: string;
   expiresAt: number;
@@ -75,12 +100,85 @@ export async function verifyPassword(
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
 
+export function generateRecoveryKey(): string {
+  const part = () => randomBytes(2).toString("hex").toUpperCase();
+  return `IF-REC-${part()}-${part()}-${part()}`;
+}
+
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
+
+function mergeStringArrays(a?: string[], b?: string[]): string[] {
+  return Array.from(new Set([...(a ?? []), ...(b ?? [])]));
+}
+
+function mergeRequestLists(
+  a?: { publicId: string; createdAt: number }[],
+  b?: { publicId: string; createdAt: number }[],
+): { publicId: string; createdAt: number }[] {
+  const map = new Map<string, { publicId: string; createdAt: number }>();
+  for (const item of [...(a ?? []), ...(b ?? [])]) {
+    if (item && item.publicId) {
+      map.set(item.publicId.toUpperCase(), item);
+    }
+  }
+  return Array.from(map.values());
+}
+
+function mergeUsers(localUser: UserRecord, dbUser: UserRecord): UserRecord {
+  const newer =
+    (dbUser.updatedAt ?? dbUser.createdAt ?? 0) >=
+    (localUser.updatedAt ?? localUser.createdAt ?? 0)
+      ? dbUser
+      : localUser;
+  const older = newer === dbUser ? localUser : dbUser;
+
+  return {
+    ...older,
+    ...newer,
+    id: newer.id,
+    publicId: newer.publicId || older.publicId,
+    username: newer.username || older.username,
+    usernameLower: (newer.username || older.username).toLowerCase(),
+    email: newer.email || older.email,
+    emailVerified: Boolean(newer.emailVerified ?? older.emailVerified),
+    doubleSafeEnabled: Boolean(
+      newer.doubleSafeEnabled ?? older.doubleSafeEnabled,
+    ),
+    // Never lose a valid passwordHash or recoveryKey during merge!
+    passwordHash: newer.passwordHash ?? older.passwordHash,
+    googleId: newer.googleId ?? older.googleId,
+    recoveryKey:
+      newer.recoveryKey ?? older.recoveryKey ?? generateRecoveryKey(),
+    friends: mergeStringArrays(localUser.friends, dbUser.friends),
+    incomingRequests: mergeRequestLists(
+      localUser.incomingRequests,
+      dbUser.incomingRequests,
+    ),
+    outgoingRequests: mergeRequestLists(
+      localUser.outgoingRequests,
+      dbUser.outgoingRequests,
+    ),
+    noticesSeen: mergeStringArrays(localUser.noticesSeen, dbUser.noticesSeen),
+    settings: {
+      ...(older.settings ?? {}),
+      ...(newer.settings ?? {}),
+    },
+    inventory: {
+      ...(older.inventory ?? {}),
+      ...(newer.inventory ?? {}),
+      flares: mergeStringArrays(
+        older.inventory?.flares,
+        newer.inventory?.flares,
+      ),
+    },
+  };
+}
 
 /** Small durable store: JSON file with atomic write + backup + PostgreSQL sync when DATABASE_URL is set. */
 export class AuthStore {
   private data: Data = { users: [], sessions: [] };
   private backupFile: string;
+  private initPromise: Promise<void>;
 
   constructor(private readonly file: string) {
     this.backupFile = this.file + ".backup";
@@ -92,7 +190,7 @@ export class AuthStore {
         const raw = fs.readFileSync(file, "utf8");
         this.data = JSON.parse(raw) as Data;
         loaded = true;
-      } catch (err) {
+      } catch {
         console.warn(
           `[auth-store] Failed to parse ${file}, attempting backup...`,
         );
@@ -109,30 +207,114 @@ export class AuthStore {
       }
     }
 
+    this.data.users ??= [];
+    this.data.sessions ??= [];
+    this.data.deletedUserIds ??= [];
+
+    // Ensure every loaded user has a recoveryKey
+    let migrated = false;
+    for (const u of this.data.users) {
+      if (!u.recoveryKey) {
+        u.recoveryKey = generateRecoveryKey();
+        migrated = true;
+      }
+    }
+    if (migrated) {
+      this.save(false);
+    }
+
     // Try loading / merging from PostgreSQL if DATABASE_URL is provided
-    void this.syncFromDb();
+    this.initPromise = this.syncFromDb();
+  }
+
+  public async init(): Promise<void> {
+    await this.initPromise;
   }
 
   private async syncFromDb(): Promise<void> {
     try {
-      const dbUsers = await dbLoadUsers();
-      if (dbUsers && dbUsers.length > 0) {
-        const byId = new Map(this.data.users.map((u) => [u.id, u]));
-        for (const u of dbUsers) {
-          byId.set(u.id, u);
-        }
-        this.data.users = Array.from(byId.values());
-        this.save(false);
-        console.log(
-          `[auth-store] Synchronized ${dbUsers.length} users from PostgreSQL.`,
+      const [dbUsers, dbDeleted, dbSessions] = await Promise.all([
+        dbLoadUsers(),
+        dbLoadDeletedUsers(),
+        dbLoadSessions(),
+      ]);
+
+      if (dbDeleted && dbDeleted.length > 0) {
+        this.data.deletedUserIds = mergeStringArrays(
+          this.data.deletedUserIds,
+          dbDeleted,
         );
       }
+      const deletedSet = new Set(this.data.deletedUserIds ?? []);
+
+      if (dbUsers) {
+        const byId = new Map<string, UserRecord>();
+        for (const localU of this.data.users) {
+          if (!deletedSet.has(localU.id)) {
+            byId.set(localU.id, localU);
+          }
+        }
+        for (const dbU of dbUsers) {
+          if (deletedSet.has(dbU.id)) continue;
+          const existing = byId.get(dbU.id);
+          if (existing) {
+            byId.set(dbU.id, mergeUsers(existing, dbU));
+          } else {
+            dbU.recoveryKey ??= generateRecoveryKey();
+            byId.set(dbU.id, dbU);
+          }
+        }
+        this.data.users = Array.from(byId.values());
+
+        // Push any local users or merged updates back to PostgreSQL so DB is 100% complete
+        for (const u of this.data.users) {
+          await dbUpsertUser(u);
+        }
+        console.log(
+          `[auth-store] Synchronized ${this.data.users.length} users with PostgreSQL.`,
+        );
+      }
+
+      if (dbSessions) {
+        const now = Date.now();
+        const sessionMap = new Map<string, SessionRecord>();
+        for (const s of [...this.data.sessions, ...dbSessions]) {
+          if (s.expiresAt > now && !deletedSet.has(s.userId)) {
+            sessionMap.set(s.tokenHash, s);
+          }
+        }
+        this.data.sessions = Array.from(sessionMap.values());
+        for (const s of this.data.sessions) {
+          await dbUpsertSession(s);
+        }
+      }
+
+      this.save(false);
     } catch (err: any) {
       console.warn("[auth-store] syncFromDb:", err.message);
     }
   }
 
+  public async fetchUserFromDb(
+    userId: string,
+  ): Promise<UserRecord | undefined> {
+    if (this.isUserDeleted(userId)) return undefined;
+    const mem = this.byId(userId);
+    if (mem) return mem;
+    const fromDb = await dbLoadUserById(userId);
+    if (fromDb) {
+      fromDb.recoveryKey ??= generateRecoveryKey();
+      this.data.users.push(fromDb);
+      this.save(false);
+      return fromDb;
+    }
+    return undefined;
+  }
+
   private save(syncDb = true, userToSync?: UserRecord): void {
+    if (userToSync) {
+      userToSync.updatedAt = Date.now();
+    }
     try {
       const json = JSON.stringify(this.data, null, 2);
       const tmp = this.file + ".tmp";
@@ -194,6 +376,84 @@ export class AuthStore {
     return true;
   }
 
+  ensureRecoveryKey(userId: string): string | null {
+    const u = this.byId(userId);
+    if (!u) return null;
+    if (!u.recoveryKey) {
+      u.recoveryKey = generateRecoveryKey();
+      this.save(true, u);
+    }
+    return u.recoveryKey;
+  }
+
+  regenerateRecoveryKey(userId: string): string | null {
+    const u = this.byId(userId);
+    if (!u) return null;
+    u.recoveryKey = generateRecoveryKey();
+    this.save(true, u);
+    return u.recoveryKey;
+  }
+
+  updateUserSettings(
+    userId: string,
+    patchSettings: Record<string, string | null>,
+  ): Record<string, string> | null {
+    const u = this.byId(userId);
+    if (!u) return null;
+    u.settings ??= {};
+    for (const [k, v] of Object.entries(patchSettings)) {
+      if (typeof k !== "string" || k.length > 120) continue;
+      if (v === null) {
+        delete u.settings[k];
+      } else if (typeof v === "string" && v.length <= 16384) {
+        u.settings[k] = v;
+      }
+    }
+    this.save(true, u);
+    return u.settings;
+  }
+
+  updateUserInventory(
+    userId: string,
+    patchInventory: Partial<UserInventoryRecord>,
+  ): UserInventoryRecord | null {
+    const u = this.byId(userId);
+    if (!u) return null;
+    u.inventory ??= {};
+    if (Array.isArray(patchInventory.flares)) {
+      u.inventory.flares = mergeStringArrays(
+        u.inventory.flares,
+        patchInventory.flares.filter((x): x is string => typeof x === "string"),
+      );
+    }
+    if (patchInventory.equippedPattern !== undefined) {
+      u.inventory.equippedPattern = patchInventory.equippedPattern;
+    }
+    if (patchInventory.equippedFlag !== undefined) {
+      u.inventory.equippedFlag = patchInventory.equippedFlag;
+    }
+    if (patchInventory.equippedCrown !== undefined) {
+      u.inventory.equippedCrown = patchInventory.equippedCrown;
+    }
+    if (patchInventory.equippedColor !== undefined) {
+      u.inventory.equippedColor = patchInventory.equippedColor;
+    }
+    if (
+      patchInventory.equippedEffects &&
+      typeof patchInventory.equippedEffects === "object"
+    ) {
+      u.inventory.equippedEffects = patchInventory.equippedEffects;
+    }
+    if (Array.isArray(patchInventory.loadouts)) {
+      u.inventory.loadouts = patchInventory.loadouts.slice(0, 10);
+    }
+    if (patchInventory.activeLoadout !== undefined) {
+      u.inventory.activeLoadout = patchInventory.activeLoadout;
+    }
+    this.save(true, u);
+    return u.inventory;
+  }
+
   isUserDeleted(userId: string): boolean {
     return (this.data.deletedUserIds ?? []).includes(userId);
   }
@@ -204,15 +464,26 @@ export class AuthStore {
     const pub = u.publicId;
     this.data.users = this.data.users.filter((x) => x.id !== userId);
     for (const other of this.data.users) {
-      if (other.friends) other.friends = other.friends.filter((f) => f !== pub);
-      if (other.incomingRequests)
+      let modified = false;
+      if (other.friends?.includes(pub)) {
+        other.friends = other.friends.filter((f) => f !== pub);
+        modified = true;
+      }
+      if (other.incomingRequests?.some((r) => r.publicId === pub)) {
         other.incomingRequests = other.incomingRequests.filter(
           (r) => r.publicId !== pub,
         );
-      if (other.outgoingRequests)
+        modified = true;
+      }
+      if (other.outgoingRequests?.some((r) => r.publicId === pub)) {
         other.outgoingRequests = other.outgoingRequests.filter(
           (r) => r.publicId !== pub,
         );
+        modified = true;
+      }
+      if (modified) {
+        dbUpsertUser(other).catch(() => {});
+      }
     }
     this.deleteAllSessions(userId);
     this.data.deletedUserIds ??= [];
@@ -289,9 +560,23 @@ export class AuthStore {
     purpose?: "recovery" | "2fa" | "email_verify",
   ): UserRecord | null {
     const u = this.byPublicIdOrUsername(identifier);
-    if (!u || !u.recoveryCodes) return null;
+    if (!u) return null;
 
     const trimmedCode = code.trim();
+
+    // Allow recovery via personal Backup Recovery Key (IF-REC-XXXX-XXXX-XXXX)
+    if (
+      (!purpose || purpose === "recovery") &&
+      u.recoveryKey &&
+      trimmedCode.toUpperCase() === u.recoveryKey.toUpperCase()
+    ) {
+      // Rotate recovery key after use so a leaked key cannot be reused endlessly
+      u.recoveryKey = generateRecoveryKey();
+      this.save(true, u);
+      return u;
+    }
+
+    if (!u.recoveryCodes) return null;
     const now = Date.now();
     const idx = u.recoveryCodes.findIndex(
       (c) =>
@@ -432,12 +717,16 @@ export class AuthStore {
     createdAt?: number;
   }): UserRecord {
     const id = p.id ?? randomUUID();
-    const existing = this.byId(id);
+    const existing = this.byId(id) ?? this.byUsername(p.username);
     if (existing) {
       existing.username = p.username.trim();
       existing.usernameLower = p.username.trim().toLowerCase();
-      existing.email = p.email.trim().toLowerCase();
+      if (p.email && !p.email.endsWith("@indufront.local")) {
+        existing.email = p.email.trim().toLowerCase();
+      }
       if (p.passwordHash) existing.passwordHash = p.passwordHash;
+      if (p.googleId) existing.googleId = p.googleId;
+      existing.recoveryKey ??= generateRecoveryKey();
       this.save(true, existing);
       return existing;
     }
@@ -446,6 +735,7 @@ export class AuthStore {
     const publicId =
       p.publicId ?? `IF-${randomBytes(4).toString("hex").toUpperCase()}`;
 
+    const now = p.createdAt ?? Date.now();
     const user: UserRecord = {
       id,
       publicId,
@@ -454,9 +744,13 @@ export class AuthStore {
       email: p.email.trim().toLowerCase(),
       emailVerified: false,
       doubleSafeEnabled: false,
+      recoveryKey: generateRecoveryKey(),
       passwordHash: p.passwordHash,
       googleId: p.googleId,
-      createdAt: p.createdAt ?? Date.now(),
+      createdAt: now,
+      updatedAt: now,
+      settings: {},
+      inventory: {},
     };
     this.data.users.push(user);
     this.save(true, user);
@@ -471,7 +765,7 @@ export class AuthStore {
     }
   }
 
-  /** Returns the signed refresh token; works both in-memory and statelessly across server restarts. */
+  /** Returns the signed refresh token; works both in-memory, PostgreSQL, and statelessly across server restarts. */
   createSession(userId: string): string {
     const now = Date.now();
     const expiresAt = now + SESSION_TTL_MS;
@@ -481,13 +775,15 @@ export class AuthStore {
       .update(`${userId}:${expiresAt}`)
       .digest("base64url");
     const token = `${userId}.${expiresAt}.${hmacSig}`;
-    this.data.sessions = this.data.sessions.filter((s) => s.expiresAt > now);
-    this.data.sessions.push({
+    const session: SessionRecord = {
       tokenHash: sha(token),
       userId,
       expiresAt,
-    });
+    };
+    this.data.sessions = this.data.sessions.filter((s) => s.expiresAt > now);
+    this.data.sessions.push(session);
     this.save(false);
+    dbUpsertSession(session).catch(() => {});
     return token;
   }
 
@@ -523,10 +819,12 @@ export class AuthStore {
     const h = sha(token);
     this.data.sessions = this.data.sessions.filter((s) => s.tokenHash !== h);
     this.save(false);
+    dbDeleteSession(h).catch(() => {});
   }
 
   deleteAllSessions(userId: string): void {
     this.data.sessions = this.data.sessions.filter((s) => s.userId !== userId);
     this.save(false);
+    dbDeleteAllUserSessions(userId).catch(() => {});
   }
 }

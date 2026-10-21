@@ -208,24 +208,26 @@ export class FriendsModal extends BaseModal {
   }
 
   private async handleAccept(publicId: string) {
-    const ok = await acceptFriendRequest(publicId);
-    if (ok) {
+    const res = await acceptFriendRequest(publicId);
+    if (res === true) {
       showToast("Freund hinzugefügt!", "green");
       await this.loadData();
+    } else {
+      showToast("Anfrage konnte nicht angenommen werden", "red");
     }
   }
 
   private async handleDecline(publicId: string) {
-    const ok = await deleteFriendRequest(publicId);
-    if (ok) {
+    const res = await deleteFriendRequest(publicId);
+    if (res === true) {
       await this.loadData();
     }
   }
 
   private async handleRemove(publicId: string) {
     if (confirm("Möchtest du diesen Freund wirklich entfernen?")) {
-      const ok = await removeFriend(publicId);
-      if (ok) {
+      const res = await removeFriend(publicId);
+      if (res === true) {
         showToast("Freund entfernt", "green");
         await this.loadData();
       }

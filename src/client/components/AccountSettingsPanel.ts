@@ -68,6 +68,9 @@ export class AccountSettingsPanel extends LitElement {
 
   @state() private email: string = "";
   @state() private idCopied = false;
+  @state() private recoveryKeyCopied = false;
+  @state() private recoveryKeyOverride: string | null = null;
+  @state() private recoveryKeyBusy = false;
   @state() private safeEmail = "";
   @state() private verifyCodeInput = "";
   @state() private safeBusy = false;
@@ -242,7 +245,10 @@ export class AccountSettingsPanel extends LitElement {
         </div>
 
         <div class="mt-4 pt-4 border-t border-white/10 space-y-3">
-          <div class="flex flex-col sm:flex-row gap-2">
+          ${this.renderRecoveryKeySection()}
+          <div
+            class="pt-3 border-t border-white/10 flex flex-col sm:flex-row gap-2"
+          >
             <input
               type="email"
               .value=${currentEmail}
@@ -335,6 +341,93 @@ export class AccountSettingsPanel extends LitElement {
     `;
   }
 
+  private renderRecoveryKeySection(): TemplateResult {
+    const recKey = this.recoveryKeyOverride ?? this.user?.recoveryKey ?? "—";
+    return html`
+      <div
+        class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-black/30 border border-yellow-400/20 rounded-xl p-3.5"
+      >
+        <div class="flex-1">
+          <div
+            class="text-xs font-bold text-yellow-300 uppercase tracking-wider flex items-center gap-1.5"
+          >
+            <span>🔑</span>
+            <span
+              >${t(
+                "Persönlicher Backup-Wiederherstellungsschlüssel",
+                "Personal Backup Recovery Key",
+              )}</span
+            >
+          </div>
+          <div class="text-xs text-white/50 mt-0.5">
+            ${t(
+              "Bewahre diesen Schlüssel sicher auf. Damit kannst du dein Passwort jederzeit sofort zurücksetzen (auch ohne E-Mail).",
+              "Keep this key safe. You can use it anytime to reset your password immediately.",
+            )}
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span
+            class="font-mono font-bold text-yellow-300 text-xs sm:text-sm bg-black/50 border border-white/15 px-3 py-1.5 rounded-lg tracking-wider select-all"
+          >
+            ${recKey}
+          </span>
+          <button
+            type="button"
+            @click=${() => {
+              if (recKey && recKey !== "—") {
+                navigator.clipboard.writeText(recKey);
+                this.recoveryKeyCopied = true;
+                setTimeout(() => (this.recoveryKeyCopied = false), 2500);
+              }
+            }}
+            class="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+          >
+            ${this.recoveryKeyCopied
+              ? t("Kopiert! ✓", "Copied! ✓")
+              : t("Kopieren", "Copy")}
+          </button>
+          <button
+            type="button"
+            ?disabled=${this.recoveryKeyBusy}
+            @click=${this.handleRegenerateRecoveryKey}
+            title=${t("Neuen Schlüssel generieren", "Generate new key")}
+            class="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-white/5 hover:bg-white/15 text-white/70 hover:text-white transition-colors"
+          >
+            ↻
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  private handleRegenerateRecoveryKey = async (): Promise<void> => {
+    const auth = await userAuth();
+    if (!auth || this.recoveryKeyBusy) return;
+    this.recoveryKeyBusy = true;
+    try {
+      const res = await fetch(`${getApiBase()}/auth/recovery-key/regenerate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth.jwt}`,
+        },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.recoveryKey) {
+        this.recoveryKeyOverride = String(data.recoveryKey);
+        this.safeSuccess = t(
+          "Neuer Backup-Schlüssel generiert! Bitte sicher abspeichern.",
+          "New backup recovery key generated! Please save it securely.",
+        );
+      }
+    } catch {
+      /* ignore */
+    } finally {
+      this.recoveryKeyBusy = false;
+    }
+  };
+
   private handleSendSafeCode = async (email: string): Promise<void> => {
     if (!email || !email.includes("@")) {
       this.safeError = t(
@@ -363,12 +456,12 @@ export class AccountSettingsPanel extends LitElement {
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
         this.safeCodeSent = true;
-        this.safeSuccess = t(
-          data.code
-            ? `Code generiert: ${data.code} (in Server-Logs & für Tests hinterlegt).`
-            : "Bestätigungscode wurde gesendet! Bitte prüfe dein Postfach.",
-          "Verification code sent! Please check your inbox.",
-        );
+        this.safeSuccess =
+          data.message ??
+          t(
+            "Bestätigungscode wurde gesendet! Bitte prüfe dein Postfach.",
+            "Verification code sent! Please check your inbox.",
+          );
       } else {
         this.safeError = t(
           "Fehler beim Senden des Codes.",
