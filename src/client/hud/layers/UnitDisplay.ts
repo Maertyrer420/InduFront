@@ -5,17 +5,20 @@ import {
   PlayerBuildableUnitType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import { renderNumber } from "@openfront/engine-lib/Format";
 import {
   BUILDING_BASE_COSTS,
   calculateBuildingCost,
   getUnitResourceCost,
 } from "@openfront/engine-lib/game/EconomyConfig";
-import { renderNumber } from "@openfront/engine-lib/Format";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { Controller } from "../../Controller";
-import { ToggleEraserModeEvent, ToggleStructureEvent } from "../../InputHandler";
+import {
+  ToggleEraserModeEvent,
+  ToggleStructureEvent,
+} from "../../InputHandler";
 import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
 import { translateText } from "../../Utils";
@@ -42,7 +45,6 @@ import {
   repairShipIcon,
   samLauncherIcon,
   steelMillIcon,
-  submarineIcon,
   uraniumMineIcon,
   warshipIcon,
   buildIcon,
@@ -358,7 +360,8 @@ export class UnitDisplay extends LitElement implements Controller {
         type: UnitType.Radar,
         icon: radarIcon,
         name: "Radarstation",
-        description: "Frühwarn-Sensornetzwerk (R=30), erhöht SAM-Reichweite um +50%.",
+        description:
+          "Frühwarn-Sensornetzwerk (R=30), erhöht SAM-Reichweite um +50%.",
         yieldInfo: "SAM 12 ➔ 18 Kacheln",
         defaultHotkey: "8",
         structureKey: "radar",
@@ -451,7 +454,8 @@ export class UnitDisplay extends LitElement implements Controller {
         type: UnitType.Destroyer,
         icon: destroyerIcon,
         name: "Zerstörer",
-        description: "Booster-Eskorte: Erhöht Kriegsschiff-Schaden in der Nähe um +10% pro Zerstörer (max 30%). Hoher Treibstoffverbrauch.",
+        description:
+          "Booster-Eskorte: Erhöht Kriegsschiff-Schaden in der Nähe um +10% pro Zerstörer (max 30%). Hoher Treibstoffverbrauch.",
         yieldInfo: "Kosten: 50 Stahl, 150 Treibstoff",
         defaultHotkey: "2",
         structureKey: "destroyer",
@@ -460,7 +464,8 @@ export class UnitDisplay extends LitElement implements Controller {
         type: UnitType.Submarine,
         icon: repairShipIcon,
         name: "Reparaturschiff",
-        description: "Heilt in Intervallen nahe Kriegsschiffe & Zerstörer (+10 HP). Kann selbst nicht repariert werden (40 HP).",
+        description:
+          "Heilt in Intervallen nahe Kriegsschiffe & Zerstörer (+10 HP). Kann selbst nicht repariert werden (40 HP).",
         yieldInfo: "Kosten: 80 Stahl, 120 Treibstoff",
         defaultHotkey: "3",
         structureKey: "submarine",
@@ -469,7 +474,8 @@ export class UnitDisplay extends LitElement implements Controller {
         type: UnitType.CruiseMissile,
         icon: cruiseMissileIcon,
         name: "Marschflugkörper / Rakete",
-        description: "Konventioneller taktischer Präzisionsschlag mit kleinem Radius (R=3). Kein Uran erforderlich!",
+        description:
+          "Konventioneller taktischer Präzisionsschlag mit kleinem Radius (R=3). Kein Uran erforderlich!",
         yieldInfo: "Kosten: 40 Stahl, 120 Treibstoff (0 Uran)",
         defaultHotkey: "4",
         structureKey: "cruise_missile",
@@ -487,7 +493,8 @@ export class UnitDisplay extends LitElement implements Controller {
         type: UnitType.HydrogenBomb,
         icon: hydrogenBombIcon,
         name: "Wasserstoffbombe (H-Bombe)",
-        description: "Thermonukleare Vernichtungswaffe mit großem Explosionsradius.",
+        description:
+          "Thermonukleare Vernichtungswaffe mit großem Explosionsradius.",
         yieldInfo: "Kosten: 450 Uran, 400 Stahl, 300 Treibstoff",
         defaultHotkey: "6",
         structureKey: "hydrogen_bomb",
@@ -496,7 +503,8 @@ export class UnitDisplay extends LitElement implements Controller {
         type: UnitType.MIRV,
         icon: mirvIcon,
         name: "MIRV Mehrfachsprengkopf",
-        description: "Strategische Interkontinentalrakete mit bis zu 8 Sprengköpfen.",
+        description:
+          "Strategische Interkontinentalrakete mit bis zu 8 Sprengköpfen.",
         yieldInfo: "Kosten: 1000 Uran, 800 Stahl, 500 Treibstoff",
         defaultHotkey: "7",
         structureKey: "mirv",
@@ -581,15 +589,16 @@ export class UnitDisplay extends LitElement implements Controller {
       this._ports;
 
     const activeTotal =
-      this._warships +
-      this._destroyers +
-      this._submarines +
-      this._battleships;
+      this._warships + this._destroyers + this._submarines + this._battleships;
 
     return html`
-      <div class="border-t border-white/10 w-full bg-slate-950/90 backdrop-blur-md select-none overflow-visible relative">
+      <div
+        class="border-t border-white/10 w-full bg-slate-950/90 backdrop-blur-md select-none overflow-visible relative"
+      >
         <!-- Hotbar Tabs Switcher (No Emojis) -->
-        <div class="flex items-center justify-between px-2.5 py-1 bg-slate-900/95 border-b border-white/10">
+        <div
+          class="flex items-center justify-between px-2.5 py-1 bg-slate-900/95 border-b border-white/10"
+        >
           <div class="flex items-center gap-1.5">
             <button
               class="flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-bold transition-all ${this
@@ -604,7 +613,10 @@ export class UnitDisplay extends LitElement implements Controller {
             >
               <img src=${buildIcon} class="w-3.5 h-3.5 object-contain" />
               <span>Gebäude</span>
-              <span class="text-[10px] px-1.5 py-0.2 bg-black/40 rounded-full font-mono">${buildingTotal}</span>
+              <span
+                class="text-[10px] px-1.5 py-0.2 bg-black/40 rounded-full font-mono"
+                >${buildingTotal}</span
+              >
             </button>
             <button
               class="flex items-center gap-1.5 px-2.5 py-0.5 rounded text-xs font-bold transition-all ${this
@@ -619,7 +631,10 @@ export class UnitDisplay extends LitElement implements Controller {
             >
               <img src=${targetIcon} class="w-3.5 h-3.5 object-contain" />
               <span>Actives</span>
-              <span class="text-[10px] px-1.5 py-0.2 bg-black/40 rounded-full font-mono">${activeTotal}</span>
+              <span
+                class="text-[10px] px-1.5 py-0.2 bg-black/40 rounded-full font-mono"
+                >${activeTotal}</span
+              >
             </button>
           </div>
           <div class="flex items-center gap-2">
@@ -646,23 +661,32 @@ export class UnitDisplay extends LitElement implements Controller {
               <img src=${eraserIcon} class="w-3.5 h-3.5 object-contain" />
               <span>Radierer</span>
             </button>
-            <div class="flex items-center gap-1 text-[11px] text-slate-400 font-mono hidden sm:flex">
-              <span class="px-1.5 py-0.5 bg-black/40 rounded border border-white/10 text-slate-300">Tab</span>
+            <div
+              class="flex items-center gap-1 text-[11px] text-slate-400 font-mono hidden sm:flex"
+            >
+              <span
+                class="px-1.5 py-0.5 bg-black/40 rounded border border-white/10 text-slate-300"
+                >Tab</span
+              >
               <span>Wechseln</span>
             </div>
           </div>
         </div>
 
         <!-- Hotbar Grid (Compact, overflow-visible for tooltips) -->
-        <div class="px-1 py-1 w-full flex flex-col items-center gap-1 overflow-visible">
+        <div
+          class="px-1 py-1 w-full flex flex-col items-center gap-1 overflow-visible"
+        >
           ${this.activeTab === "buildings"
             ? html`
                 <!-- Row 1: Infrastruktur & Verteidigung -->
-                <div class="flex items-center justify-center gap-1 w-full overflow-visible py-0.5">
+                <div
+                  class="flex items-center justify-center gap-1 w-full overflow-visible py-0.5"
+                >
                   ${this.infrastructureUnits.map((u) => {
                     const hotkey =
-                      this.keybinds[`build${u.type.replace(/\s+/g, "")}`]?.key ??
-                      u.defaultHotkey;
+                      this.keybinds[`build${u.type.replace(/\s+/g, "")}`]
+                        ?.key ?? u.defaultHotkey;
                     return this.renderUnitItem(
                       u.icon,
                       this.getUnitCount(u.type),
@@ -676,11 +700,13 @@ export class UnitDisplay extends LitElement implements Controller {
                   })}
                 </div>
                 <!-- Row 2: Bergbau & Veredelung -->
-                <div class="flex items-center justify-center gap-1 w-full overflow-visible py-0.5">
+                <div
+                  class="flex items-center justify-center gap-1 w-full overflow-visible py-0.5"
+                >
                   ${this.economyUnits.map((u) => {
                     const hotkey =
-                      this.keybinds[`build${u.type.replace(/\s+/g, "")}`]?.key ??
-                      u.defaultHotkey;
+                      this.keybinds[`build${u.type.replace(/\s+/g, "")}`]
+                        ?.key ?? u.defaultHotkey;
                     return this.renderUnitItem(
                       u.icon,
                       this.getUnitCount(u.type),
@@ -696,11 +722,13 @@ export class UnitDisplay extends LitElement implements Controller {
               `
             : html`
                 <!-- Actives: Flotte & Nuklearwaffen -->
-                <div class="flex items-center justify-center gap-1 w-full overflow-visible py-0.5">
+                <div
+                  class="flex items-center justify-center gap-1 w-full overflow-visible py-0.5"
+                >
                   ${this.activeUnits.map((u) => {
                     const hotkey =
-                      this.keybinds[`build${u.type.replace(/\s+/g, "")}`]?.key ??
-                      u.defaultHotkey;
+                      this.keybinds[`build${u.type.replace(/\s+/g, "")}`]
+                        ?.key ?? u.defaultHotkey;
                     return this.renderUnitItem(
                       u.icon,
                       this.getUnitCount(u.type),
@@ -752,7 +780,6 @@ export class UnitDisplay extends LitElement implements Controller {
       unitType === UnitType.HydrogenBomb ||
       unitType === UnitType.MIRV;
 
-    const isMissile = isNuke || unitType === UnitType.CruiseMissile;
     const hasSilo = (player?.units(UnitType.MissileSilo).length ?? 0) > 0;
     const hasPort = (player?.units(UnitType.Port).length ?? 0) > 0;
     const missingUranium = isNuke && curUranium < costs.enrichedUranium;
@@ -791,59 +818,104 @@ export class UnitDisplay extends LitElement implements Controller {
                 class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 text-gray-200 text-center w-max min-w-[200px] max-w-[310px] text-xs bg-gray-950/95 backdrop-blur-md rounded-lg p-2.5 z-[100] shadow-2xl border border-gray-700 pointer-events-none"
               >
                 <div class="font-bold text-sm mb-1 text-emerald-400">
-                  ${displayName} <span class="text-gray-400 font-mono text-xs">[${displayHotkey}]</span>
+                  ${displayName}
+                  <span class="text-gray-400 font-mono text-xs"
+                    >[${displayHotkey}]</span
+                  >
                 </div>
                 <div class="text-[11px] text-gray-300 mb-1.5 leading-tight">
                   ${displayDesc}
                 </div>
                 ${yieldInfo
-                  ? html`<div class="text-[11px] font-semibold text-amber-300 bg-amber-950/40 border border-amber-800/40 rounded px-1.5 py-0.5 mb-1.5">
+                  ? html`<div
+                      class="text-[11px] font-semibold text-amber-300 bg-amber-950/40 border border-amber-800/40 rounded px-1.5 py-0.5 mb-1.5"
+                    >
                       ${yieldInfo}
                     </div>`
                   : null}
 
                 <!-- Requirements & Warnings (No Emojis) -->
                 ${isNuke && !hasSilo
-                  ? html`<div class="text-[11px] font-bold text-red-400 bg-red-950/50 border border-red-800/40 rounded px-1.5 py-0.5 mb-1">
+                  ? html`<div
+                      class="text-[11px] font-bold text-red-400 bg-red-950/50 border border-red-800/40 rounded px-1.5 py-0.5 mb-1"
+                    >
                       [Voraussetzung: Raketensilo]
                     </div>`
                   : null}
                 ${missingUranium
-                  ? html`<div class="text-[11px] font-bold text-red-400 bg-red-950/50 border border-red-800/40 rounded px-1.5 py-0.5 mb-1">
-                      Spaltmaterial fehlt: ${costs.enrichedUranium} U_ref benötigt (Vorhanden: ${curUranium})
-                    </div>
-                    <div class="text-[10px] text-amber-400 mb-1">
-                      Fördere Uran mit Uranminen & reichere es in Zentrifugen an!
-                    </div>`
+                  ? html`<div
+                        class="text-[11px] font-bold text-red-400 bg-red-950/50 border border-red-800/40 rounded px-1.5 py-0.5 mb-1"
+                      >
+                        Spaltmaterial fehlt: ${costs.enrichedUranium} U_ref
+                        benötigt (Vorhanden: ${curUranium})
+                      </div>
+                      <div class="text-[10px] text-amber-400 mb-1">
+                        Fördere Uran mit Uranminen & reichere es in Zentrifugen
+                        an!
+                      </div>`
                   : null}
-                ${(unitType === UnitType.Warship || unitType === UnitType.Destroyer || unitType === UnitType.Submarine) && !hasPort
-                  ? html`<div class="text-[11px] font-bold text-red-400 bg-red-950/50 border border-red-800/40 rounded px-1.5 py-0.5 mb-1">
+                ${(unitType === UnitType.Warship ||
+                  unitType === UnitType.Destroyer ||
+                  unitType === UnitType.Submarine) &&
+                !hasPort
+                  ? html`<div
+                      class="text-[11px] font-bold text-red-400 bg-red-950/50 border border-red-800/40 rounded px-1.5 py-0.5 mb-1"
+                    >
                       [Voraussetzung: Marinehafen]
                     </div>`
                   : null}
 
                 <!-- Costs Breakdown with SVG icons & Clear Header -->
-                <div class="flex flex-col gap-1 pt-1.5 border-t border-gray-700/80 text-xs">
-                  <div class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold">Baukosten</div>
-                  <div class="flex items-center justify-center gap-2 font-medium flex-wrap">
-                    <div class="flex items-center gap-1 ${missingGold ? "text-red-400 font-bold bg-red-950/40" : "text-yellow-300 bg-yellow-950/40"} px-1.5 py-0.5 rounded border border-white/10" title="Gold">
+                <div
+                  class="flex flex-col gap-1 pt-1.5 border-t border-gray-700/80 text-xs"
+                >
+                  <div
+                    class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold"
+                  >
+                    Baukosten
+                  </div>
+                  <div
+                    class="flex items-center justify-center gap-2 font-medium flex-wrap"
+                  >
+                    <div
+                      class="flex items-center gap-1 ${missingGold
+                        ? "text-red-400 font-bold bg-red-950/40"
+                        : "text-yellow-300 bg-yellow-950/40"} px-1.5 py-0.5 rounded border border-white/10"
+                      title="Gold"
+                    >
                       <img src=${goldCoinIcon} width="13" height="13" />
                       <span>${renderNumber(goldCost)} Gold</span>
                     </div>
                     ${costs.steel > 0
-                      ? html`<div class="flex items-center gap-1 ${curSteel < costs.steel ? "text-red-400 font-bold bg-red-950/40" : "text-cyan-300 bg-cyan-950/40"} px-1.5 py-0.5 rounded border border-white/10" title="Stahl">
+                      ? html`<div
+                          class="flex items-center gap-1 ${curSteel <
+                          costs.steel
+                            ? "text-red-400 font-bold bg-red-950/40"
+                            : "text-cyan-300 bg-cyan-950/40"} px-1.5 py-0.5 rounded border border-white/10"
+                          title="Stahl"
+                        >
                           <img src=${steelMillIcon} width="13" height="13" />
                           <span>${costs.steel} Stahl</span>
                         </div>`
                       : null}
                     ${costs.fuel > 0
-                      ? html`<div class="flex items-center gap-1 ${curFuel < costs.fuel ? "text-red-400 font-bold bg-red-950/40" : "text-orange-400 bg-orange-950/40"} px-1.5 py-0.5 rounded border border-white/10" title="Treibstoff">
+                      ? html`<div
+                          class="flex items-center gap-1 ${curFuel < costs.fuel
+                            ? "text-red-400 font-bold bg-red-950/40"
+                            : "text-orange-400 bg-orange-950/40"} px-1.5 py-0.5 rounded border border-white/10"
+                          title="Treibstoff"
+                        >
                           <img src=${refineryIcon} width="13" height="13" />
                           <span>${costs.fuel} Fuel</span>
                         </div>`
                       : null}
                     ${costs.enrichedUranium > 0
-                      ? html`<div class="flex items-center gap-1 ${missingUranium ? "text-red-400 font-bold bg-red-950/40" : "text-lime-300 bg-lime-950/40"} px-1.5 py-0.5 rounded border border-white/10" title="Spaltmaterial">
+                      ? html`<div
+                          class="flex items-center gap-1 ${missingUranium
+                            ? "text-red-400 font-bold bg-red-950/40"
+                            : "text-lime-300 bg-lime-950/40"} px-1.5 py-0.5 rounded border border-white/10"
+                          title="Spaltmaterial"
+                        >
                           <img src=${centrifugeIcon} width="13" height="13" />
                           <span>${costs.enrichedUranium} U_ref</span>
                         </div>`
@@ -857,9 +929,13 @@ export class UnitDisplay extends LitElement implements Controller {
           class="${canBuildNow ? "" : "opacity-40 cursor-not-allowed"} 
                  border border-slate-700/80 rounded relative flex items-center justify-center cursor-pointer transition-all
                  w-[48px] h-[32px] shrink-0
-                 ${selected ? "bg-emerald-600/30 border-emerald-400 shadow-md ring-1 ring-emerald-400" : "hover:bg-slate-800 bg-slate-900/90"}
+                 ${selected
+            ? "bg-emerald-600/30 border-emerald-400 shadow-md ring-1 ring-emerald-400"
+            : "hover:bg-slate-800 bg-slate-900/90"}
                  text-white
-                 ${this.tutorialHighlight === unitType ? "tutorial-highlight" : ""}"
+                 ${this.tutorialHighlight === unitType
+            ? "tutorial-highlight"
+            : ""}"
           @click=${() => {
             if (this.uiState?.isEraserMode) {
               this.uiState.isEraserMode = false;
@@ -898,16 +974,25 @@ export class UnitDisplay extends LitElement implements Controller {
             this.eventBus?.emit(new ToggleStructureEvent(null))}
         >
           <!-- Hotkey Badge (Top-Left) -->
-          <span class="absolute top-0.5 left-0.5 text-[8px] font-mono font-bold text-gray-400 bg-black/70 px-0.5 rounded leading-none pointer-events-none z-10">
+          <span
+            class="absolute top-0.5 left-0.5 text-[8px] font-mono font-bold text-gray-400 bg-black/70 px-0.5 rounded leading-none pointer-events-none z-10"
+          >
             ${displayHotkey.replace("SHIFT+", "S")}
           </span>
 
           <!-- Unit / Building Icon (Centered & Clear) -->
-          <img src=${icon} alt=${structureKey} class="w-5 h-5 object-contain filter drop-shadow z-0" />
+          <img
+            src=${icon}
+            alt=${structureKey}
+            class="w-5 h-5 object-contain filter drop-shadow z-0"
+          />
 
           <!-- Count Badge (Bottom-Right, if owned) -->
           ${number !== null && number > 0
-            ? html`<span class="absolute bottom-0.5 right-0.5 text-[8.5px] font-bold font-mono tabular-nums leading-none text-emerald-300 bg-black/80 px-1 py-0.5 rounded-sm shadow-sm pointer-events-none z-10">${renderNumber(number)}</span>`
+            ? html`<span
+                class="absolute bottom-0.5 right-0.5 text-[8.5px] font-bold font-mono tabular-nums leading-none text-emerald-300 bg-black/80 px-1 py-0.5 rounded-sm shadow-sm pointer-events-none z-10"
+                >${renderNumber(number)}</span
+              >`
             : null}
         </div>
       </div>

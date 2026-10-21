@@ -1,4 +1,5 @@
 # BRAIN CACHE & PATCHNOTES: OPENFRONT.IO HYBRID-RTS EXPANSION
+
 **Repository:** `OpenFrontIO-main`  
 **Datum:** 2026-10-20  
 **Status:** In aktiver Entwicklung & Integration
@@ -8,11 +9,13 @@
 ## 1. MASTER-PROMPT: ANFORDERUNGEN & MATHEMATISCHE FORMELN
 
 ### A. Deterministische Tick-Engine
+
 - **Diskrete Simulation:** 1 Hz Simulations-Ticks (State-Machine) im Web Worker (`packages/engine`).
 - **Render-Interpolation:** 60 FPS Sub-Tick-Interpolation im Renderer (`src/client/render/`).
 - **Deterministische Mathematik:** Strikte Verwendung von `packages/engine-lib/src/DetMath.ts` und seeded PRNG (`PseudoRandom.ts`) ohne Rundungsdifferenzen zwischen Clients.
 
 ### B. Hybride Ökonomie & Demografie
+
 - **Gold-Formel pro Tick:**
   $$G_{tick} = \lfloor \alpha \cdot T + \beta \cdot P \rfloor \quad (\alpha = 0{,}02,\ \beta = 0{,}10)$$
 - **Demografisches Wachstum:**
@@ -22,6 +25,7 @@
   $$Cost(n) = BaseCost \cdot (1{,}15)^{n-1}$$
 
 #### Ressourcen-Tiers:
+
 - **Tier 0:** Gold ($G$) – Universelle Zivilwährung.
 - **Tier 1 (Heatmap-gebunden):**
   - Eisenerz ($Fe_{raw}$)
@@ -34,39 +38,42 @@
   - Spaltmaterial ($U_{ref}$): $4\,U_{raw} + 2\,C \rightarrow 1\,Spaltmaterial$ (Zentrifuge)
 
 #### Baukosten-Tabelle:
-| Gebäude / Einheit | Basiskosten Gold | Refined Resources | Unterhalt / Tick | Rolle |
-| :--- | :--- | :--- | :--- | :--- |
-| **Wohngebäude** | $100\,G$ | $-$ | $-$ | $+500\,K_P$ |
-| **Eisenmine** | $200\,G$ | $-$ | $-$ | Fördert Eisenerz |
-| **Kohlemine** | $150\,G$ | $-$ | $-$ | Fördert Kohle |
-| **Ölturm** | $350\,G$ | $-$ | $-$ | Fördert Rohöl (Land/Offshore) |
-| **Uranmine** | $800\,G$ | $-$ | $-$ | Fördert Uranerz |
-| **Stahlwerk** | $400\,G$ | $-$ | $-$ | $2 Fe + 1 C \rightarrow 1 Stahl$ |
-| **Raffinerie** | $500\,G$ | $-$ | $-$ | $2 Oil \rightarrow 1 Fuel$ |
-| **Zentrifuge** | $1\,200\,G$ | $-$ | $-$ | $4 U + 2 C \rightarrow 1 U_{ref}$ |
-| **Werft (Marinehafen)** | $600\,G$ | $-$ | $-$ | Schiffsbau-Infrastruktur |
-| **Flugplatz** | $750\,G$ | $-$ | $-$ | Luftwaffen-Infrastruktur |
-| **Bunker** | $150\,G$ | $+10\,Stahl$ | $-$ | DefBonus $1{,}8\times$ |
-| **Radarstation** | $800\,G$ | $+40\,Stahl + 5\,U_{ref}$ | $-$ | $R=30$, +50% SAM-Radius |
-| **SAM-Launcher** | $700\,G$ | $+50\,Stahl$ | $-$ | Magazin 4, Abfanggitter |
-| **Raketensilo** | $1\,000\,G$ | $+80\,Stahl$ | $-$ | Startbasis Strategische Waffen |
-| **Infanterie (100x)** | $50\,G$ | $-$ | $0$ | Frontbesetzung |
-| **Panzer-Division** | $250\,G$ | $+15\,Stahl$ | $0{,}5\,Fuel$ / Zug | $5\times$ Durchbruchskraft |
-| **Landungsboot** | $100\,G$ | $+5\,Stahl$ | $0{,}2\,Fuel$ / Tick | Max. 1000 Truppen |
-| **Zerstörer** | $500\,G$ | $+35\,Stahl$ | $0{,}8\,Fuel$ / Tick | Sonar U-Boot-Jagd, Küstenbeschuss |
-| **U-Boot** | $450\,G$ | $+25\,Stahl$ | $0{,}5\,Fuel$ / Tick | Stealth Torpedoangriff |
-| **Schlachtschiff** | $1\,200\,G$ | $+90\,Stahl$ | $2{,}0\,Fuel$ / Tick | Massive Reichweite $R=14$ |
-| **Abfangjäger (Fighter)**| $300\,G$ | $+10\,Stahl$ | $1{,}5\,Fuel$ / Mission | Luftraum-Patrouille |
-| **Strategischer Bomber** | $600\,G$ | $+30\,Stahl$ | $3{,}0\,Fuel$ / Mission | Fabrik- & Minenzerstörung |
-| **Cruise Missile** | $300\,G$ | $+20\,Stahl + 15\,Fuel$ | $-$ | Radius $R=3$ Gebäudezerstörung |
-| **ICBM (Nuklear)** | $2\,500\,G$ | $+100\,Stahl + 50\,Fuel + 10\,U_{ref}$ | $-$ | Radius $R=12$ Wipetile + 120s Fallout |
+
+| Gebäude / Einheit         | Basiskosten Gold | Refined Resources                      | Unterhalt / Tick        | Rolle                                 |
+| :------------------------ | :--------------- | :------------------------------------- | :---------------------- | :------------------------------------ |
+| **Wohngebäude**           | $100\,G$         | $-$                                    | $-$                     | $+500\,K_P$                           |
+| **Eisenmine**             | $200\,G$         | $-$                                    | $-$                     | Fördert Eisenerz                      |
+| **Kohlemine**             | $150\,G$         | $-$                                    | $-$                     | Fördert Kohle                         |
+| **Ölturm**                | $350\,G$         | $-$                                    | $-$                     | Fördert Rohöl (Land/Offshore)         |
+| **Uranmine**              | $800\,G$         | $-$                                    | $-$                     | Fördert Uranerz                       |
+| **Stahlwerk**             | $400\,G$         | $-$                                    | $-$                     | $2 Fe + 1 C \rightarrow 1 Stahl$      |
+| **Raffinerie**            | $500\,G$         | $-$                                    | $-$                     | $2 Oil \rightarrow 1 Fuel$            |
+| **Zentrifuge**            | $1\,200\,G$      | $-$                                    | $-$                     | $4 U + 2 C \rightarrow 1 U_{ref}$     |
+| **Werft (Marinehafen)**   | $600\,G$         | $-$                                    | $-$                     | Schiffsbau-Infrastruktur              |
+| **Flugplatz**             | $750\,G$         | $-$                                    | $-$                     | Luftwaffen-Infrastruktur              |
+| **Bunker**                | $150\,G$         | $+10\,Stahl$                           | $-$                     | DefBonus $1{,}8\times$                |
+| **Radarstation**          | $800\,G$         | $+40\,Stahl + 5\,U_{ref}$              | $-$                     | $R=30$, +50% SAM-Radius               |
+| **SAM-Launcher**          | $700\,G$         | $+50\,Stahl$                           | $-$                     | Magazin 4, Abfanggitter               |
+| **Raketensilo**           | $1\,000\,G$      | $+80\,Stahl$                           | $-$                     | Startbasis Strategische Waffen        |
+| **Infanterie (100x)**     | $50\,G$          | $-$                                    | $0$                     | Frontbesetzung                        |
+| **Panzer-Division**       | $250\,G$         | $+15\,Stahl$                           | $0{,}5\,Fuel$ / Zug     | $5\times$ Durchbruchskraft            |
+| **Landungsboot**          | $100\,G$         | $+5\,Stahl$                            | $0{,}2\,Fuel$ / Tick    | Max. 1000 Truppen                     |
+| **Zerstörer**             | $500\,G$         | $+35\,Stahl$                           | $0{,}8\,Fuel$ / Tick    | Sonar U-Boot-Jagd, Küstenbeschuss     |
+| **U-Boot**                | $450\,G$         | $+25\,Stahl$                           | $0{,}5\,Fuel$ / Tick    | Stealth Torpedoangriff                |
+| **Schlachtschiff**        | $1\,200\,G$      | $+90\,Stahl$                           | $2{,}0\,Fuel$ / Tick    | Massive Reichweite $R=14$             |
+| **Abfangjäger (Fighter)** | $300\,G$         | $+10\,Stahl$                           | $1{,}5\,Fuel$ / Mission | Luftraum-Patrouille                   |
+| **Strategischer Bomber**  | $600\,G$         | $+30\,Stahl$                           | $3{,}0\,Fuel$ / Mission | Fabrik- & Minenzerstörung             |
+| **Cruise Missile**        | $300\,G$         | $+20\,Stahl + 15\,Fuel$                | $-$                     | Radius $R=3$ Gebäudezerstörung        |
+| **ICBM (Nuklear)**        | $2\,500\,G$      | $+100\,Stahl + 50\,Fuel + 10\,U_{ref}$ | $-$                     | Radius $R=12$ Wipetile + 120s Fallout |
 
 ### C. Fuel-Starvation (Logistischer Treibstoffausfall)
+
 - Wenn $Fuel \le 0$:
   - Motorisierte Bodentruppen & Flugzeuge: $-80\%$ Geschwindigkeit, $-50\%$ Kampfkraft.
   - Schiffe auf See: $5\%$ Hüllen-Attrition pro Sekunde/Tick.
 
 ### D. SAM & Radar Abfang-Netzwerk
+
 - **Radar ($R = 30$):** Enttarnt U-Boote, hebt Nebel für Schiffe/Flugzeuge auf, erweitert verbündete SAM-Reichweite um $+50\%$ ($12 \rightarrow 18$).
 - **SAM-Launcher:** 4 Raketen Magazin. Reload: 10s ($50\,G + 5\,Stahl + 5\,Fuel$).
 - **Interzeption:**
@@ -74,6 +81,7 @@
   - ICBM: $2$ SAM-Raketen = $100\%$ Abschuss. $1$ SAM-Treffer = vorzeitige Detonation mit $50\%$ Radius ($R=6$).
 
 ### E. Frontlinien & Lanchester-Gesetz
+
 - Modifiziertes Quadratgesetz:
   $$\Delta Soldaten = \sqrt{|Soldaten_{Att}^2 - (Soldaten_{Def} \cdot DefBonus)^2|}$$
   $DefBonus = 1{,}0$ (Feld), $1{,}2$ (Berg/Wald), $1{,}8$ (Bunker).
@@ -81,6 +89,7 @@
   $$Building.ownerId = NewTileOwner$$
 
 ### F. Procedural Heatmap & Depletion
+
 - **Home-Buffer ($R_{home} = 15$):** 4 Rohstoffe ($H = 0{,}35 \pm 0{,}05$), 180s Vorrat, $90^\circ$ Drehung.
 - **Simplex Noise Makro-Cluster:**
   $$H_{raw}(x, y) = \max\left(0, \frac{\text{SimplexNoise}(x/\lambda, y/\lambda) - \theta}{1 - \theta}\right)^\gamma$$
@@ -101,6 +110,7 @@
   - Basiskarten-Dimmung: 25% Graustufen, weiße 1px Vektorkanten.
 
 ### G. Diplomatie & Transfer
+
 - Krieg (Default), Nichtangriffspakt (60s Kündigungsfrist), Allianz (geteiltes Radar & SAM-Schutz).
 - Direkter Rohstoff- & Goldtransfer.
 
@@ -108,29 +118,31 @@
 
 ## 2. OPENFRONT.IO CODE-MAPPING
 
-| OpenFront Komponente | Pfad im Repo | Zu integrierendes Feature |
-| :--- | :--- | :--- |
-| **GameTypes & Enums** | `packages/engine-api/src/game/GameTypes.ts` | Neue `UnitType`s (Tank, OilRig, Refinery, SteelMill, Centrifuge, etc.), Ressourcen-Typen |
-| **Intent Schemas** | `packages/engine-api/src/Schemas.ts` | `BuildStructureIntent`, `TransferResourceIntent`, `LaunchCruiseIntent`, `LaunchICBMIntent` |
-| **Tile Grid & Storage** | `packages/engine-lib/src/game/GameMapImpl.ts` | Ressourcen-Felder, Cluster-Pointer, Strahlungs-Countdown in `Uint16Array`/State-Map |
-| **Deterministische Math**| `packages/engine-lib/src/DetMath.ts` | Lanchester Quadratwurzel, exponentielle Kosten $Base \cdot 1.15^{n-1}$ |
-| **Map Generator & Clust**| `packages/engine-lib/src/` | 2D Simplex Noise Makro-Cluster & Home-Buffer Generator |
-| **Kampf & Lanchester** | `packages/engine/src/execution/AttackExecution.ts` | Lanchester Quadratgesetz mit Bunker- & Panzerboni, intakte Gebäudeübernahme |
-| **SAM & Radar Grid** | `packages/engine/src/execution/SAMLauncherExecution.ts`| Radar Sensor $R=30$, SAM-Boost $+50\%$, Cruise Missile Abfang (1x), ICBM Abfang (2x) |
-| **Wirtschafts-Simulation**| `packages/engine/src/game/GameImpl.ts` & `PlayerImpl.ts`| Tick-basierte Minenförderung, Erschöpfung, Refineries, Fuel-Starvation |
-| **Renderer & Shader** | `src/client/render/` | Geologischer Scouting Shader (25% Grayscale Dimmung, 5-Stufen Thermal Gradient, Iso-Linien) |
-| **HUD & Slider UI** | `src/client/hud/` | Truppen-Slider, Scouting Quick-Buttons, Ressourcen-Leiste, Diplomatie & Transfer-Modal |
+| OpenFront Komponente       | Pfad im Repo                                             | Zu integrierendes Feature                                                                   |
+| :------------------------- | :------------------------------------------------------- | :------------------------------------------------------------------------------------------ |
+| **GameTypes & Enums**      | `packages/engine-api/src/game/GameTypes.ts`              | Neue `UnitType`s (Tank, OilRig, Refinery, SteelMill, Centrifuge, etc.), Ressourcen-Typen    |
+| **Intent Schemas**         | `packages/engine-api/src/Schemas.ts`                     | `BuildStructureIntent`, `TransferResourceIntent`, `LaunchCruiseIntent`, `LaunchICBMIntent`  |
+| **Tile Grid & Storage**    | `packages/engine-lib/src/game/GameMapImpl.ts`            | Ressourcen-Felder, Cluster-Pointer, Strahlungs-Countdown in `Uint16Array`/State-Map         |
+| **Deterministische Math**  | `packages/engine-lib/src/DetMath.ts`                     | Lanchester Quadratwurzel, exponentielle Kosten $Base \cdot 1.15^{n-1}$                      |
+| **Map Generator & Clust**  | `packages/engine-lib/src/`                               | 2D Simplex Noise Makro-Cluster & Home-Buffer Generator                                      |
+| **Kampf & Lanchester**     | `packages/engine/src/execution/AttackExecution.ts`       | Lanchester Quadratgesetz mit Bunker- & Panzerboni, intakte Gebäudeübernahme                 |
+| **SAM & Radar Grid**       | `packages/engine/src/execution/SAMLauncherExecution.ts`  | Radar Sensor $R=30$, SAM-Boost $+50\%$, Cruise Missile Abfang (1x), ICBM Abfang (2x)        |
+| **Wirtschafts-Simulation** | `packages/engine/src/game/GameImpl.ts` & `PlayerImpl.ts` | Tick-basierte Minenförderung, Erschöpfung, Refineries, Fuel-Starvation                      |
+| **Renderer & Shader**      | `src/client/render/`                                     | Geologischer Scouting Shader (25% Grayscale Dimmung, 5-Stufen Thermal Gradient, Iso-Linien) |
+| **HUD & Slider UI**        | `src/client/hud/`                                        | Truppen-Slider, Scouting Quick-Buttons, Ressourcen-Leiste, Diplomatie & Transfer-Modal      |
 
 ---
 
 ## 3. PATCHNOTES & CHANGELOG
 
 ### [Version 0.1.0-alpha] - 2026-10-20
+
 - **Repository Setup:** OpenFrontIO Quellcode geklont und in `C:\Users\steve\.gemini\antigravity\scratch\OpenFrontIO-main` entpackt.
 - **Node/NPM Engine Patch:** `package.json` angepasst auf `"npm": ">=11.0.0 <13"` zur Kompatibilität mit Node v24.15.0 und npm 11.12.1.
 - **Brain Cache Initialisierung:** `BRAIN_CACHE.md` angelegt als persistenter Wissensspeicher für alle mathematischen Formeln, System-Architektur, Integrationsschritte und Fehlerbehebungen.
 
 ### [Version 0.2.0-beta] - 2026-10-20
+
 - **Engine-API Erweiterung (`packages/engine-api`):**
   - Neue `UnitType` Enums in `GameTypes.ts`: `Residential`, `IronMine`, `CoalMine`, `OilRig`, `UraniumMine`, `SteelMill`, `Refinery`, `Centrifuge`, `Shipyard`, `Airbase`, `Bunker`, `Radar`, `Tank`, `Destroyer`, `Submarine`, `Battleship`, `Fighter`, `Bomber`, `CruiseMissile`, `ICBM`.
   - Neue Typen `ResourceType`, `RefinedType`, `ResourceDeposit`, `ResourceCluster`, `PlayerEconomyState`.
@@ -147,6 +159,7 @@
   - `npm run typecheck` erfolgreich mit Exit-Code 0 über alle Pakete hinweg (`@openfront/engine-api`, `@openfront/engine-lib`, `@openfront/engine`, `@openfront/engine/src/worker`, `@openfront/shared`, `@openfront/zbin` und Root-Client).
 
 ### [Version 0.3.0-rc1] - 2026-10-20
+
 - **Lanchester-Kampfmechanik & Nahtlose Gebäudeübernahme (`packages/engine`):**
   - `EngineConfig.ts`:
     - Terra Nullius: Vorstoß auf neutrales Land verbraucht exakt 1 Soldat pro Kachel (`attackerTroopLoss = 1`).
@@ -183,6 +196,7 @@
   - Deterministische Snapshot-Engine (`tests/core/snapshot/FullGameSnapshot.test.ts`): Alle 12 Tests erfolgreich abgeschlossen (vollständige Byte-Identität bei Snapshot/Restore über Hunderte von Ticks).
 
 ### [Version 0.4.0] - 2026-10-20
+
 - **Cleanup toter Website-Funktionen & Promo-Banner:**
   - `src/client/components/DesktopNavBar.ts`: Shop- (`page-item-store`) und Inventar-Buttons (`page-inventory`) aus der Navigation entfernt.
   - `src/client/components/MobileNavBar.ts`: Shop- und Inventar-Links aus der mobilen Leiste entfernt.
@@ -215,6 +229,7 @@
   - Registriert in `GameRenderer.ts` und als Web Component `<mining-economy-panel>` in `index.html`.
 
 ### [Version 0.4.1] - 2026-10-20
+
 - **Entfernung externer OpenFront.io Links & Wiki-Buttons:**
   - `src/client/components/Footer.ts`: Vollständige Entfernung der externen OpenFront-Icon-Leiste (Wiki-Button `https://openfront.wiki/Main_Page`, Discord `https://discord.gg/openfront`, Reddit `https://www.reddit.com/r/OpenFront/`, GitHub `https://github.com/openfrontio/OpenFrontIO`). Die Fußzeile bleibt fokussiert auf Version, lokale Richtlinien und Sprachauswahl.
   - `src/client/hud/layers/WinModal.ts`: Entfernung des externen OpenFront-Discord-Einladungsbuttons aus dem Sieg- und Spielendebildschirm.
@@ -226,6 +241,7 @@
   - Layer-Boundaries & Determinismus-Tests zu 100% grün.
 
 ### [Version 0.4.2] - 2026-10-20
+
 - **Neues Hauptlobby-Hintergrundbild (Tactical Military Grid World Map):**
   - Hochgeladene taktische Weltkarte mit Gitter-Overlay verarbeitet und eingebunden.
   - Skaliert via Lanczos-Resampling auf **`2048 × 1228 px`** und als optimiertes WebP (Quality 90, 260 KB) hinterlegt in `resources/images/background.webp` und `static/images/background.webp`.
@@ -237,6 +253,7 @@
   - Server antwortet auf `http://localhost:9000/` mit HTTP 200 OK.
 
 ### [Version 0.4.3] - 2026-10-20
+
 - **Rebranding zu "InduFront":**
   - Neues hochauflösendes Vektorlogo `resources/images/InduFrontLogo.svg` mit industriellem Militär-Hexagon-Emblem (Zahnrad, Rang-Chevrons) und markanter Typografie ("INDU" in taktischem Gold, "FRONT" in Alpinweiß) entworfen und eingebunden.
   - Verlinkung und Alt-Tags in `DesktopNavBar.ts`, `MobileNavBar.ts`, `PlayPage.ts` und Fallback-Dateien auf `InduFront` aktualisiert.
@@ -250,6 +267,7 @@
     - Alle Hover- und Ringschatten auf Moosgrün-Glow umgestellt.
 
 ### [Version 0.5.1] - 2026-10-20
+
 - **Behebung der Hotbar-UI & Neugestaltung der Tabs (`UnitDisplay.ts`):**
   - **Marinehafen (`Port`) in "Gebäude" verschoben:** Wie gefordert befindet sich der Hafen nun logisch bei der Gebäude-Infrastruktur.
   - **Zweiter Tab umbenannt in "Actives":** Beinhaltet Kriegsschiffe, Zerstörer, U-Boote sowie strategische Nuklearwaffen (A-Bombe, H-Bombe, MIRV).
@@ -324,6 +342,7 @@
   - Server live auf `http://localhost:9000/` aktiv.
 
 ### [Version 0.5.2] - 2026-10-20
+
 - **Kompaktes HUD ohne horizontale Scrollleiste (`UnitDisplay.ts`):**
   - Horizontale Scrollleiste vollständig eliminiert (`overflow-x-auto` durch `overflow-hidden` ersetzt).
   - Button-Größe von `min-w-[56px] h-[34px]` auf kompakte `w-[45px] h-[30px] shrink-0 px-1 py-0.5` optimiert.
@@ -352,6 +371,7 @@
   - Dev-Server läuft stabil auf `http://localhost:9000/`.
 
 ### [Version 0.5.3] - 2026-10-20
+
 - **Bereinigung der Spawn-Punkte & Garantierte Minen-Mindestförderung (`ProceduralHeatmap.ts`, `EconomyExecution.ts`):**
   - **Künstliche Spawn-Punkte vollständig entfernt:** Sämtliche künstlichen Home-Buffer-Ressourcenpunkte um Hauptstädte/Spawns wurden eliminiert. Die Verteilung folgt rein organischem Simplex-Noise über das Festland.
   - **Garantierte Mindestförderung:** Jede gebaute Mine liefert unabhängig von der Kachel mindestens 60% ihres Basis-Ertrags (`minedAmount = baseYield * (0.6 + intensity * 1.8 * yieldFactor)`).
@@ -378,6 +398,7 @@
   - Dev-Server läuft stabil auf `http://localhost:9000/`.
 
 ### [Version 0.5.4] - 2026-10-20
+
 - **Eroberungs-Plünderung & 80% Ressourcenübernahme (`EconomyExecution.ts`, `GameImpl.ts`):**
   - **Nationale Kapitulation (`conquerPlayer`):** Bei vollständiger Annexion einer Nation werden 80% aller gelagerten Rohstoffe ($Fe, C, Oil, U$) und veredelten Vorräte ($Stahl, Treibstoff, U_{ref}$) an den Sieger übertragen. Die restlichen 20% gelten als Kriegsverlust/Zerstörung.
   - **Taktische Anlagenübernahme (`onStructureCaptured`):** Beim Einnehmen einer feindlichen Kachel mit Mine, Bohrturm, Raffinerie oder Schmelze gehen 80% der vor Ort gepufferten Rohstoffe und der im Transit befindlichen Konvois an den Eroberer. Zudem wird ein lokaler Werksdepot-Bonus ausgeschüttet.
@@ -391,6 +412,7 @@
   - Dokumentation von Patch 0.5.4 im Changelog und Startseiten-Newsfeed.
 
 ### [Version 0.5.5] - 2026-10-20
+
 - **Behebung der fehlenden Hotbar-Icons (`UnitDisplay.ts`):**
   - **Neues Button-Layout:** Die Buttons in der Hotbar wurden von horizontalem Inline-Flex auf zentrierte Icons (`w-5 h-5`) mit absolutem Micro-Hotkey-Badge oben links (`S1`, `S2` etc.) und Stückzahl-Badge unten rechts umgestellt.
   - Dadurch verdrängen lange Hotkeys ("SHIFT+1" etc.) die Icons nicht mehr aus dem Button.

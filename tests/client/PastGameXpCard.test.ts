@@ -108,8 +108,8 @@ describe("<past-game-xp-card>", () => {
   it("(a) shows the total, the level change and each source at its base value", async () => {
     await mount({ kind: "result", data: levelUp });
     expect(stateOf()).toBe("result");
-    expect(q("[data-past-xp-total]")!.textContent).toContain(
-      'progression.xp_total:{"xp":"1,150"}',
+    expect(q("[data-past-xp-total]")!.textContent).toMatch(
+      /progression\.xp_total:\{"xp":"1[,.]150"\}/,
     );
     const change = q("[data-past-xp-levelup]")!;
     expect(change.getAttribute("data-past-xp-levelup")).toBe("47");
@@ -223,8 +223,8 @@ describe("<past-game-xp-card>", () => {
     expect(q("[data-past-xp-levelup]")).toBeNull();
     const level = q("[data-past-xp-level]")!;
     expect(level.textContent).toContain('progression.level:{"level":47}');
-    expect(level.textContent).toContain(
-      'progression.xp_progress:{"current":"769","next":"2,260"}',
+    expect(level.textContent).toMatch(
+      /progression\.xp_progress:\{"current":"769","next":"2[,.]260"\}/,
     );
     expect(q("[data-past-xp-new-badge]")).toBeNull();
   });

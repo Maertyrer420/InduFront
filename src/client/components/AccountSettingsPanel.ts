@@ -1,7 +1,6 @@
 import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { getApiBase } from "../ApiBase";
 import { isSteamPrimaryUser } from "../AccountIdentity";
 import {
   deleteAccount,
@@ -10,7 +9,13 @@ import {
   setSearchVisibility,
   type SetVisibilityResult,
 } from "../Api";
-import { clearLocalSession, linkGoogle, sendMagicLink, userAuth } from "../Auth";
+import { getApiBase } from "../ApiBase";
+import {
+  clearLocalSession,
+  linkGoogle,
+  sendMagicLink,
+  userAuth,
+} from "../Auth";
 import { isDesktopShell } from "../DesktopShell";
 import { gamePortal } from "../GamePortal";
 import { showInGameAlert } from "../InGameModal";
@@ -114,10 +119,9 @@ export class AccountSettingsPanel extends LitElement {
   render(): TemplateResult {
     return html`
       <div class="flex flex-col gap-6">
-        ${this.renderPlayerIdCard()}
-        ${this.renderDoubleSafeCard()}
-        ${this.renderPasswordChangeCard()}
-        ${this.renderMarketingCard()} ${this.renderPrivacyCard()}
+        ${this.renderPlayerIdCard()} ${this.renderDoubleSafeCard()}
+        ${this.renderPasswordChangeCard()} ${this.renderMarketingCard()}
+        ${this.renderPrivacyCard()}
         <identity-token-card></identity-token-card>
         ${this.renderDeleteAccountCard()}
       </div>
@@ -126,15 +130,19 @@ export class AccountSettingsPanel extends LitElement {
 
   private renderPlayerIdCard(): TemplateResult {
     const rawId =
-      this.user?.publicId ||
-      this.player?.publicId ||
-      (this.player as { id?: string } | null)?.id ||
+      this.user?.publicId ??
+      this.player?.publicId ??
+      (this.player as { id?: string } | null)?.id ??
       "—";
     return html`
       <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div
+          class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
           <div>
-            <div class="text-white font-medium text-base flex items-center gap-2">
+            <div
+              class="text-white font-medium text-base flex items-center gap-2"
+            >
               <span class="text-xl">🆔</span>
               <span>${t("Deine Spieler-ID", "Your Player ID")}</span>
             </div>
@@ -172,20 +180,31 @@ export class AccountSettingsPanel extends LitElement {
     `;
   }
 
-  private renderDoubleSafeCard(): TemplateResult {
+  private renderDoubleSafeCard(): TemplateResult | typeof nothing {
+    if (isSteamPrimaryUser(this.user)) return nothing;
     const isVerified =
-      this.emailVerifiedActive ?? (this.user?.emailVerified ?? false);
+      this.emailVerifiedActive ?? this.user?.emailVerified ?? false;
     const isDoubleSafe =
-      this.doubleSafeActive ?? (this.user?.doubleSafeEnabled ?? false);
-    const currentEmail = this.safeEmail || this.user?.email || "";
+      this.doubleSafeActive ?? this.user?.doubleSafeEnabled ?? false;
+    const currentEmail =
+      this.safeEmail.length > 0 ? this.safeEmail : (this.user?.email ?? "");
 
     return html`
       <div class="bg-white/5 rounded-xl border border-white/10 p-6">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div
+          class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
           <div class="flex-1">
-            <div class="text-white font-medium text-base flex items-center gap-2">
+            <div
+              class="text-white font-medium text-base flex items-center gap-2"
+            >
               <span class="text-xl">🛡️</span>
-              <span>${t("Account-Wiederherstellung & Double Safe", "Account Recovery & Double Safe")}</span>
+              <span
+                >${t(
+                  "Account-Wiederherstellung & Double Safe",
+                  "Account Recovery & Double Safe",
+                )}</span
+              >
             </div>
             <div class="text-white/50 text-sm mt-1">
               ${t(
@@ -196,8 +215,12 @@ export class AccountSettingsPanel extends LitElement {
           </div>
           ${isVerified
             ? html`
-                <div class="flex items-center gap-3 bg-black/30 px-3.5 py-2 rounded-xl border border-white/10 shrink-0">
-                  <span class="text-xs text-white/80 font-medium">Double Safe:</span>
+                <div
+                  class="flex items-center gap-3 bg-black/30 px-3.5 py-2 rounded-xl border border-white/10 shrink-0"
+                >
+                  <span class="text-xs text-white/80 font-medium"
+                    >Double Safe:</span
+                  >
                   <button
                     role="switch"
                     aria-checked=${isDoubleSafe ? "true" : "false"}
@@ -269,15 +292,14 @@ export class AccountSettingsPanel extends LitElement {
                       ? html`<span class="text-green-400 font-medium"
                           >✓ ${t("E-Mail verifiziert", "Email verified")}</span
                         >`
-                      : t(
-                          "E-Mail noch nicht bestätigt",
-                          "Email not verified",
-                        )}
+                      : t("E-Mail noch nicht bestätigt", "Email not verified")}
                   </span>
                 </div>
               `
             : html`
-                <div class="text-xs text-green-400 font-medium flex items-center gap-1.5">
+                <div
+                  class="text-xs text-green-400 font-medium flex items-center gap-1.5"
+                >
                   <span>✓</span>
                   <span
                     >${t(
@@ -294,7 +316,6 @@ export class AccountSettingsPanel extends LitElement {
                       >`}
                 </div>
               `}
-
           ${this.safeError
             ? html`<div
                 class="text-xs text-red-400 bg-red-500/10 border border-red-500/30 px-3 py-2 rounded-lg"
@@ -669,72 +690,153 @@ export class AccountSettingsPanel extends LitElement {
     `;
   }
 
-  private renderPasswordChangeCard(): TemplateResult {
+  private renderPasswordChangeCard(): TemplateResult | typeof nothing {
+    if (isSteamPrimaryUser(this.user)) return nothing;
     return html`
       <div class="bg-white/5 rounded-xl border border-white/10 p-6">
         <div class="text-white font-medium text-base">
           ${t("Passwort ändern", "Change Password")}
         </div>
         <div class="text-white/50 text-sm mt-1">
-          ${t("Aktualisiere dein Passwort für diesen Account (mind. 8 Zeichen).", "Update your account password (at least 8 characters).")}
+          ${t(
+            "Aktualisiere dein Passwort für diesen Account (mind. 8 Zeichen).",
+            "Update your account password (at least 8 characters).",
+          )}
         </div>
 
         <form class="mt-4 space-y-3" @submit=${this.handlePasswordChangeSubmit}>
           <label class="block">
-            <span class="text-xs font-semibold text-white/60">${t("Aktuelles Passwort", "Current Password")}</span>
+            <span class="text-xs font-semibold text-white/60"
+              >${t("Aktuelles Passwort", "Current Password")}</span
+            >
             <div class="relative mt-1">
               <input
                 type=${this.showCurrentPassword ? "text" : "password"}
                 .value=${this.currentPassword}
                 autocomplete="current-password"
                 required
-                @input=${(e: Event) => (this.currentPassword = (e.target as HTMLInputElement).value)}
+                @input=${(e: Event) =>
+                  (this.currentPassword = (e.target as HTMLInputElement).value)}
                 class="w-full pl-3.5 pr-10 py-2.5 bg-white/5 border border-white/15 focus:border-white/50 rounded-xl text-white text-sm outline-none"
               />
               <button
                 type="button"
-                @click=${() => (this.showCurrentPassword = !this.showCurrentPassword)}
-                aria-label=${this.showCurrentPassword ? t("Passwort verbergen", "Hide password") : t("Passwort anzeigen", "Show password")}
+                @click=${() =>
+                  (this.showCurrentPassword = !this.showCurrentPassword)}
+                aria-label=${this.showCurrentPassword
+                  ? t("Passwort verbergen", "Hide password")
+                  : t("Passwort anzeigen", "Show password")}
                 class="absolute inset-y-0 right-0 pr-3 flex items-center text-white/40 hover:text-white transition-colors"
               >
                 ${this.showCurrentPassword
-                  ? html`<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>`
-                  : html`<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>`}
+                  ? html`<svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"
+                      />
+                    </svg>`
+                  : html`<svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                      />
+                    </svg>`}
               </button>
             </div>
           </label>
 
           <label class="block">
-            <span class="text-xs font-semibold text-white/60">${t("Neues Passwort", "New Password")}</span>
+            <span class="text-xs font-semibold text-white/60"
+              >${t("Neues Passwort", "New Password")}</span
+            >
             <div class="relative mt-1">
               <input
                 type=${this.showNewPassword ? "text" : "password"}
                 .value=${this.newPassword}
                 autocomplete="new-password"
                 required
-                @input=${(e: Event) => (this.newPassword = (e.target as HTMLInputElement).value)}
+                @input=${(e: Event) =>
+                  (this.newPassword = (e.target as HTMLInputElement).value)}
                 class="w-full pl-3.5 pr-10 py-2.5 bg-white/5 border border-white/15 focus:border-white/50 rounded-xl text-white text-sm outline-none"
               />
               <button
                 type="button"
                 @click=${() => (this.showNewPassword = !this.showNewPassword)}
-                aria-label=${this.showNewPassword ? t("Passwort verbergen", "Hide password") : t("Passwort anzeigen", "Show password")}
+                aria-label=${this.showNewPassword
+                  ? t("Passwort verbergen", "Hide password")
+                  : t("Passwort anzeigen", "Show password")}
                 class="absolute inset-y-0 right-0 pr-3 flex items-center text-white/40 hover:text-white transition-colors"
               >
                 ${this.showNewPassword
-                  ? html`<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" /></svg>`
-                  : html`<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>`}
+                  ? html`<svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"
+                      />
+                    </svg>`
+                  : html`<svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                      />
+                    </svg>`}
               </button>
             </div>
           </label>
 
           ${this.passwordChangeError
-            ? html`<div class="text-xs text-red-400 bg-red-500/10 border border-red-500/30 px-3 py-2 rounded-lg">
+            ? html`<div
+                class="text-xs text-red-400 bg-red-500/10 border border-red-500/30 px-3 py-2 rounded-lg"
+              >
                 ${this.passwordChangeError}
               </div>`
             : nothing}
           ${this.passwordChangeSuccess
-            ? html`<div class="text-xs text-green-400 bg-green-500/10 border border-green-500/30 px-3 py-2 rounded-lg">
+            ? html`<div
+                class="text-xs text-green-400 bg-green-500/10 border border-green-500/30 px-3 py-2 rounded-lg"
+              >
                 ${this.passwordChangeSuccess}
               </div>`
             : nothing}
@@ -745,7 +847,9 @@ export class AccountSettingsPanel extends LitElement {
               ?disabled=${this.passwordChangeBusy}
               class="px-5 py-2.5 text-xs font-bold uppercase tracking-wider rounded-xl bg-green-600 hover:bg-green-500 disabled:opacity-50 text-white transition-colors"
             >
-              ${this.passwordChangeBusy ? t("Wird gespeichert...", "Saving...") : t("Passwort speichern", "Update Password")}
+              ${this.passwordChangeBusy
+                ? t("Wird gespeichert...", "Saving...")
+                : t("Passwort speichern", "Update Password")}
             </button>
           </div>
         </form>

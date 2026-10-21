@@ -25,10 +25,14 @@ const handleChunk = (chunk) => {
   process.stdout.write(text);
   const match = text.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/i);
   if (match) {
-    console.log(`\n=============================================================`);
+    console.log(
+      `\n=============================================================`,
+    );
     console.log(`  OEFFENTLICHER GAME-SERVER LINK (fuer Freunde):`);
     console.log(`  ${match[0]}`);
-    console.log(`=============================================================\n`);
+    console.log(
+      `=============================================================\n`,
+    );
   }
 };
 

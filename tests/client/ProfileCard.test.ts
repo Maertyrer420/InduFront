@@ -51,10 +51,10 @@ describe("<profile-card>", () => {
     expect(
       card.querySelector("[data-xp-bar]")!.getAttribute("aria-valuenow"),
     ).toBe("62");
-    expect(text("[data-profile-xp]")).toContain(
-      'progression.xp_progress:{"current":"1,490","next":"2,410"}',
+    expect(text("[data-profile-xp]")).toMatch(
+      /progression\.xp_progress:\{"current":"1[,.]490","next":"2[,.]410"\}/,
     );
-    expect(text("[data-profile-lifetime]")).toContain("212,400");
+    expect(text("[data-profile-lifetime]")).toMatch(/212[,.]400/);
   });
 
   it("never repeats the games and wins the stats below it show", async () => {

@@ -63,8 +63,8 @@ import {
   showGLGate,
   trackGLInit,
 } from "./render/gl";
-import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { GeologicalDataService } from "./render/gl/utils/GeologicalDataService";
+import { ALL_UNIT_TYPES, UnitState } from "./render/types";
 import { versionedPathForMismatchedGame } from "./ServerList";
 import { audioMixer, initAudioMixer } from "./sound/AudioMixer";
 import { SoundManager } from "./sound/SoundManager";
@@ -1245,10 +1245,11 @@ export class ClientGameRunner {
         this.myPlayer = myPlayer;
       }
       const myStructures = this.myPlayer.units(...Structures.types);
-      const floatCoord = this.renderer.transformHandler.screenToWorldCoordinatesFloat(
-        event.x,
-        event.y,
-      );
+      const floatCoord =
+        this.renderer.transformHandler.screenToWorldCoordinatesFloat(
+          event.x,
+          event.y,
+        );
       let targetUnit = null;
       let minDistSq = 2.25; // 1.5 tiles radius squared
       for (const u of myStructures) {

@@ -83,39 +83,6 @@ function getStructureRatios(
       ratioPerCity: 0.2,
       perceivedCostIncreasePerOwned: 1,
     },
-    // Mines and Industrial Refining for Bots
-    [UnitType.IronMine]: {
-      ratioPerCity: 0.5,
-      perceivedCostIncreasePerOwned: 0.4,
-    },
-    [UnitType.CoalMine]: {
-      ratioPerCity: 0.4,
-      perceivedCostIncreasePerOwned: 0.4,
-    },
-    [UnitType.OilRig]: {
-      ratioPerCity: 0.35,
-      perceivedCostIncreasePerOwned: 0.4,
-    },
-    [UnitType.UraniumMine]: {
-      ratioPerCity: 0.25,
-      perceivedCostIncreasePerOwned: 0.6,
-    },
-    [UnitType.SteelMill]: {
-      ratioPerCity: 0.3,
-      perceivedCostIncreasePerOwned: 0.5,
-    },
-    [UnitType.Refinery]: {
-      ratioPerCity: 0.3,
-      perceivedCostIncreasePerOwned: 0.5,
-    },
-    [UnitType.Centrifuge]: {
-      ratioPerCity: 0.2,
-      perceivedCostIncreasePerOwned: 0.8,
-    },
-    [UnitType.Bunker]: {
-      ratioPerCity: 0.25,
-      perceivedCostIncreasePerOwned: 0.3,
-    },
   };
 }
 
@@ -300,6 +267,11 @@ export class NationStructureBehavior {
       builtCrowdedMapFirstStructure: this.builtCrowdedMapFirstStructure,
       hasHighStartingGold: this._hasHighStartingGold,
       postSaveUpStartTick: this._postSaveUpStartTick,
+      lastFailedCycleTick: this.lastFailedCycleTick,
+      lastFailedCycleTileVersion: this.lastFailedCycleTileVersion,
+      failedSpawnCache: Array.from(this.failedSpawnCache.entries()).sort(
+        ([a], [b]) => a.localeCompare(b),
+      ),
     });
   }
 
@@ -317,9 +289,9 @@ export class NationStructureBehavior {
     this.reachableStationsCache = null;
     this._sharedWaterComponents = null;
     this.mirvWorthSavingMemo = null;
-    this.failedSpawnCache = new Map();
-    this.lastFailedCycleTick = -100;
-    this.lastFailedCycleTileVersion = -1;
+    this.failedSpawnCache = new Map(s.failedSpawnCache);
+    this.lastFailedCycleTick = s.lastFailedCycleTick;
+    this.lastFailedCycleTileVersion = s.lastFailedCycleTileVersion;
     this.cachedCoastalTiles = null;
     this.cachedCoastalTileVersion = -1;
     this.cachedCoastalWaterVersion = -1;
@@ -730,16 +702,8 @@ export class NationStructureBehavior {
 
     // Build order for non-city structures (priority order)
     const buildOrder: UnitType[] = [
-      UnitType.IronMine,
-      UnitType.CoalMine,
-      UnitType.OilRig,
-      UnitType.SteelMill,
-      UnitType.Refinery,
       UnitType.Port,
       UnitType.Factory,
-      UnitType.UraniumMine,
-      UnitType.Centrifuge,
-      UnitType.Bunker,
       UnitType.SAMLauncher,
       UnitType.MissileSilo,
     ];
@@ -1241,7 +1205,12 @@ export class NationStructureBehavior {
     const tiles =
       type === UnitType.Port
         ? this.randCoastalTileArray(sampleSize)
-        : randTerritoryTileArray(this.random, this.game, this.player, sampleSize);
+        : randTerritoryTileArray(
+            this.random,
+            this.game,
+            this.player,
+            sampleSize,
+          );
     if (tiles.length === 0) return null;
     const valueFunction = this.structureSpawnTileValue(type);
     if (valueFunction === null) return null;
@@ -1798,12 +1767,32 @@ export class NationStructureBehavior {
 
 export const NationStructureBehaviorSnapshot = snapshotType({
   name: "NationStructureBehavior",
-  version: 1,
+  version: 2,
   schema: z.object({
     lastStructureTick: zInt().nullable(),
     placementsCount: zInt(),
     builtCrowdedMapFirstStructure: z.boolean(),
     hasHighStartingGold: z.boolean().nullable(),
     postSaveUpStartTick: zInt().nullable(),
+    lastFailedCycleTick: zInt(),
+    lastFailedCycleTileVersion: zInt(),
+    failedSpawnCache: z.array(
+      z.tuple([
+        z.nativeEnum(UnitType),
+        z.object({
+          tileVersion: zInt(),
+          unitsVersion: zInt(),
+          tick: zInt(),
+        }),
+      ]),
+    ),
   }),
+  migrations: {
+    1: (d) => ({
+      ...d,
+      lastFailedCycleTick: -100,
+      lastFailedCycleTileVersion: -1,
+      failedSpawnCache: [],
+    }),
+  },
 });

@@ -1,7 +1,7 @@
-import { createMapQuad, createProgram, shaderSrc } from "../utils/GlUtils";
-import vertSrc from "../shaders/geological-scouting/geological-scouting.vert.glsl?raw";
-import fragSrc from "../shaders/geological-scouting/geological-scouting.frag.glsl?raw";
 import type { ResourceType } from "@openfront/engine-api/game/GameTypes";
+import fragSrc from "../shaders/geological-scouting/geological-scouting.frag.glsl?raw";
+import vertSrc from "../shaders/geological-scouting/geological-scouting.vert.glsl?raw";
+import { createMapQuad, createProgram, shaderSrc } from "../utils/GlUtils";
 
 export class GeologicalScoutingPass {
   private gl: WebGL2RenderingContext;
@@ -38,7 +38,10 @@ export class GeologicalScoutingPass {
     this.uMapSize = gl.getUniformLocation(this.program, "uMapSize")!;
     this.uHeatmapAlpha = gl.getUniformLocation(this.program, "uHeatmapAlpha")!;
     this.uActive = gl.getUniformLocation(this.program, "uActive")!;
-    this.uResourceDensityTex = gl.getUniformLocation(this.program, "uResourceDensityTex")!;
+    this.uResourceDensityTex = gl.getUniformLocation(
+      this.program,
+      "uResourceDensityTex",
+    )!;
 
     this.vao = createMapQuad(gl, mapW, mapH);
 

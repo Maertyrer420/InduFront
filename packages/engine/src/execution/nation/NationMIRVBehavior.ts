@@ -257,7 +257,9 @@ export class NationMIRVBehavior {
     if (this.player.units(UnitType.MissileSilo).length === 0) {
       return false;
     }
-    if (!this.player.canBuildUnitType(UnitType.MIRV, this.cost(UnitType.MIRV))) {
+    if (
+      !this.player.canBuildUnitType(UnitType.MIRV, this.cost(UnitType.MIRV))
+    ) {
       return false;
     }
 

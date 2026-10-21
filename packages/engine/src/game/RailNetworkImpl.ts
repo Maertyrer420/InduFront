@@ -313,7 +313,7 @@ export class RailNetworkImpl implements RailNetwork {
     // Stations connect if they are an industrial hub or if a hub is nearby
     const buildingHub = RAIL_HUB_UNIT_TYPES.includes(unitType);
     const hasNearbyHub = RAIL_HUB_UNIT_TYPES.some((hubType) =>
-      this.game.hasUnitNearby(tile, maxRange, hubType)
+      this.game.hasUnitNearby(tile, maxRange, hubType),
     );
     if (!buildingHub && !hasNearbyHub) {
       return [];

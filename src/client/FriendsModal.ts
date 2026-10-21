@@ -1,6 +1,6 @@
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { getApiBase, getUserMe } from "./Api";
+import { getApiBase } from "./Api";
 import { getAuthHeader } from "./Auth";
 import { BaseModal } from "./components/BaseModal";
 import { modalHeader } from "./components/ui/ModalHeader";
@@ -12,7 +12,7 @@ import {
   removeFriend,
   sendFriendRequest,
 } from "./FriendsApi";
-import { showToast, translateText } from "./Utils";
+import { showToast } from "./Utils";
 
 export interface DirectChatMessage {
   id: string;
@@ -33,7 +33,10 @@ export class FriendsModal extends BaseModal {
   @state() private incoming: any[] = [];
   @state() private outgoing: any[] = [];
   @state() private loading = false;
-  @state() private activeFriendChat: { publicId: string; username: string } | null = null;
+  @state() private activeFriendChat: {
+    publicId: string;
+    username: string;
+  } | null = null;
   @state() private chatMessages: DirectChatMessage[] = [];
   @state() private chatInput = "";
   @state() private chatLoading = false;
@@ -105,9 +108,13 @@ export class FriendsModal extends BaseModal {
       if (res.ok) {
         const data = await res.json();
         const onlineList = data.onlineFriends ?? [];
-        this.onlineFriendsSet = new Set(onlineList.map((x: string) => x.toLowerCase()));
+        this.onlineFriendsSet = new Set(
+          onlineList.map((x: string) => x.toLowerCase()),
+        );
       }
-    } catch {}
+    } catch {
+      /* ignore fetch errors */
+    }
   }
 
   private openChatWithFriend(friend: { publicId: string; username: string }) {
@@ -136,15 +143,17 @@ export class FriendsModal extends BaseModal {
           if (c) c.scrollTop = c.scrollHeight;
         }, 50);
       }
-    } catch {}
-    finally {
+    } catch {
+      /* ignore chat fetch errors */
+    } finally {
       this.chatLoading = false;
     }
   }
 
   private async sendDirectMessage(e?: Event) {
     if (e) e.preventDefault();
-    if (!this.activeFriendChat || !this.chatInput.trim() || this.chatSending) return;
+    if (!this.activeFriendChat || !this.chatInput.trim() || this.chatSending)
+      return;
 
     const text = this.chatInput.trim();
     this.chatSending = true;
@@ -180,7 +189,7 @@ export class FriendsModal extends BaseModal {
     this.adding = true;
     try {
       const res = await sendFriendRequest(target);
-      if (res) {
+      if (res && typeof res !== "string") {
         showToast(
           res.status === "accepted"
             ? "Freundschaftsanfrage sofort akzeptiert!"
@@ -217,7 +226,7 @@ export class FriendsModal extends BaseModal {
     if (confirm("Möchtest du diesen Freund wirklich entfernen?")) {
       const ok = await removeFriend(publicId);
       if (ok) {
-        showToast("Freund entfernt", "amber");
+        showToast("Freund entfernt", "green");
         await this.loadData();
       }
     }
@@ -238,9 +247,17 @@ export class FriendsModal extends BaseModal {
               ⬅️ Zurück
             </button>
             <div class="flex items-center gap-2">
-              <span class="w-2.5 h-2.5 rounded-full ${isOnline ? "bg-green-400" : "bg-white/30"}"></span>
-              <span class="font-bold text-white text-lg">${this.activeFriendChat.username}</span>
-              <span class="text-xs text-white/40 font-mono">(${isOnline ? "Online" : "Offline"})</span>
+              <span
+                class="w-2.5 h-2.5 rounded-full ${isOnline
+                  ? "bg-green-400"
+                  : "bg-white/30"}"
+              ></span>
+              <span class="font-bold text-white text-lg"
+                >${this.activeFriendChat.username}</span
+              >
+              <span class="text-xs text-white/40 font-mono"
+                >(${isOnline ? "Online" : "Offline"})</span
+              >
             </div>
           </div>
         `,
@@ -262,7 +279,9 @@ export class FriendsModal extends BaseModal {
     return html`
       <div class="p-4 lg:p-6 space-y-4">
         ${this.loading && this.friends.length === 0
-          ? html`<div class="text-center p-8 text-white/40">Lade Freundesliste...</div>`
+          ? html`<div class="text-center p-8 text-white/40">
+              Lade Freundesliste...
+            </div>`
           : this.activeTab === "requests"
             ? this.renderRequestsTab()
             : this.activeTab === "add"
@@ -275,11 +294,16 @@ export class FriendsModal extends BaseModal {
   private renderFriendsListTab(): TemplateResult {
     if (this.friends.length === 0) {
       return html`
-        <div class="flex flex-col items-center justify-center p-12 text-center bg-white/5 rounded-2xl border border-white/10">
+        <div
+          class="flex flex-col items-center justify-center p-12 text-center bg-white/5 rounded-2xl border border-white/10"
+        >
           <span class="text-4xl mb-3">👥</span>
-          <h3 class="text-base font-bold text-white/80 mb-1">Noch keine Freunde</h3>
+          <h3 class="text-base font-bold text-white/80 mb-1">
+            Noch keine Freunde
+          </h3>
           <p class="text-xs text-white/40 mb-4 max-w-sm">
-            Füge Freunde per Benutzername oder ID hinzu, um ihren Online-Status zu sehen und direkt mit ihnen zu chatten!
+            Füge Freunde per Benutzername oder ID hinzu, um ihren Online-Status
+            zu sehen und direkt mit ihnen zu chatten!
           </p>
           <button
             @click=${() => (this.activeTab = "add")}
@@ -306,7 +330,7 @@ export class FriendsModal extends BaseModal {
                   <div
                     class="w-10 h-10 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center font-bold text-white text-sm"
                   >
-                    ${(friend.username || "?").charAt(0).toUpperCase()}
+                    ${(friend.username ?? "?").charAt(0).toUpperCase()}
                   </div>
                   <span
                     class="absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-black ${isOnline
@@ -316,8 +340,10 @@ export class FriendsModal extends BaseModal {
                   ></span>
                 </div>
                 <div class="min-w-0">
-                  <div class="font-bold text-white text-sm truncate flex items-center gap-2">
-                    <span>${friend.username || friend.publicId}</span>
+                  <div
+                    class="font-bold text-white text-sm truncate flex items-center gap-2"
+                  >
+                    <span>${friend.username ?? friend.publicId}</span>
                     <span
                       class="text-[10px] font-mono px-1.5 py-0.2 rounded ${isOnline
                         ? "bg-green-500/20 text-green-300 border border-green-500/30"
@@ -347,8 +373,19 @@ export class FriendsModal extends BaseModal {
                   class="p-2 text-white/30 hover:text-red-400 transition-colors cursor-pointer rounded-lg hover:bg-red-500/10"
                   title="Freund entfernen"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="w-4 h-4"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
                   </svg>
                 </button>
               </div>
@@ -361,16 +398,27 @@ export class FriendsModal extends BaseModal {
 
   private renderDirectChat(): TemplateResult {
     return html`
-      <div class="flex flex-col h-[520px] bg-black/40 rounded-xl border border-white/10 overflow-hidden shadow-2xl">
+      <div
+        class="flex flex-col h-[520px] bg-black/40 rounded-xl border border-white/10 overflow-hidden shadow-2xl"
+      >
         <!-- Messages Area -->
-        <div class="direct-chat-scroll flex-1 p-4 overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-white/20">
+        <div
+          class="direct-chat-scroll flex-1 p-4 overflow-y-auto space-y-3 scrollbar-thin scrollbar-thumb-white/20"
+        >
           ${this.chatLoading && this.chatMessages.length === 0
-            ? html`<div class="text-center p-8 text-white/40 text-sm">Lade Nachrichten...</div>`
+            ? html`<div class="text-center p-8 text-white/40 text-sm">
+                Lade Nachrichten...
+              </div>`
             : this.chatMessages.length === 0
               ? html`
-                  <div class="flex flex-col items-center justify-center h-full text-white/40 text-sm gap-2">
+                  <div
+                    class="flex flex-col items-center justify-center h-full text-white/40 text-sm gap-2"
+                  >
                     <span class="text-3xl">💬</span>
-                    <span>Keine vorherigen Nachrichten mit ${this.activeFriendChat?.username}. Sag Hallo!</span>
+                    <span
+                      >Keine vorherigen Nachrichten mit
+                      ${this.activeFriendChat?.username}. Sag Hallo!</span
+                    >
                   </div>
                 `
               : this.chatMessages.map((m) => {
@@ -380,14 +428,22 @@ export class FriendsModal extends BaseModal {
                     minute: "2-digit",
                   });
                   return html`
-                    <div class="flex flex-col ${isMe ? "items-end" : "items-start"}">
+                    <div
+                      class="flex flex-col ${isMe
+                        ? "items-end"
+                        : "items-start"}"
+                    >
                       <div
                         class="max-w-[75%] p-3 rounded-2xl ${isMe
                           ? "bg-malibu-blue text-black rounded-br-xs font-medium"
                           : "bg-white/10 text-white rounded-bl-xs"} shadow-md"
                       >
                         <div class="text-xs break-words">${m.text}</div>
-                        <div class="text-[9px] mt-1 text-right font-mono ${isMe ? "text-black/60" : "text-white/40"}">
+                        <div
+                          class="text-[9px] mt-1 text-right font-mono ${isMe
+                            ? "text-black/60"
+                            : "text-white/40"}"
+                        >
                           ${time}
                         </div>
                       </div>
@@ -404,7 +460,8 @@ export class FriendsModal extends BaseModal {
           <input
             type="text"
             maxlength="500"
-            placeholder="Nachricht an ${this.activeFriendChat?.username} schreiben..."
+            placeholder="Nachricht an ${this.activeFriendChat
+              ?.username} schreiben..."
             class="flex-1 bg-white/5 border border-white/10 focus:border-malibu-blue rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/30 outline-none transition-colors"
             .value=${this.chatInput}
             @input=${(e: any) => (this.chatInput = e.target.value)}
@@ -426,19 +483,31 @@ export class FriendsModal extends BaseModal {
       <div class="space-y-6">
         <!-- Incoming -->
         <div>
-          <h4 class="text-xs font-bold uppercase tracking-wider text-white/50 mb-3">
+          <h4
+            class="text-xs font-bold uppercase tracking-wider text-white/50 mb-3"
+          >
             Eingehende Anfragen (${this.incoming.length})
           </h4>
           ${this.incoming.length === 0
-            ? html`<div class="text-xs text-white/30 italic p-3 bg-white/5 rounded-xl border border-white/5">Keine eingehenden Anfragen</div>`
+            ? html`<div
+                class="text-xs text-white/30 italic p-3 bg-white/5 rounded-xl border border-white/5"
+              >
+                Keine eingehenden Anfragen
+              </div>`
             : html`
                 <div class="space-y-2">
                   ${this.incoming.map(
                     (req) => html`
-                      <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
+                      <div
+                        class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10"
+                      >
                         <div>
-                          <div class="font-bold text-white text-sm">${req.username || req.publicId}</div>
-                          <div class="text-[10px] text-white/40 font-mono">${req.publicId}</div>
+                          <div class="font-bold text-white text-sm">
+                            ${req.username ?? req.publicId}
+                          </div>
+                          <div class="text-[10px] text-white/40 font-mono">
+                            ${req.publicId}
+                          </div>
                         </div>
                         <div class="flex items-center gap-2">
                           <button
@@ -463,19 +532,31 @@ export class FriendsModal extends BaseModal {
 
         <!-- Outgoing -->
         <div>
-          <h4 class="text-xs font-bold uppercase tracking-wider text-white/50 mb-3">
+          <h4
+            class="text-xs font-bold uppercase tracking-wider text-white/50 mb-3"
+          >
             Gesendete Anfragen (${this.outgoing.length})
           </h4>
           ${this.outgoing.length === 0
-            ? html`<div class="text-xs text-white/30 italic p-3 bg-white/5 rounded-xl border border-white/5">Keine offenen gesendeten Anfragen</div>`
+            ? html`<div
+                class="text-xs text-white/30 italic p-3 bg-white/5 rounded-xl border border-white/5"
+              >
+                Keine offenen gesendeten Anfragen
+              </div>`
             : html`
                 <div class="space-y-2">
                   ${this.outgoing.map(
                     (req) => html`
-                      <div class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10">
+                      <div
+                        class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10"
+                      >
                         <div>
-                          <div class="font-bold text-white text-sm">${req.username || req.publicId}</div>
-                          <div class="text-[10px] text-white/40 font-mono">Wartet auf Antwort</div>
+                          <div class="font-bold text-white text-sm">
+                            ${req.username ?? req.publicId}
+                          </div>
+                          <div class="text-[10px] text-white/40 font-mono">
+                            Wartet auf Antwort
+                          </div>
                         </div>
                         <button
                           @click=${() => this.handleDecline(req.publicId)}
@@ -495,12 +576,15 @@ export class FriendsModal extends BaseModal {
 
   private renderAddTab(): TemplateResult {
     return html`
-      <div class="max-w-md mx-auto p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4">
+      <div
+        class="max-w-md mx-auto p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4"
+      >
         <h3 class="text-sm font-bold text-white uppercase tracking-wider">
           Freund hinzufügen
         </h3>
         <p class="text-xs text-white/50 leading-relaxed">
-          Gib den Benutzernamen oder die Public-ID des Spielers ein, dem du eine Freundschaftsanfrage senden möchtest.
+          Gib den Benutzernamen oder die Public-ID des Spielers ein, dem du eine
+          Freundschaftsanfrage senden möchtest.
         </p>
         <form @submit=${this.handleAddFriend} class="space-y-3">
           <input

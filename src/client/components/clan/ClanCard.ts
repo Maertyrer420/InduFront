@@ -3,7 +3,7 @@ import { customElement, property } from "lit/decorators.js";
 import type { ClanInfo } from "../../ClanApi";
 import { translateText } from "../../Utils";
 import "../CurrencyDisplay";
-import { translateClanRole } from "./ClanShared";
+import { normalizeClanRole, translateClanRole } from "./ClanShared";
 
 @customElement("clan-card")
 export class ClanCard extends LitElement {
@@ -38,7 +38,7 @@ export class ClanCard extends LitElement {
       "text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0";
     if (this.clanRole) {
       const colors =
-        this.clanRole === "leader"
+        normalizeClanRole(this.clanRole) === "leader"
           ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
           : "bg-malibu-blue/15 text-aquarius border border-malibu-blue/30";
       return html`<span class="${base} ${colors}"

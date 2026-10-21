@@ -112,14 +112,18 @@ export class ShellExecution implements Execution {
     }
 
     // Destroyer proximity aura: boosts friendly Warship damage by +10% per Destroyer (capped at +30%)
-    if (this.ownerUnit.isActive() && this.ownerUnit.type() === UnitType.Warship) {
+    if (
+      this.ownerUnit.isActive() &&
+      this.ownerUnit.type() === UnitType.Warship
+    ) {
       const warshipTile = this.ownerUnit.tile();
       const owner = this.ownerUnit.owner();
       const nearby = this.mg.nearbyUnits(
         warshipTile,
         12,
         UnitType.Destroyer,
-        ({ unit }) => unit.isActive() && (unit as Unit).owner().isFriendly(owner, true),
+        ({ unit }) =>
+          unit.isActive() && (unit as Unit).owner().isFriendly(owner, true),
       );
       const destroyerBonus = Math.min(30, nearby.length * 10);
       if (destroyerBonus > 0) {

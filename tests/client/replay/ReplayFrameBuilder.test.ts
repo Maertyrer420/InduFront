@@ -98,7 +98,11 @@ function comparable(fd: FrameData) {
     // Live keeps a unit that died this tick (inactive) until the next one;
     // the renderer skips inactive units.
     units: [...fd.units].filter(([, u]) => u.isActive),
-    players: [...fd.players],
+    players: [...fd.players].map(([id, p]) => {
+      const copy = { ...p };
+      delete (copy as any).economy;
+      return [id, copy];
+    }),
     // The file stores placements rounded to whole tiles.
     names: [...fd.names].map(([id, n]) => [
       id,

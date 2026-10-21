@@ -168,7 +168,8 @@ export class WarshipExecution implements Execution {
       tile,
       8,
       [UnitType.Warship, UnitType.Destroyer],
-      ({ unit }) => unit.isActive() && (unit as Unit).owner().isFriendly(owner, true),
+      ({ unit }) =>
+        unit.isActive() && (unit as Unit).owner().isFriendly(owner, true),
     );
     for (const { unit } of targets) {
       const maxHp = this.mg.config().unitInfo(unit.type()).maxHealth ?? 1000;

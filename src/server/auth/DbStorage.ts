@@ -9,7 +9,8 @@ export function getDbPool(): pg.Pool | null {
   if (!connStr) return null;
   if (!pool) {
     try {
-      const isLocal = connStr.includes("localhost") || connStr.includes("127.0.0.1");
+      const isLocal =
+        connStr.includes("localhost") || connStr.includes("127.0.0.1");
       pool = new pg.Pool({
         connectionString: connStr,
         ssl: isLocal ? false : { rejectUnauthorized: false },
@@ -60,7 +61,9 @@ export async function initDbTables(): Promise<boolean> {
         );
       `);
       dbInitialized = true;
-      console.log("[db] PostgreSQL connected and tables initialized successfully!");
+      console.log(
+        "[db] PostgreSQL connected and tables initialized successfully!",
+      );
       return true;
     } finally {
       client.release();
@@ -123,7 +126,9 @@ export async function dbDeleteUser(userId: string): Promise<void> {
   try {
     await initDbTables();
     await p.query("DELETE FROM indufront_users WHERE id = $1", [userId]);
-    await p.query("DELETE FROM indufront_sessions WHERE user_id = $1", [userId]);
+    await p.query("DELETE FROM indufront_sessions WHERE user_id = $1", [
+      userId,
+    ]);
   } catch (err: any) {
     console.warn("[db] dbDeleteUser failed:", err.message);
   }
@@ -134,7 +139,9 @@ export async function dbLoadSocialData(): Promise<any | null> {
   if (!p) return null;
   try {
     await initDbTables();
-    const res = await p.query("SELECT data FROM indufront_social WHERE key = 'social_main'");
+    const res = await p.query(
+      "SELECT data FROM indufront_social WHERE key = 'social_main'",
+    );
     if (res.rows.length > 0) {
       return res.rows[0].data;
     }

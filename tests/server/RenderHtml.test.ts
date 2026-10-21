@@ -12,6 +12,11 @@ import {
 } from "../../src/server/RenderHtml";
 import { ServerEnv } from "../../src/server/ServerEnv";
 
+vi.mock("../../src/server/RuntimeAssetManifest", () => ({
+  getRuntimeAssetManifest: vi.fn(async () => ({})),
+  clearRuntimeAssetManifestCache: vi.fn(),
+}));
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // The identity deploy.sh writes: the tests below boot as letter "a" with one
@@ -398,6 +403,6 @@ describe("RenderHtml environment-only render", () => {
     expect(match).not.toBeNull();
     const data = JSON.parse(match![1]);
     expect(data["@type"]).toBe("VideoGame");
-    expect(data.name).toBe("OpenFront");
+    expect(data.name).toBe("InduFront");
   });
 });

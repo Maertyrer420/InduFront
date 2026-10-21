@@ -90,15 +90,9 @@ export type ToggleGameStartTimer = z.infer<
 export type TransferResourceIntent = z.infer<
   typeof TransferResourceIntentSchema
 >;
-export type StrategicStrikeIntent = z.infer<
-  typeof StrategicStrikeIntentSchema
->;
-export type RecruitMilitaryIntent = z.infer<
-  typeof RecruitMilitaryIntentSchema
->;
-export type ToggleHeatmapIntent = z.infer<
-  typeof ToggleHeatmapIntentSchema
->;
+export type StrategicStrikeIntent = z.infer<typeof StrategicStrikeIntentSchema>;
+export type RecruitMilitaryIntent = z.infer<typeof RecruitMilitaryIntentSchema>;
+export type ToggleHeatmapIntent = z.infer<typeof ToggleHeatmapIntentSchema>;
 
 export type Turn = z.infer<typeof TurnSchema>;
 export type GameConfig = z.infer<typeof GameConfigSchema>;

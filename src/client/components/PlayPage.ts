@@ -68,7 +68,8 @@ export class PlayPage extends LitElement {
             ></span>
             <span class="text-white font-semibold truncate">${username}</span>
             ${email
-              ? html`<span class="hidden sm:inline text-xs text-white/45 truncate"
+              ? html`<span
+                  class="hidden sm:inline text-xs text-white/45 truncate"
                   >(${email})</span
                 >`
               : null}

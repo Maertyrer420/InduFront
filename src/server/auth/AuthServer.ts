@@ -1,17 +1,16 @@
-import { uuidToBase64url } from "@openfront/shared/Base64";
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
+import { uuidToBase64url } from "@openfront/shared/Base64";
 import * as dotenv from "dotenv";
 import express, { NextFunction, Request, Response } from "express";
 import { rateLimit } from "express-rate-limit";
+import { exportJWK, importJWK, jwtVerify, JWK, SignJWT } from "jose";
 import {
-  exportJWK,
-  generateKeyPair,
-  importJWK,
-  jwtVerify,
-  JWK,
-  SignJWT,
-} from "jose";
-import { randomBytes, randomUUID, createHash, createPrivateKey, createPublicKey } from "node:crypto";
+  randomBytes,
+  randomUUID,
+  createHash,
+  createPrivateKey,
+  createPublicKey,
+} from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -50,19 +49,25 @@ const store = new AuthStore(path.join(DATA_DIR, "users.json"));
 const socialStore = new GameSocialStore(path.join(DATA_DIR, "social.json"));
 
 type Keys = { privateJwk: JWK; publicJwk: JWK };
-const AUTH_SECRET = process.env.AUTH_SECRET ?? "indufront_persistent_auth_secret_v1_2026";
+const AUTH_SECRET =
+  process.env.AUTH_SECRET ?? "indufront_persistent_auth_secret_v1_2026";
 
 async function loadKeys(): Promise<Keys> {
   const file = path.join(DATA_DIR, "keys.json");
   if (fs.existsSync(file)) {
     try {
       return JSON.parse(fs.readFileSync(file, "utf8"));
-    } catch {}
+    } catch {
+      /* ignore corrupted keys and regenerate */
+    }
   }
   // Generate deterministic Ed25519 keypair based on AUTH_SECRET so restarts never invalidate active sessions
   const seed = createHash("sha256").update(AUTH_SECRET).digest();
   const privKeyObj = createPrivateKey({
-    key: Buffer.concat([Buffer.from("302e020100300506032b657004220420", "hex"), seed]),
+    key: Buffer.concat([
+      Buffer.from("302e020100300506032b657004220420", "hex"),
+      seed,
+    ]),
     format: "der",
     type: "pkcs8",
   });
@@ -74,7 +79,9 @@ async function loadKeys(): Promise<Keys> {
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     fs.writeFileSync(file, JSON.stringify(keys), { mode: 0o600 });
-  } catch {}
+  } catch {
+    /* ignore write error */
+  }
   return keys;
 }
 
@@ -82,7 +89,10 @@ function cookies(req: Request): Record<string, string> {
   const out: Record<string, string> = {};
   for (const part of (req.headers.cookie ?? "").split(";")) {
     const i = part.indexOf("=");
-    if (i > 0) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+    if (i > 0)
+      out[part.slice(0, i).trim()] = decodeURIComponent(
+        part.slice(i + 1).trim(),
+      );
   }
   return out;
 }
@@ -106,7 +116,9 @@ function setCookie(
 }
 
 const validEmail = (e: unknown): e is string =>
-  typeof e === "string" && e.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+  typeof e === "string" &&
+  e.length <= 254 &&
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 const validUsername = (u: unknown): u is string =>
   typeof u === "string" && /^[A-Za-z0-9_]{3,20}$/.test(u);
 const validPassword = (p: unknown): p is string =>
@@ -117,7 +129,10 @@ function userMe(u: UserRecord): UserMeResponse {
   const clans = socialStore.getClansForUser(u.publicId).map((c) => ({
     tag: c.tag,
     name: c.name,
-    role: c.members.find((m) => m.publicId.toLowerCase() === u.publicId.toLowerCase())?.role ?? "Mitglied",
+    role:
+      c.members.find(
+        (m) => m.publicId.toLowerCase() === u.publicId.toLowerCase(),
+      )?.role ?? "Mitglied",
   }));
   return {
     user: {
@@ -157,7 +172,10 @@ function playerProfile(u: UserRecord) {
   const clans = socialStore.getClansForUser(u.publicId).map((c) => ({
     tag: c.tag,
     name: c.name,
-    role: c.members.find((m) => m.publicId.toLowerCase() === u.publicId.toLowerCase())?.role ?? "Mitglied",
+    role:
+      c.members.find(
+        (m) => m.publicId.toLowerCase() === u.publicId.toLowerCase(),
+      )?.role ?? "Mitglied",
   }));
   return {
     createdAt: new Date(u.createdAt).toISOString(),
@@ -232,8 +250,14 @@ async function main() {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Vary", "Origin");
       res.setHeader("Access-Control-Allow-Credentials", "true");
-      res.setHeader("Access-Control-Allow-Headers", "authorization, content-type");
-      res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        "authorization, content-type",
+      );
+      res.setHeader(
+        "Access-Control-Allow-Methods",
+        "GET,POST,PUT,DELETE,OPTIONS",
+      );
     }
     if (req.method === "OPTIONS") return void res.sendStatus(204);
     next();
@@ -248,7 +272,9 @@ async function main() {
   });
 
   app.get("/.well-known/jwks.json", (_req, res) => {
-    res.json({ keys: [{ ...keys.publicJwk, alg: "EdDSA", crv: "Ed25519", kty: "OKP" }] });
+    res.json({
+      keys: [{ ...keys.publicJwk, alg: "EdDSA", crv: "Ed25519", kty: "OKP" }],
+    });
   });
 
   app.get("/auth/providers", (_req, res) => {
@@ -257,11 +283,16 @@ async function main() {
 
   app.post("/auth/register", authLimiter, async (req, res) => {
     const { email, password, username } = req.body ?? {};
-    if (!validUsername(username)) return void res.status(400).json({ error: "invalid_username" });
-    if (!validPassword(password)) return void res.status(400).json({ error: "weak_password" });
-    if (email && !validEmail(email)) return void res.status(400).json({ error: "invalid_email" });
-    if (email && store.byEmail(email)) return void res.status(409).json({ error: "email_taken" });
-    if (store.byUsername(username)) return void res.status(409).json({ error: "username_taken" });
+    if (!validUsername(username))
+      return void res.status(400).json({ error: "invalid_username" });
+    if (!validPassword(password))
+      return void res.status(400).json({ error: "weak_password" });
+    if (email && !validEmail(email))
+      return void res.status(400).json({ error: "invalid_email" });
+    if (email && store.byEmail(email))
+      return void res.status(409).json({ error: "email_taken" });
+    if (store.byUsername(username))
+      return void res.status(409).json({ error: "username_taken" });
     const effectiveEmail =
       typeof email === "string" && email.trim()
         ? email.trim()
@@ -288,12 +319,14 @@ async function main() {
       user?.passwordHash !== undefined
         ? await verifyPassword(password, user.passwordHash)
         : (await verifyPassword(password, "scrypt$00$00"), false);
-    if (!user || !ok) return void res.status(401).json({ error: "invalid_credentials" });
+    if (!user || !ok)
+      return void res.status(401).json({ error: "invalid_credentials" });
     res.json(await startSession(req, res, user));
   });
 
   app.post("/auth/refresh", async (req, res) => {
-    const headerToken = (req.headers["x-refresh-token"] as string) || req.body?.refreshToken;
+    const headerToken =
+      (req.headers["x-refresh-token"] as string) || req.body?.refreshToken;
     const cookieToken = cookies(req)[COOKIE];
     const token = cookieToken || headerToken;
     const user = token ? store.sessionUser(token) : undefined;
@@ -315,7 +348,8 @@ async function main() {
     if (!recovery) {
       return void res.json({
         ok: true,
-        message: "Falls dieser Account existiert, wurde ein 6-stelliger Wiederherstellungscode erstellt.",
+        message:
+          "Falls dieser Account existiert, wurde ein 6-stelliger Wiederherstellungscode erstellt.",
       });
     }
     console.log(
@@ -323,7 +357,8 @@ async function main() {
     );
     res.json({
       ok: true,
-      message: "Wiederherstellungscode generiert. Bitte Code und neues Passwort eingeben.",
+      message:
+        "Wiederherstellungscode generiert. Bitte Code und neues Passwort eingeben.",
       code: recovery.code,
     });
   });
@@ -333,7 +368,11 @@ async function main() {
     if (!identifier || !code || !validPassword(newPassword)) {
       return void res.status(400).json({ error: "weak_password" });
     }
-    const user = store.verifyRecoveryCode(String(identifier), String(code), "recovery");
+    const user = store.verifyRecoveryCode(
+      String(identifier),
+      String(code),
+      "recovery",
+    );
     if (!user) {
       return void res.status(400).json({ error: "invalid_code" });
     }
@@ -353,10 +392,13 @@ async function main() {
   app.post("/auth/email/send-code", authed, (req, res) => {
     const u = (req as Request & { user: UserRecord }).user;
     const { email } = req.body ?? {};
-    if (!validEmail(email)) return void res.status(400).json({ error: "invalid_email" });
+    if (!validEmail(email))
+      return void res.status(400).json({ error: "invalid_email" });
     store.setEmail(u.id, email, false);
     const recovery = store.createRecoveryCode(u.id, "email_verify");
-    console.log(`[auth] Email verification code for ${u.username} (${email}): ${recovery?.code}`);
+    console.log(
+      `[auth] Email verification code for ${u.username} (${email}): ${recovery?.code}`,
+    );
     res.json({ ok: true, message: "Code gesendet", code: recovery?.code });
   });
 
@@ -364,7 +406,11 @@ async function main() {
     const u = (req as Request & { user: UserRecord }).user;
     const { code } = req.body ?? {};
     if (!code) return void res.status(400).json({ error: "missing_code" });
-    const verified = store.verifyRecoveryCode(u.id, String(code), "email_verify");
+    const verified = store.verifyRecoveryCode(
+      u.id,
+      String(code),
+      "email_verify",
+    );
     if (!verified) return void res.status(400).json({ error: "invalid_code" });
     store.setEmail(u.id, verified.email, true);
     store.setDoubleSafe(u.id, true);
@@ -402,7 +448,8 @@ async function main() {
   );
 
   app.get("/auth/login/google", (req, res) => {
-    if (!googleEnabled) return void res.status(501).json({ error: "google_not_configured" });
+    if (!googleEnabled)
+      return void res.status(501).json({ error: "google_not_configured" });
     const redirect = String(req.query.redirect_uri ?? PUBLIC_URL);
     let target: URL;
     try {
@@ -430,7 +477,11 @@ async function main() {
     if (!googleEnabled) return void res.status(501).end();
     const [state, redirect] = (cookies(req).oauth_state ?? "").split("|");
     setCookie(req, res, "oauth_state", "", 0);
-    if (!state || req.query.state !== state || typeof req.query.code !== "string") {
+    if (
+      !state ||
+      req.query.state !== state ||
+      typeof req.query.code !== "string"
+    ) {
       return void res.status(400).send("Invalid OAuth state");
     }
     try {
@@ -446,10 +497,15 @@ async function main() {
         }),
       });
       if (!tokenRes.ok) throw new Error(`token ${tokenRes.status}`);
-      const { access_token } = (await tokenRes.json()) as { access_token: string };
-      const infoRes = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
-        headers: { Authorization: `Bearer ${access_token}` },
-      });
+      const { access_token } = (await tokenRes.json()) as {
+        access_token: string;
+      };
+      const infoRes = await fetch(
+        "https://openidconnect.googleapis.com/v1/userinfo",
+        {
+          headers: { Authorization: `Bearer ${access_token}` },
+        },
+      );
       const info = (await infoRes.json()) as {
         sub: string;
         email?: string;
@@ -457,16 +513,25 @@ async function main() {
         name?: string;
       };
       if (!info.sub || !info.email || info.email_verified !== true) {
-        return void res.status(403).send("Google account has no verified email");
+        return void res
+          .status(403)
+          .send("Google account has no verified email");
       }
       let user = store.byGoogleId(info.sub) ?? store.byEmail(info.email);
       if (user && !user.googleId) store.linkGoogle(user.id, info.sub);
       if (!user) {
         const base =
-          (info.name ?? info.email.split("@")[0]).replace(/[^A-Za-z0-9_]/g, "").slice(0, 14) || "player";
+          (info.name ?? info.email.split("@")[0])
+            .replace(/[^A-Za-z0-9_]/g, "")
+            .slice(0, 14) || "player";
         let name = base.length >= 3 ? base : base + "_pl";
-        while (store.byUsername(name)) name = base + Math.floor(Math.random() * 9999);
-        user = store.createUser({ email: info.email, username: name, googleId: info.sub });
+        while (store.byUsername(name))
+          name = base + Math.floor(Math.random() * 9999);
+        user = store.createUser({
+          email: info.email,
+          username: name,
+          googleId: info.sub,
+        });
       }
       setCookie(req, res, COOKIE, store.createSession(user.id), 30 * 24 * 3600);
       res.redirect(redirect || PUBLIC_URL);
@@ -511,7 +576,9 @@ async function main() {
   }
 
   app.post("/auth/sync", async (req, res) => {
-    const rawToken = req.body?.jwt ?? (req.headers.authorization ?? "").replace(/^Bearer /, "");
+    const rawToken =
+      req.body?.jwt ??
+      (req.headers.authorization ?? "").replace(/^Bearer /, "");
     if (!rawToken) return void res.status(400).json({ error: "missing_token" });
     try {
       const { payload } = await jwtVerify(rawToken, verifyKey, {
@@ -576,11 +643,20 @@ async function main() {
     const u = (req as Request & { user: UserRecord }).user;
     const { currentPassword, newPassword } = req.body ?? {};
     if (!validPassword(newPassword)) {
-      return void res.status(400).json({ error: "weak_password", reason: "Min. 8 Zeichen erforderlich" });
+      return void res.status(400).json({
+        error: "weak_password",
+        reason: "Min. 8 Zeichen erforderlich",
+      });
     }
     if (u.passwordHash) {
-      if (typeof currentPassword !== "string" || !(await verifyPassword(currentPassword, u.passwordHash))) {
-        return void res.status(401).json({ error: "incorrect_password", reason: "Aktuelles Passwort falsch" });
+      if (
+        typeof currentPassword !== "string" ||
+        !(await verifyPassword(currentPassword, u.passwordHash))
+      ) {
+        return void res.status(401).json({
+          error: "incorrect_password",
+          reason: "Aktuelles Passwort falsch",
+        });
       }
     }
     const newHash = await hashPassword(newPassword);
@@ -594,7 +670,11 @@ async function main() {
   app.post("/users/@me/notices", authed, (req, res) => {
     const u = (req as Request & { user: UserRecord }).user;
     const notice = req.body?.notice;
-    if (typeof notice === "string" && notice.length > 0 && notice.length <= 64) {
+    if (
+      typeof notice === "string" &&
+      notice.length > 0 &&
+      notice.length <= 64
+    ) {
       store.markNoticeSeen(u.id, notice);
     }
     res.sendStatus(200);
@@ -636,19 +716,23 @@ async function main() {
   app.post("/game/:gameId", async (req, res) => {
     try {
       const gameRecord = req.body ?? {};
-      const gameId = String(req.params.gameId || gameRecord.info?.gameID || randomUUID());
+      const gameId = String(
+        req.params.gameId ?? gameRecord.info?.gameID ?? randomUUID(),
+      );
       const playersObj = gameRecord.players ?? {};
       const winnerId = gameRecord.winner;
-      const rankedType = String(gameRecord.info?.rankedType || "ffa");
-      const gameType = String(gameRecord.info?.gameType || "Public");
+      const rankedType = String(gameRecord.info?.rankedType ?? "ffa");
+      const gameType = String(gameRecord.info?.gameType ?? "Public");
 
       const playerList: any[] = [];
       let rankCounter = 1;
 
       for (const [clientId, p] of Object.entries<any>(playersObj)) {
-        const isWinner = clientId === winnerId || (p.teamIndex !== undefined && p.teamIndex === winnerId);
-        const publicId = p.persistentID || clientId;
-        const username = p.username || "Player";
+        const isWinner =
+          clientId === winnerId ||
+          (p.teamIndex !== undefined && p.teamIndex === winnerId);
+        const publicId = p.persistentID ?? clientId;
+        const username = p.username ?? "Player";
         const kills = p.stats?.kills ?? 0;
         const territory = p.stats?.territory ?? 0;
         playerList.push({
@@ -661,7 +745,9 @@ async function main() {
         });
       }
 
-      playerList.sort((a, b) => (a.winner ? -1 : b.winner ? 1 : a.placement - b.placement));
+      playerList.sort((a, b) =>
+        a.winner ? -1 : b.winner ? 1 : a.placement - b.placement,
+      );
       playerList.forEach((pl, idx) => {
         pl.placement = idx + 1;
         pl.qpEarned = calculateQpPoints(pl.placement);
@@ -726,7 +812,10 @@ async function main() {
   app.get("/clans", (req, res) => {
     const search = String(req.query.search ?? "").toLowerCase();
     const page = Math.max(1, Number(req.query.page ?? 1) || 1);
-    const limit = Math.max(1, Math.min(100, Number(req.query.limit ?? 20) || 20));
+    const limit = Math.max(
+      1,
+      Math.min(100, Number(req.query.limit ?? 20) || 20),
+    );
     let list = socialStore.getClans();
     if (search) {
       list = list.filter(
@@ -756,7 +845,12 @@ async function main() {
   app.post("/clans", authed, (req, res) => {
     const u = (req as Request & { user: UserRecord }).user;
     const { tag, name, description, isOpen } = req.body ?? {};
-    const result = socialStore.createClan(u, { tag, name, description, isOpen });
+    const result = socialStore.createClan(u, {
+      tag,
+      name,
+      description,
+      isOpen,
+    });
     if (!result.ok) {
       return void res.status(400).json({ error: result.error });
     }
@@ -782,7 +876,11 @@ async function main() {
 
   app.patch("/clans/:tag", authed, (req, res) => {
     const u = (req as Request & { user: UserRecord }).user;
-    const result = socialStore.updateClan(u, String(req.params.tag), req.body ?? {});
+    const result = socialStore.updateClan(
+      u,
+      String(req.params.tag),
+      req.body ?? {},
+    );
     if (!result.ok) {
       return void res.status(400).json({ error: result.error });
     }
@@ -839,7 +937,11 @@ async function main() {
   app.post("/clans/:tag/kick", authed, (req, res) => {
     const u = (req as Request & { user: UserRecord }).user;
     const { targetPublicId } = req.body ?? {};
-    const result = socialStore.kickMember(u, String(req.params.tag), String(targetPublicId));
+    const result = socialStore.kickMember(
+      u,
+      String(req.params.tag),
+      String(targetPublicId),
+    );
     if (!result.ok) {
       return void res.status(403).json({ error: result.error });
     }
@@ -945,7 +1047,8 @@ async function main() {
   app.get("/clans/:tag/chat", authed, (req, res) => {
     const u = (req as Request & { user: UserRecord }).user;
     const chat = socialStore.getClanChat(u, String(req.params.tag));
-    if (chat === null) return void res.status(403).json({ error: "not_member" });
+    if (chat === null)
+      return void res.status(403).json({ error: "not_member" });
     res.json({ messages: chat });
   });
 
@@ -1022,7 +1125,10 @@ async function main() {
   app.get("/friends", authed, (req, res) => {
     const u = (req as Request & { user: UserRecord }).user;
     const page = Math.max(1, Number(req.query.page ?? 1) || 1);
-    const limit = Math.max(1, Math.min(100, Number(req.query.limit ?? 20) || 20));
+    const limit = Math.max(
+      1,
+      Math.min(100, Number(req.query.limit ?? 20) || 20),
+    );
     const allIds = u.friends ?? [];
     const entries = allIds
       .map((pid) => {
@@ -1046,7 +1152,9 @@ async function main() {
 
   app.get("/friends/requests", authed, (req, res) => {
     const u = (req as Request & { user: UserRecord }).user;
-    const mapReq = (list: { publicId: string; createdAt: number }[] | undefined) =>
+    const mapReq = (
+      list: { publicId: string; createdAt: number }[] | undefined,
+    ) =>
       (list ?? [])
         .map((r) => {
           const other = store.byPublicId(r.publicId);
@@ -1144,7 +1252,9 @@ async function main() {
   app.use((_req, res) => res.status(404).json({ error: "not_found" }));
 
   app.listen(PORT, () => {
-    console.log(`[auth] listening on :${PORT} issuer=${ISSUER} public=${PUBLIC_URL} google=${googleEnabled}`);
+    console.log(
+      `[auth] listening on :${PORT} issuer=${ISSUER} public=${PUBLIC_URL} google=${googleEnabled}`,
+    );
   });
 }
 

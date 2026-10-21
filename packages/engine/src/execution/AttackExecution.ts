@@ -376,12 +376,7 @@ export class AttackExecution implements Execution {
       );
     const defenderHasBunker =
       defender !== null &&
-      this.mg.hasUnitNearby(
-        tile,
-        15,
-        UnitType.Bunker,
-        defender.id(),
-      );
+      this.mg.hasUnitNearby(tile, 15, UnitType.Bunker, defender.id());
     const attackerHasTanks = this.mg.hasUnitNearby(
       tile,
       20,

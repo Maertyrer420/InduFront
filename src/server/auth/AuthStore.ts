@@ -1,4 +1,11 @@
-import { randomBytes, randomUUID, scrypt, timingSafeEqual, createHash, createHmac } from "node:crypto";
+import {
+  randomBytes,
+  randomUUID,
+  scrypt,
+  timingSafeEqual,
+  createHash,
+  createHmac,
+} from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { dbDeleteUser, dbLoadUsers, dbUpsertUser } from "./DbStorage";
@@ -86,7 +93,9 @@ export class AuthStore {
         this.data = JSON.parse(raw) as Data;
         loaded = true;
       } catch (err) {
-        console.warn(`[auth-store] Failed to parse ${file}, attempting backup...`);
+        console.warn(
+          `[auth-store] Failed to parse ${file}, attempting backup...`,
+        );
       }
     }
 
@@ -95,7 +104,9 @@ export class AuthStore {
         const raw = fs.readFileSync(this.backupFile, "utf8");
         this.data = JSON.parse(raw) as Data;
         console.log(`[auth-store] Restored from backup: ${this.backupFile}`);
-      } catch {}
+      } catch {
+        /* ignore corrupted backup */
+      }
     }
 
     // Try loading / merging from PostgreSQL if DATABASE_URL is provided
@@ -112,7 +123,9 @@ export class AuthStore {
         }
         this.data.users = Array.from(byId.values());
         this.save(false);
-        console.log(`[auth-store] Synchronized ${dbUsers.length} users from PostgreSQL.`);
+        console.log(
+          `[auth-store] Synchronized ${dbUsers.length} users from PostgreSQL.`,
+        );
       }
     } catch (err: any) {
       console.warn("[auth-store] syncFromDb:", err.message);
@@ -193,9 +206,13 @@ export class AuthStore {
     for (const other of this.data.users) {
       if (other.friends) other.friends = other.friends.filter((f) => f !== pub);
       if (other.incomingRequests)
-        other.incomingRequests = other.incomingRequests.filter((r) => r.publicId !== pub);
+        other.incomingRequests = other.incomingRequests.filter(
+          (r) => r.publicId !== pub,
+        );
       if (other.outgoingRequests)
-        other.outgoingRequests = other.outgoingRequests.filter((r) => r.publicId !== pub);
+        other.outgoingRequests = other.outgoingRequests.filter(
+          (r) => r.publicId !== pub,
+        );
     }
     this.deleteAllSessions(userId);
     this.data.deletedUserIds ??= [];
@@ -300,11 +317,13 @@ export class AuthStore {
     const me = this.byId(fromUserId);
     const target = this.byPublicIdOrUsername(targetStr);
     if (!me || !target) return { ok: false, code: "not_found" };
-    if (me.publicId === target.publicId) return { ok: false, code: "bad_request" };
+    if (me.publicId === target.publicId)
+      return { ok: false, code: "bad_request" };
 
     me.friends ??= [];
     target.friends ??= [];
-    if (me.friends.includes(target.publicId)) return { ok: false, code: "conflict" };
+    if (me.friends.includes(target.publicId))
+      return { ok: false, code: "conflict" };
 
     me.incomingRequests ??= [];
     me.outgoingRequests ??= [];
@@ -320,8 +339,10 @@ export class AuthStore {
       target.outgoingRequests = target.outgoingRequests.filter(
         (r) => r.publicId !== me.publicId,
       );
-      if (!me.friends.includes(target.publicId)) me.friends.push(target.publicId);
-      if (!target.friends.includes(me.publicId)) target.friends.push(me.publicId);
+      if (!me.friends.includes(target.publicId))
+        me.friends.push(target.publicId);
+      if (!target.friends.includes(me.publicId))
+        target.friends.push(me.publicId);
       this.save(true, me);
       this.save(true, target);
       return { ok: true, status: "accepted" };
@@ -345,7 +366,9 @@ export class AuthStore {
     if (!me || !other) return false;
     me.incomingRequests ??= [];
     other.outgoingRequests ??= [];
-    const idx = me.incomingRequests.findIndex((r) => r.publicId === other.publicId);
+    const idx = me.incomingRequests.findIndex(
+      (r) => r.publicId === other.publicId,
+    );
     if (idx < 0) return false;
     me.incomingRequests.splice(idx, 1);
     other.outgoingRequests = other.outgoingRequests.filter(
@@ -368,10 +391,18 @@ export class AuthStore {
     me.outgoingRequests ??= [];
     other.incomingRequests ??= [];
     other.outgoingRequests ??= [];
-    me.incomingRequests = me.incomingRequests.filter((r) => r.publicId !== other.publicId);
-    me.outgoingRequests = me.outgoingRequests.filter((r) => r.publicId !== other.publicId);
-    other.incomingRequests = other.incomingRequests.filter((r) => r.publicId !== me.publicId);
-    other.outgoingRequests = other.outgoingRequests.filter((r) => r.publicId !== me.publicId);
+    me.incomingRequests = me.incomingRequests.filter(
+      (r) => r.publicId !== other.publicId,
+    );
+    me.outgoingRequests = me.outgoingRequests.filter(
+      (r) => r.publicId !== other.publicId,
+    );
+    other.incomingRequests = other.incomingRequests.filter(
+      (r) => r.publicId !== me.publicId,
+    );
+    other.outgoingRequests = other.outgoingRequests.filter(
+      (r) => r.publicId !== me.publicId,
+    );
     this.save(true, me);
     this.save(true, other);
     return true;
@@ -413,8 +444,7 @@ export class AuthStore {
 
     // Generate unique permanent player ID with IF- prefix
     const publicId =
-      p.publicId ??
-      `IF-${randomBytes(4).toString("hex").toUpperCase()}`;
+      p.publicId ?? `IF-${randomBytes(4).toString("hex").toUpperCase()}`;
 
     const user: UserRecord = {
       id,
@@ -445,7 +475,8 @@ export class AuthStore {
   createSession(userId: string): string {
     const now = Date.now();
     const expiresAt = now + SESSION_TTL_MS;
-    const authSecret = process.env.AUTH_SECRET ?? "indufront_persistent_auth_secret_v1_2026";
+    const authSecret =
+      process.env.AUTH_SECRET ?? "indufront_persistent_auth_secret_v1_2026";
     const hmacSig = createHmac("sha256", authSecret)
       .update(`${userId}:${expiresAt}`)
       .digest("base64url");
@@ -474,7 +505,8 @@ export class AuthStore {
       const [userId, expStr, sig] = parts;
       const expiresAt = parseInt(expStr, 10);
       if (Number.isFinite(expiresAt) && expiresAt >= now) {
-        const authSecret = process.env.AUTH_SECRET ?? "indufront_persistent_auth_secret_v1_2026";
+        const authSecret =
+          process.env.AUTH_SECRET ?? "indufront_persistent_auth_secret_v1_2026";
         const expectedSig = createHmac("sha256", authSecret)
           .update(`${userId}:${expiresAt}`)
           .digest("base64url");

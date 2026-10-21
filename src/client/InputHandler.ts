@@ -1494,6 +1494,36 @@ export class InputHandler {
     code: string,
     shiftKey: boolean,
   ): PlayerBuildableUnitType | null {
+    // When active hotbar tab is explicitly set to "actives", digits 1..7 map to the actives hotbar row
+    if (!shiftKey && this.uiState?.activeHotbarTab === "actives") {
+      let digit: number | null = null;
+      if (code.startsWith("Digit")) {
+        digit = parseInt(code.slice(5), 10);
+      } else if (code.startsWith("Numpad")) {
+        digit = parseInt(code.slice(6), 10);
+      }
+      if (digit !== null) {
+        switch (digit) {
+          case 1:
+            return UnitType.Warship;
+          case 2:
+            return UnitType.Destroyer;
+          case 3:
+            return UnitType.Submarine;
+          case 4:
+            return UnitType.CruiseMissile;
+          case 5:
+            return UnitType.AtomBomb;
+          case 6:
+            return UnitType.HydrogenBomb;
+          case 7:
+            return UnitType.MIRV;
+          default:
+            break;
+        }
+      }
+    }
+
     const buildKeybinds: ReadonlyArray<{
       key: string;
       type: PlayerBuildableUnitType;
@@ -1509,12 +1539,20 @@ export class InputHandler {
       { key: "buildWarship", type: UnitType.Warship },
       { key: "buildMIRV", type: UnitType.MIRV },
     ];
+
+    // Phase 1: Exact code match
     for (const { key, type } of buildKeybinds) {
       if (this.keybindMatchesEvent({ code, shiftKey }, this.keybinds[key]))
         return type;
     }
 
-    // Digit / Numpad resolution with Shift and Tab awareness
+    // Phase 2: Digit/Numpad alias match
+    for (const { key, type } of buildKeybinds) {
+      if (this.buildKeybindMatchesDigit(code, shiftKey, this.keybinds[key]))
+        return type;
+    }
+
+    // Secondary hotbar fallbacks (Mining/Refining row and un-keyed structures)
     let digit: number | null = null;
     if (code.startsWith("Digit")) {
       digit = parseInt(code.slice(5), 10);
@@ -1544,48 +1582,14 @@ export class InputHandler {
             break;
         }
       } else {
-        // Without Shift: depends on active hotbar tab
-        if (this.uiState?.activeHotbarTab === "actives") {
-          switch (digit) {
-            case 1:
-              return UnitType.Warship;
-            case 2:
-              return UnitType.Destroyer;
-            case 3:
-              return UnitType.Submarine;
-            case 4:
-              return UnitType.CruiseMissile;
-            case 5:
-              return UnitType.AtomBomb;
-            case 6:
-              return UnitType.HydrogenBomb;
-            case 7:
-              return UnitType.MIRV;
-            default:
-              break;
-          }
-        } else {
-          // Default tab: "buildings" (Infrastruktur & Verteidigung)
-          switch (digit) {
-            case 1:
-              return UnitType.City;
-            case 2:
-              return UnitType.Factory;
-            case 3:
-              return UnitType.Port;
-            case 4:
-              return UnitType.DefensePost;
-            case 5:
-              return UnitType.MissileSilo;
-            case 6:
-              return UnitType.SAMLauncher;
-            case 7:
-              return UnitType.Bunker;
-            case 8:
-              return UnitType.Radar;
-            default:
-              break;
-          }
+        // Buildings tab extra structures (Bunker & Radar)
+        switch (digit) {
+          case 7:
+            return UnitType.Bunker;
+          case 8:
+            return UnitType.Radar;
+          default:
+            break;
         }
       }
     }

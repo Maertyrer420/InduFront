@@ -525,7 +525,9 @@ export class ClanModal extends BaseModal {
       }
       // Default: detail view — dispatched by the active detail tab
       if (this.activeTab === "chat") {
-        return html`<clan-chat-view .clanTag=${this.selectedClanTag}></clan-chat-view>`;
+        return html`<clan-chat-view
+          .clanTag=${this.selectedClanTag}
+        ></clan-chat-view>`;
       }
       if (this.activeTab === "donations") {
         return html`<clan-donations-view
@@ -943,15 +945,21 @@ export class ClanModal extends BaseModal {
 
   private renderCreateClanForm() {
     return html`
-      <div class="max-w-lg mx-auto bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl">
+      <div
+        class="max-w-lg mx-auto bg-white/5 border border-white/10 rounded-2xl p-6 shadow-xl"
+      >
         <h3 class="text-lg font-bold text-white mb-1">Eigenen Clan gründen</h3>
         <p class="text-xs text-white/50 mb-6">
-          Als Clan-Ersteller wirst du automatisch zum <span class="text-amber-400 font-bold">👑 Owner</span> ernannt. Der Owner-Status kann nicht übertragen werden.
+          Als Clan-Ersteller wirst du automatisch zum
+          <span class="text-amber-400 font-bold">👑 Owner</span> ernannt. Der
+          Owner-Status kann nicht übertragen werden.
         </p>
 
         <form @submit=${this.handleCreateClanSubmit} class="space-y-4">
           <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5">
+            <label
+              class="block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5"
+            >
               Clan-Kürzel (Tag)
             </label>
             <input
@@ -961,14 +969,20 @@ export class ClanModal extends BaseModal {
               required
               .value=${this.newClanTag}
               @input=${(e: Event) =>
-                (this.newClanTag = (e.target as HTMLInputElement).value.toUpperCase())}
+                (this.newClanTag = (
+                  e.target as HTMLInputElement
+                ).value.toUpperCase())}
               class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white font-mono uppercase focus:border-malibu-blue outline-none transition-all"
             />
-            <p class="text-[11px] text-white/40 mt-1">2 bis 5 Zeichen (A-Z, 0-9)</p>
+            <p class="text-[11px] text-white/40 mt-1">
+              2 bis 5 Zeichen (A-Z, 0-9)
+            </p>
           </div>
 
           <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5">
+            <label
+              class="block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5"
+            >
               Clan-Name
             </label>
             <input
@@ -984,7 +998,9 @@ export class ClanModal extends BaseModal {
           </div>
 
           <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5">
+            <label
+              class="block text-xs font-bold uppercase tracking-wider text-white/70 mb-1.5"
+            >
               Clan-Beschreibung
             </label>
             <textarea
@@ -993,7 +1009,9 @@ export class ClanModal extends BaseModal {
               placeholder="Beschreibe die Ziele und Regeln deines Clans..."
               .value=${this.newClanDescription}
               @input=${(e: Event) =>
-                (this.newClanDescription = (e.target as HTMLInputElement).value)}
+                (this.newClanDescription = (
+                  e.target as HTMLInputElement
+                ).value)}
               class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white focus:border-malibu-blue outline-none transition-all resize-none"
             ></textarea>
           </div>
@@ -1007,12 +1025,17 @@ export class ClanModal extends BaseModal {
                 (this.newClanIsOpen = (e.target as HTMLInputElement).checked)}
               class="w-4 h-4 rounded bg-white/5 border-white/20 text-malibu-blue focus:ring-0 cursor-pointer"
             />
-            <label for="clan-is-open" class="text-sm text-white/80 cursor-pointer select-none">
+            <label
+              for="clan-is-open"
+              class="text-sm text-white/80 cursor-pointer select-none"
+            >
               Öffentlicher Clan (Jeder kann direkt beitreten)
             </label>
           </div>
 
-          <div class="pt-6 flex items-center justify-end gap-3 border-t border-white/10">
+          <div
+            class="pt-6 flex items-center justify-end gap-3 border-t border-white/10"
+          >
             <button
               type="button"
               @click=${() => (this.view = "list")}
@@ -1022,11 +1045,16 @@ export class ClanModal extends BaseModal {
             </button>
             <button
               type="submit"
-              ?disabled=${this.isCreatingClan || !this.newClanTag.trim() || !this.newClanName.trim()}
+              ?disabled=${this.isCreatingClan ||
+              !this.newClanTag.trim() ||
+              !this.newClanName.trim()}
               class="px-6 py-2.5 text-sm font-bold text-white bg-malibu-blue hover:bg-aquarius disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all shadow-lg shadow-malibu-blue/20 flex items-center gap-2"
             >
               ${this.isCreatingClan
-                ? html`<span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span> Gründet...`
+                ? html`<span
+                      class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"
+                    ></span>
+                    Gründet...`
                 : html`<span>👑 Clan gründen</span>`}
             </button>
           </div>

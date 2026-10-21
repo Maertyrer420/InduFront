@@ -124,7 +124,7 @@ export class GlobalChatModal extends BaseModal {
         await this.loadMessages(false);
       } else {
         const err = await res.json().catch(() => ({}));
-        showToast(err.error || "Nachricht konnte nicht gesendet werden", "red");
+        showToast(err.error ?? "Nachricht konnte nicht gesendet werden", "red");
       }
     } catch {
       showToast("Netzwerkfehler", "red");
@@ -135,16 +135,27 @@ export class GlobalChatModal extends BaseModal {
 
   private renderTierBadge(tier: string) {
     let bg = "bg-stone-700/60 text-stone-300 border-stone-600";
-    if (tier === "Top 10") bg = "bg-gradient-to-r from-red-600 to-amber-500 text-white border-amber-400 font-extrabold shadow-sm";
-    else if (tier === "Elite") bg = "bg-purple-900/60 text-purple-300 border-purple-700 font-bold";
-    else if (tier === "Expert") bg = "bg-indigo-900/60 text-indigo-300 border-indigo-700";
-    else if (tier === "Diamond") bg = "bg-cyan-900/60 text-cyan-300 border-cyan-700";
-    else if (tier === "Platinum") bg = "bg-teal-900/60 text-teal-300 border-teal-700";
-    else if (tier === "Gold") bg = "bg-amber-900/60 text-amber-300 border-amber-700";
-    else if (tier === "Silber") bg = "bg-slate-700/60 text-slate-300 border-slate-600";
-    else if (tier === "Bronze") bg = "bg-amber-950/60 text-amber-600 border-amber-900";
+    if (tier === "Top 10")
+      bg =
+        "bg-gradient-to-r from-red-600 to-amber-500 text-white border-amber-400 font-extrabold shadow-sm";
+    else if (tier === "Elite")
+      bg = "bg-purple-900/60 text-purple-300 border-purple-700 font-bold";
+    else if (tier === "Expert")
+      bg = "bg-indigo-900/60 text-indigo-300 border-indigo-700";
+    else if (tier === "Diamond")
+      bg = "bg-cyan-900/60 text-cyan-300 border-cyan-700";
+    else if (tier === "Platinum")
+      bg = "bg-teal-900/60 text-teal-300 border-teal-700";
+    else if (tier === "Gold")
+      bg = "bg-amber-900/60 text-amber-300 border-amber-700";
+    else if (tier === "Silber")
+      bg = "bg-slate-700/60 text-slate-300 border-slate-600";
+    else if (tier === "Bronze")
+      bg = "bg-amber-950/60 text-amber-600 border-amber-900";
 
-    return html`<span class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border ${bg}">
+    return html`<span
+      class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded border ${bg}"
+    >
       ${tier}
     </span>`;
   }
@@ -157,27 +168,31 @@ export class GlobalChatModal extends BaseModal {
           class="global-chat-scroll flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-white/10"
         >
           ${this.loading
-            ? html`<div class="flex items-center justify-center h-48 text-white/50 text-sm">
+            ? html`<div
+                class="flex items-center justify-center h-48 text-white/50 text-sm"
+              >
                 Lade Chat...
               </div>`
             : this.messages.length === 0
-              ? html`<div class="flex flex-col items-center justify-center h-48 text-white/40 text-sm">
+              ? html`<div
+                  class="flex flex-col items-center justify-center h-48 text-white/40 text-sm"
+                >
                   <span class="text-3xl mb-2">💬</span>
                   Noch keine Nachrichten im globalen Chat. Sei der Erste!
                 </div>`
               : this.messages.map((m) => {
-                  const isMe = this.myPublicId && m.senderId.toLowerCase() === this.myPublicId.toLowerCase();
+                  const isMe =
+                    this.myPublicId &&
+                    m.senderId.toLowerCase() === this.myPublicId.toLowerCase();
                   const time = new Date(m.timestamp).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
                   });
                   return html`
                     <div
-                      class="flex flex-col p-2.5 rounded-xl border ${
-                        isMe
-                          ? "bg-malibu-blue/10 border-malibu-blue/30 ml-6"
-                          : "bg-white/5 border-white/5 mr-6"
-                      } transition-all"
+                      class="flex flex-col p-2.5 rounded-xl border ${isMe
+                        ? "bg-malibu-blue/10 border-malibu-blue/30 ml-6"
+                        : "bg-white/5 border-white/5 mr-6"} transition-all"
                     >
                       <div class="flex items-center justify-between gap-2 mb-1">
                         <div class="flex items-center gap-2 flex-wrap">
@@ -187,14 +202,22 @@ export class GlobalChatModal extends BaseModal {
                                 >[${m.senderClan}]</span
                               >`
                             : ""}
-                          <span class="font-bold text-sm ${isMe ? "text-cyan-300" : "text-white"}">
+                          <span
+                            class="font-bold text-sm ${isMe
+                              ? "text-cyan-300"
+                              : "text-white"}"
+                          >
                             ${m.senderName}
                           </span>
                           ${this.renderTierBadge(m.senderTier || "Wood")}
                         </div>
-                        <span class="text-[10px] text-white/40 shrink-0">${time}</span>
+                        <span class="text-[10px] text-white/40 shrink-0"
+                          >${time}</span
+                        >
                       </div>
-                      <div class="text-sm text-white/90 break-words leading-relaxed pl-0.5">
+                      <div
+                        class="text-sm text-white/90 break-words leading-relaxed pl-0.5"
+                      >
                         ${m.text}
                       </div>
                     </div>
@@ -206,8 +229,12 @@ export class GlobalChatModal extends BaseModal {
         <div class="mt-4 pt-3 border-t border-white/10">
           ${this.signedOut
             ? html`
-                <div class="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 text-sm">
-                  <span class="text-white/60">Melde dich an, um am Chat teilzunehmen.</span>
+                <div
+                  class="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/10 text-sm"
+                >
+                  <span class="text-white/60"
+                    >Melde dich an, um am Chat teilzunehmen.</span
+                  >
                   <button
                     @click=${() => {
                       this.close();
@@ -220,7 +247,10 @@ export class GlobalChatModal extends BaseModal {
                 </div>
               `
             : html`
-                <form @submit=${this.handleSend} class="flex items-center gap-2">
+                <form
+                  @submit=${this.handleSend}
+                  class="flex items-center gap-2"
+                >
                   <input
                     type="text"
                     maxlength="500"
@@ -236,10 +266,19 @@ export class GlobalChatModal extends BaseModal {
                     class="px-5 py-2.5 bg-malibu-blue hover:bg-aquarius disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold text-sm rounded-xl flex items-center gap-2 transition-all shrink-0 shadow-lg shadow-malibu-blue/20"
                   >
                     ${this.sending
-                      ? html`<span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>`
+                      ? html`<span
+                          class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"
+                        ></span>`
                       : html`<span>Senden</span>
-                          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="w-4 h-4"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"
+                            />
                           </svg>`}
                   </button>
                 </form>

@@ -655,7 +655,7 @@ export class UserSettings {
   /** Starting nation color in hex, e.g. "#3b7a57", or null if using default theme color. */
   getPlayerColor(): string | null {
     const val = this.getCached(COLOR_KEY);
-    return val ? val : null;
+    return val ?? null;
   }
 
   setPlayerColor(color: string | null): void {

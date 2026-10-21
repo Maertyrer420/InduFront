@@ -866,11 +866,13 @@ export async function createClan(
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      return { ok: false, error: data.error || "Fehler beim Erstellen des Clans" };
+      return {
+        ok: false,
+        error: data.error ?? "Fehler beim Erstellen des Clans",
+      };
     }
     return { ok: true, clan: data };
   } catch {
     return { ok: false, error: "Netzwerkfehler" };
   }
 }
-

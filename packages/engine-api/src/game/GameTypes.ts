@@ -572,8 +572,8 @@ export function formatPlayerDisplayName(
 // Master Prompt Hybrid Economy & Geological Scouting Types
 //
 
-export type ResourceType = 'ironOre' | 'coal' | 'crudeOil' | 'uraniumOre';
-export type RefinedType = 'steel' | 'fuel' | 'enrichedUranium';
+export type ResourceType = "ironOre" | "coal" | "crudeOil" | "uraniumOre";
+export type RefinedType = "steel" | "fuel" | "enrichedUranium";
 
 export interface ResourceDeposit {
   resource: ResourceType;
@@ -600,4 +600,3 @@ export interface PlayerEconomyState {
   fuelStarved: boolean;
   buildingsCount: Partial<Record<UnitType, number>>;
 }
-

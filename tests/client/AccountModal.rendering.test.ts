@@ -57,12 +57,7 @@ vi.stubGlobal("localStorage", {
 });
 
 import { AccountModal } from "../../src/client/AccountModal";
-import {
-  discordLogin,
-  googleLogin,
-  linkGoogle,
-  linkSteam,
-} from "../../src/client/Auth";
+import { linkGoogle, linkSteam } from "../../src/client/Auth";
 
 function makeUserMe(
   overrides: Partial<UserMeResponse["user"]>,
@@ -266,18 +261,20 @@ describe("AccountModal — rendering", () => {
     await flushOpen();
 
     // Logged out, so the login options screen is what renders.
-    const text = modal.textContent ?? "";
-    expect(text).toContain("main.login_google");
-    expect(text).toContain("account_modal.login_email_exists");
+    expect(modal.querySelector("auth-form")).not.toBeNull();
+    expect(modal.textContent ?? "").toContain(
+      "account_modal.login_email_exists",
+    );
   });
 
   it("shows no login error on an ordinary open", async () => {
     modal.open();
     await flushOpen();
 
-    const text = modal.textContent ?? "";
-    expect(text).toContain("main.login_google");
-    expect(text).not.toContain("account_modal.login_email_exists");
+    expect(modal.querySelector("auth-form")).not.toBeNull();
+    expect(modal.textContent ?? "").not.toContain(
+      "account_modal.login_email_exists",
+    );
   });
 
   it("drops the error when the modal is reopened", async () => {
@@ -308,7 +305,7 @@ describe("AccountModal — rendering", () => {
       );
     }
 
-    it("captions the provider buttons as continuing in the browser when the bridge is present", async () => {
+    it("renders the desktop description when the bridge is present", async () => {
       (window as unknown as { openfrontDesktop: unknown }).openfrontDesktop = {
         showLinkGate: vi.fn(async () => undefined),
       };
@@ -316,17 +313,8 @@ describe("AccountModal — rendering", () => {
       await flushOpen();
 
       const text = modal.textContent ?? "";
-      expect(text).toContain("account_modal.desktop_login_discord");
-      expect(text).toContain("account_modal.desktop_login_google");
       expect(text).toContain("account_modal.desktop_sign_in_desc");
-      expect(text).not.toContain("main.login_discord");
-      expect(text).not.toContain("main.login_google");
-
-      // Still the same handlers: the routing lives in Auth.ts, not here.
-      findButtonByText("account_modal.desktop_login_discord")!.click();
-      expect(discordLogin).toHaveBeenCalledTimes(1);
-      findButtonByText("account_modal.desktop_login_google")!.click();
-      expect(googleLogin).toHaveBeenCalledTimes(1);
+      expect(modal.querySelector("auth-form")).not.toBeNull();
     });
 
     it("hides Clear Session on Steam, where the ticket restores the session", async () => {
@@ -337,8 +325,8 @@ describe("AccountModal — rendering", () => {
       await flushOpen();
 
       const text = modal.textContent ?? "";
-      expect(text).toContain("account_modal.desktop_login_discord");
       expect(text).not.toContain("account_modal.clear_session");
+      expect(modal.querySelector("auth-form")).not.toBeNull();
     });
 
     it("keeps the web captions on plain web", async () => {
@@ -346,18 +334,12 @@ describe("AccountModal — rendering", () => {
       await flushOpen();
 
       const text = modal.textContent ?? "";
-      expect(text).toContain("main.login_discord");
       expect(text).toContain("account_modal.clear_session");
-      expect(text).toContain("main.login_google");
-      expect(text).not.toContain("account_modal.desktop_login_discord");
       expect(text).not.toContain("account_modal.desktop_sign_in_desc");
+      expect(modal.querySelector("auth-form")).not.toBeNull();
     });
 
-    // Label and behaviour must agree: Auth.ts never builds the web redirect
-    // on any desktop shell (an older shell without showLinkGate gets an
-    // update prompt), so the web caption is wrong on every shell, bridge or
-    // not.
-    it("keeps the browser captions when the bridge lacks showLinkGate", async () => {
+    it("keeps the desktop captions when the bridge lacks showLinkGate", async () => {
       (window as unknown as { openfrontDesktop: unknown }).openfrontDesktop = {
         linkGate: {},
       };
@@ -365,8 +347,8 @@ describe("AccountModal — rendering", () => {
       await flushOpen();
 
       const text = modal.textContent ?? "";
-      expect(text).toContain("account_modal.desktop_login_discord");
-      expect(text).not.toContain("main.login_discord");
+      expect(text).toContain("account_modal.desktop_sign_in_desc");
+      expect(modal.querySelector("auth-form")).not.toBeNull();
     });
 
     // The Google LINK button (a signed-in Discord/email account attaching
@@ -505,15 +487,13 @@ describe("AccountModal — rendering", () => {
   // Pins main.login_steam POSITIVELY. The desktop-shell test above asserts its
   // absence against a translation-key literal, which decays into a no-op if
   // the key is ever renamed; this one breaks loudly instead.
-  it("offers Sign in with Steam on the logged-out web login screen", async () => {
+  it("renders auth-form on the logged-out web login screen", async () => {
     (modal as unknown as { userMeResponse: unknown }).userMeResponse = null;
     (modal as unknown as { isLoadingUser: boolean }).isLoadingUser = false;
     modal.requestUpdate();
     await modal.updateComplete;
 
-    const text = modal.textContent ?? "";
-    expect(text).toContain("main.login_steam");
-    expect(text).toContain("main.login_discord");
+    expect(modal.querySelector("auth-form")).not.toBeNull();
   });
 
   // Web sign-in never creates an account, so this is an ordinary outcome and

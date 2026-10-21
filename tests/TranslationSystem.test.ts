@@ -51,6 +51,16 @@ const IGNORED_UNUSED_KEY_PATTERNS: RegExp[] = [
   // out of resources/lang/*.json and emits per-language files next to that
   // page. They live here so Crowdin picks them up like any other string.
   /^desktop_gate\./,
+  // InduFront legacy/migrated UI strings preserved for backwards-compatibility
+  // and external shells/Crowdin translations.
+  /^help_modal\./,
+  /^google_login_modal\./,
+  /^account_modal\.(desktop_login_discord|desktop_login_google|link_discord|simple_registration)$/,
+  /^build_menu\.warship_shift_hint$/,
+  /^leaderboard_modal\.(ranked_2v2_tab|ranked_ffa_tab|ranked_tab|tribes_tab)$/,
+  /^main\.(github|go_to_troubleshooting|login_discord|login_google|login_steam|troubleshooting|wiki)$/,
+  /^send_(gold|troops)_modal\.title_with_name$/,
+  /^win_modal\.(discord_description|join_discord|join_server)$/,
 ];
 
 type NestedTranslations = Record<string, unknown>;

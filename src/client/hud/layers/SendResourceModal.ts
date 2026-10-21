@@ -105,7 +105,9 @@ export class SendResourceModal extends LitElement {
       if (amount > myGold) return;
       this.eventBus.emit(new SendDonateGoldIntentEvent(target, BigInt(amount)));
     } else {
-      this.eventBus.emit(new SendTransferResourceIntentEvent(target, this.mode, amount));
+      this.eventBus.emit(
+        new SendTransferResourceIntentEvent(target, this.mode, amount),
+      );
     }
 
     this.dispatchEvent(
@@ -137,13 +139,15 @@ export class SendResourceModal extends LitElement {
     if (!this.isSenderAlive() || !this.myPlayer) return 0;
     if (this.mode === "troops") return Number(this.myPlayer.troops());
     if (this.mode === "gold") return Number(this.myPlayer.gold());
-    const eco = (this.myPlayer as any).economy?.() ?? (this.myPlayer.state as any)?.economy;
+    const eco =
+      (this.myPlayer as any).economy?.() ??
+      (this.myPlayer.state as any)?.economy;
     if (!eco) return 0;
     if (eco.resources && this.mode in eco.resources) {
-      return Math.floor(eco.resources[this.mode] || 0);
+      return Math.floor(eco.resources[this.mode] ?? 0);
     }
     if (eco.refined && this.mode in eco.refined) {
-      return Math.floor(eco.refined[this.mode] || 0);
+      return Math.floor(eco.refined[this.mode] ?? 0);
     }
     return 0;
   }
@@ -326,11 +330,9 @@ export class SendResourceModal extends LitElement {
           return html`
             <button
               type="button"
-              class="px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition-all border ${
-                active
-                  ? "bg-emerald-600/30 text-emerald-300 border-emerald-500 shadow-sm ring-1 ring-emerald-500/50"
-                  : "bg-zinc-800/80 text-zinc-300 border-zinc-700 hover:bg-zinc-700 hover:text-white"
-              }"
+              class="px-2.5 py-1 rounded-md text-xs font-semibold whitespace-nowrap transition-all border ${active
+                ? "bg-emerald-600/30 text-emerald-300 border-emerald-500 shadow-sm ring-1 ring-emerald-500/50"
+                : "bg-zinc-800/80 text-zinc-300 border-zinc-700 hover:bg-zinc-700 hover:text-white"}"
               @click=${() => {
                 this.mode = opt.key;
                 this.selectedPercent = 100;
@@ -358,8 +360,12 @@ export class SendResourceModal extends LitElement {
             class="inline-flex items-center gap-1.5 rounded-full bg-indigo-600/15 px-3 py-1 ring-1 ring-indigo-400/40 text-indigo-100"
             title=${this.i18n.availableTooltip()}
           >
-            <span class="opacity-90 font-medium">${this.i18n.availableChip()}:</span>
-            <span class="font-mono tabular-nums font-bold">${isTroop ? renderTroops(total) : renderNumber(total)}</span>
+            <span class="opacity-90 font-medium"
+              >${this.i18n.availableChip()}:</span
+            >
+            <span class="font-mono tabular-nums font-bold"
+              >${isTroop ? renderTroops(total) : renderNumber(total)}</span
+            >
           </span>
         </div>
       </div>
@@ -641,8 +647,7 @@ export class SendResourceModal extends LitElement {
             class="rounded-2xl bg-zinc-900 p-5 shadow-2xl ring-1 ring-zinc-800 max-h-[90vh] text-zinc-200"
             @click=${(e: MouseEvent) => e.stopPropagation()}
           >
-            ${this.renderHeader()}
-            ${this.renderResourceSelector()}
+            ${this.renderHeader()} ${this.renderResourceSelector()}
             ${this.renderAvailable()}
             ${!this.isTargetAlive() ? this.renderDeadNote() : html``}
             ${this.renderPresets(percent)} ${this.renderSlider(percent)}

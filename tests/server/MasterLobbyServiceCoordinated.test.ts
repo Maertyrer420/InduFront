@@ -69,6 +69,7 @@ describe("MasterLobbyService with a lobby coordinator", () => {
   beforeEach(() => {
     vi.stubEnv("DOMAIN", "localhost");
     vi.spyOn(ServerEnv, "numWorkers").mockReturnValue(1);
+    vi.spyOn(ServerEnv, "isDev").mockReturnValue(false);
     playlist = { gameConfig: vi.fn(async () => ({})) };
     const log = { info: vi.fn(), error: vi.fn(), warn: vi.fn() } as any;
     service = new MasterLobbyService(playlist as any, log);

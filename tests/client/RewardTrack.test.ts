@@ -642,8 +642,8 @@ describe("<reward-track>", () => {
       expect(end.querySelector("[data-end-title]")?.textContent).toContain(
         'progression.prestige:{"prestige":5}',
       );
-      expect(end.querySelector("[data-end-caps]")?.textContent).toContain(
-        'reward_track.caps_amount:{"amount":"2,500"}',
+      expect(end.querySelector("[data-end-caps]")?.textContent).toMatch(
+        /reward_track\.caps_amount:\{"amount":"2[,.]500"\}/,
       );
       const badge = end.querySelector("level-badge") as HTMLElement & {
         level: number;

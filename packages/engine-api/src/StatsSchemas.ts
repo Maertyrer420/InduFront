@@ -2,7 +2,13 @@ import { zb, ZbEncodeError } from "@openfront/zbin";
 import { z } from "zod";
 import { UnitType } from "./game/GameTypes";
 
-export const bombUnits = ["abomb", "hbomb", "mirv", "mirvw", "cmissile"] as const;
+export const bombUnits = [
+  "abomb",
+  "hbomb",
+  "mirv",
+  "mirvw",
+  "cmissile",
+] as const;
 export const BombUnitSchema = z.enum(bombUnits);
 export type BombUnit = z.infer<typeof BombUnitSchema>;
 export type NukeType =

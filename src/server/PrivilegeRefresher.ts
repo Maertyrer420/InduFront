@@ -60,7 +60,9 @@ export class PrivilegeRefresher {
       ]);
 
       if (!cosmeticsResponse || !cosmeticsResponse.ok) {
-        this.log.info("Backend API offline; defaulting to FailOpenPrivilegeChecker");
+        this.log.info(
+          "Backend API offline; defaulting to FailOpenPrivilegeChecker",
+        );
         this.privilegeChecker = this.failOpenPrivilegeChecker;
         return;
       }

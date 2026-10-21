@@ -980,7 +980,9 @@ export async function startWorker() {
   // The load balancer will handle routing to this server based on path
   const PORT = ServerEnv.workerPortByIndex(workerId);
   server.listen(PORT, () => {
-    log.info(`Worker ${workerId} internal listener on :${PORT} ready (route: /w${workerId}/)`);
+    log.info(
+      `Worker ${workerId} internal listener on :${PORT} ready (route: /w${workerId}/)`,
+    );
     // Signal to the master process that this worker is ready
     lobbyService.sendReady(workerId);
     log.info(`signaled ready state to master`);

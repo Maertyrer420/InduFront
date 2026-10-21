@@ -9,6 +9,7 @@
  *     structure levels → bars → bloom → trails → missiles → fx → conquest → names
  */
 
+import type { ResourceType } from "@openfront/engine-api/game/GameTypes";
 import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import type { Config } from "@openfront/engine-lib/configuration/Config";
 import { translateText } from "../../Utils";
@@ -40,6 +41,7 @@ import { DefenseCoveragePass } from "./passes/DefenseCoveragePass";
 import { FalloutBloomPass } from "./passes/FalloutBloomPass";
 import { FalloutLightPass } from "./passes/FalloutLightPass";
 import { FxPass } from "./passes/fx-pass";
+import { GeologicalScoutingPass } from "./passes/GeologicalScoutingPass";
 import { LightmapPass } from "./passes/LightmapPass";
 import { MapLayerPass } from "./passes/MapLayerPass";
 import { MoveIndicatorPass } from "./passes/MoveIndicatorPass";
@@ -47,8 +49,6 @@ import { NamePass } from "./passes/name-pass";
 import { NightCompositePass } from "./passes/NightCompositePass";
 import { NukeTelegraphPass } from "./passes/NukeTelegraphPass";
 import { NukeTrajectoryPass } from "./passes/NukeTrajectoryPass";
-import { GeologicalScoutingPass } from "./passes/GeologicalScoutingPass";
-import type { ResourceType } from "@openfront/engine-api/game/GameTypes";
 import { PointLightPass } from "./passes/PointLightPass";
 import { RailroadPass } from "./passes/RailroadPass";
 import { RangeCirclePass } from "./passes/RangeCirclePass";
@@ -1182,7 +1182,7 @@ export class GPURenderer {
       this.geologicalScoutingPass.setResourceDensityData(densityData);
     }
     this.geologicalScoutingPass.setActiveResource(resource);
-    this.territoryPass.setSaturationOverride(resource === "none" ? null : 0.20);
+    this.territoryPass.setSaturationOverride(resource === "none" ? null : 0.2);
   }
 
   setGridView(active: boolean): void {

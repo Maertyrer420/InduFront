@@ -8,6 +8,7 @@ The project is licensed under the **GNU Affero General Public License v3.0 (AGPL
 ## Source Code Licensing (AGPL-3.0)
 
 All source code in this repository is licensed under the AGPL v3.0 license:
+
 - You are free to run, study, modify, and distribute the software.
 - If you run a modified version on a server to provide network services, you must make your modifications available under the AGPL v3.0.
 - See the [LICENSE](LICENSE) file for the full legal text of the GNU Affero General Public License.
@@ -20,6 +21,7 @@ All source code in this repository is licensed under the AGPL v3.0 license:
 ## Historical Attribution
 
 InduFront is derived from open-source historical codebases:
+
 - Copyright (c) 2026 InduFront and Contributors
 - Historical portions Copyright (c) 2024-2025 OpenFront Inc. and WarFront.io Team under open-source AGPL-3.0 / MIT licenses.
 

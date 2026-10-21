@@ -1,14 +1,10 @@
-import {
-  RefinedType,
-  ResourceType,
-  UnitType,
-} from '@openfront/engine-api/game/GameTypes';
-import { pow as detPow } from '../DetMath';
+import { ResourceType, UnitType } from "@openfront/engine-api/game/GameTypes";
+import { pow as detPow } from "../DetMath";
 
 // Economy balancing parameters
 export const DEMOGRAPHIC_GROWTH_RATE = 0.05; // r = 0.05
 export const GOLD_ALPHA = 0.02; // alpha * Territory
-export const GOLD_BETA = 0.10; // beta * Population
+export const GOLD_BETA = 0.1; // beta * Population
 export const BASE_POPULATION_CAP = 1000;
 export const RESIDENTIAL_POP_BOOST = 500;
 export const EXPONENTIAL_COST_BASE = 1.15; // Cost(n) = BaseCost * (1.15)^(n-1)
@@ -158,7 +154,7 @@ export const TANK_EFFECTIVENESS = 5.0; // 5x breakthrough power
  */
 export function calculateBuildingCost(
   type: UnitType,
-  count: number
+  count: number,
 ): { gold: number; steel: number; fuel: number; enrichedUranium: number } {
   const base = BUILDING_BASE_COSTS[type] || { gold: 100 };
   const mult = detPow(EXPONENTIAL_COST_BASE, Math.max(0, count));

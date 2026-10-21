@@ -78,7 +78,8 @@ export class NukeExecution implements Execution {
     }
     const magnitude = this.mg.config().nukeMagnitudes(this.nuke.type());
     // Master Prompt: If 1 SAM hit landed, missile detonates prematurely with 50% blast radius
-    const isDamaged = this.nuke.hasHealth() && this.nuke.health() < this.nuke.maxHealth();
+    const isDamaged =
+      this.nuke.hasHealth() && this.nuke.health() < this.nuke.maxHealth();
     const radiusMult = isDamaged ? 0.5 : 1.0;
     const inner = Math.max(1, Math.round(magnitude.inner * radiusMult));
     const outer = Math.max(1, Math.round(magnitude.outer * radiusMult));

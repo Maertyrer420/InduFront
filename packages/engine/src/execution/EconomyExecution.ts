@@ -5,7 +5,7 @@ import {
   ResourceDeposit,
   ResourceType,
   UnitType,
-} from '@openfront/engine-api/game/GameTypes';
+} from "@openfront/engine-api/game/GameTypes";
 import {
   BASE_POPULATION_CAP,
   DEMOGRAPHIC_GROWTH_RATE,
@@ -16,11 +16,16 @@ import {
   MINE_BASE_YIELDS,
   REFINERY_RECIPES,
   RESIDENTIAL_POP_BOOST,
-} from '@openfront/engine-lib/game/EconomyConfig';
-import { ProceduralHeatmapGenerator } from '@openfront/engine-lib/game/ProceduralHeatmap';
-import { Execution, Game, Player, Unit } from '../game/Game';
-import { NoOpExecutionSnapshot } from './NoOpExecution';
-import type { ExecRecord, SnapshotWriter } from '../snapshot/SnapshotContext';
+} from "@openfront/engine-lib/game/EconomyConfig";
+import { ProceduralHeatmapGenerator } from "@openfront/engine-lib/game/ProceduralHeatmap";
+import { z } from "zod";
+import { Execution, Game, Player, Unit } from "../game/Game";
+import { execSnapshotType } from "../snapshot/ExecutionSnapshot";
+import type {
+  ExecRecord,
+  SnapshotReader,
+  SnapshotWriter,
+} from "../snapshot/SnapshotContext";
 
 export interface ResourceShipment {
   id: number;
@@ -41,13 +46,22 @@ export class EconomyExecution implements Execution {
 
   // Geological clusters
   public clusters = new Map<string, ResourceCluster>();
-  public tileDeposits = new Map<number, Partial<Record<ResourceType, ResourceDeposit>>>();
+  public tileDeposits = new Map<
+    number,
+    Partial<Record<ResourceType, ResourceDeposit>>
+  >();
 
   // Logistics: shipments in transit and on-site mine buffers
   public shipments: ResourceShipment[] = [];
   private nextShipmentId = 1;
-  public mineBuffers = new Map<number, { resource: ResourceType; amount: number }>();
-  private latencyCache = new Map<number, { latency: number; cachedAtTick: number }>();
+  public mineBuffers = new Map<
+    number,
+    { resource: ResourceType; amount: number }
+  >();
+  private latencyCache = new Map<
+    number,
+    { latency: number; cachedAtTick: number }
+  >();
 
   constructor() {}
 
@@ -150,13 +164,13 @@ export class EconomyExecution implements Execution {
       // Single pass over units for building counts, mines, and ship tracking
       for (const unit of player.units()) {
         const type = unit.type();
-        econ.buildingsCount[type] = (econ.buildingsCount[type] || 0) + 1;
+        econ.buildingsCount[type] = (econ.buildingsCount[type] ?? 0) + 1;
 
         let minedRes: ResourceType | null = null;
-        if (type === UnitType.IronMine) minedRes = 'ironOre';
-        else if (type === UnitType.CoalMine) minedRes = 'coal';
-        else if (type === UnitType.OilRig) minedRes = 'crudeOil';
-        else if (type === UnitType.UraniumMine) minedRes = 'uraniumOre';
+        if (type === UnitType.IronMine) minedRes = "ironOre";
+        else if (type === UnitType.CoalMine) minedRes = "coal";
+        else if (type === UnitType.OilRig) minedRes = "crudeOil";
+        else if (type === UnitType.UraniumMine) minedRes = "uraniumOre";
 
         if (minedRes) {
           const tile = unit.tile();
@@ -170,21 +184,30 @@ export class EconomyExecution implements Execution {
             const cluster = this.clusters.get(deposit.clusterId);
             let ratio = 1.0;
             if (cluster && cluster.totalReserve > 0) {
-              ratio = Math.max(0, cluster.currentReserve / cluster.totalReserve);
+              ratio = Math.max(
+                0,
+                cluster.currentReserve / cluster.totalReserve,
+              );
             }
-            const yieldFactor = DEPLETION_EPSILON + (1.0 - DEPLETION_EPSILON) * ratio;
-            minedAmount = baseYield * (0.6 + deposit.intensity * 1.8 * yieldFactor);
+            const yieldFactor =
+              DEPLETION_EPSILON + (1.0 - DEPLETION_EPSILON) * ratio;
+            minedAmount =
+              baseYield * (0.6 + deposit.intensity * 1.8 * yieldFactor);
             clusterDrains.set(
               deposit.clusterId,
-              (clusterDrains.get(deposit.clusterId) || 0) + minedAmount
+              (clusterDrains.get(deposit.clusterId) ?? 0) + minedAmount,
             );
           }
 
           const latency = this.getLogisticsLatency(player, unit, minedRes);
           if (latency === 0) {
-            econ.resources[minedRes] = (econ.resources[minedRes] || 0) + minedAmount;
+            econ.resources[minedRes] =
+              (econ.resources[minedRes] || 0) + minedAmount;
           } else {
-            const buf = this.mineBuffers.get(unit.id()) || { resource: minedRes, amount: 0 };
+            const buf = this.mineBuffers.get(unit.id()) ?? {
+              resource: minedRes,
+              amount: 0,
+            };
             buf.amount += minedAmount;
             buf.resource = minedRes;
 
@@ -214,8 +237,9 @@ export class EconomyExecution implements Execution {
       }
 
       // Demographic cap K_P = base (1000) + residential * 500
-      const residentialCount = econ.buildingsCount[UnitType.Residential] || 0;
-      econ.maxPopulation = BASE_POPULATION_CAP + residentialCount * RESIDENTIAL_POP_BOOST;
+      const residentialCount = econ.buildingsCount[UnitType.Residential] ?? 0;
+      econ.maxPopulation =
+        BASE_POPULATION_CAP + residentialCount * RESIDENTIAL_POP_BOOST;
 
       // Demographic Growth: P_{t+1} = P + r * P * (1 - P / K_P)
       if (econ.population < econ.maxPopulation) {
@@ -225,14 +249,14 @@ export class EconomyExecution implements Execution {
           (1.0 - econ.population / econ.maxPopulation);
         econ.population = Math.min(
           econ.maxPopulation,
-          Math.max(10, Math.round(econ.population + Math.max(1, growth)))
+          Math.max(10, Math.round(econ.population + Math.max(1, growth))),
         );
       }
 
       // Gold Income: G_tick = floor(alpha * T + beta * P)
       const numTiles = player.numTilesOwned();
       const goldIncome = Math.floor(
-        GOLD_ALPHA * numTiles + GOLD_BETA * econ.population
+        GOLD_ALPHA * numTiles + GOLD_BETA * econ.population,
       );
       if (goldIncome > 0) {
         player.addGold(BigInt(goldIncome));
@@ -240,7 +264,7 @@ export class EconomyExecution implements Execution {
 
       // Process Refineries (O(1) direct multiplication instead of unneeded for-loop iterations)
       // Steel Mill: 2 Fe + 1 C -> 1 Steel
-      const steelMills = econ.buildingsCount[UnitType.SteelMill] || 0;
+      const steelMills = econ.buildingsCount[UnitType.SteelMill] ?? 0;
       if (steelMills > 0) {
         const maxConversions = Math.min(
           steelMills,
@@ -248,48 +272,72 @@ export class EconomyExecution implements Execution {
           Math.floor(econ.resources.coal / REFINERY_RECIPES.steel.coal),
         );
         if (maxConversions > 0) {
-          econ.resources.ironOre -= maxConversions * REFINERY_RECIPES.steel.ironOre;
+          econ.resources.ironOre -=
+            maxConversions * REFINERY_RECIPES.steel.ironOre;
           econ.resources.coal -= maxConversions * REFINERY_RECIPES.steel.coal;
-          econ.refined.steel = (econ.refined.steel || 0) + maxConversions * REFINERY_RECIPES.steel.output;
+          econ.refined.steel =
+            (econ.refined.steel ?? 0) +
+            maxConversions * REFINERY_RECIPES.steel.output;
         }
       }
 
       // Refinery: 2 Crude Oil -> 1 Fuel
-      const refineries = econ.buildingsCount[UnitType.Refinery] || 0;
+      const refineries = econ.buildingsCount[UnitType.Refinery] ?? 0;
       if (refineries > 0) {
         const maxConversions = Math.min(
           refineries,
           Math.floor(econ.resources.crudeOil / REFINERY_RECIPES.fuel.crudeOil),
         );
         if (maxConversions > 0) {
-          econ.resources.crudeOil -= maxConversions * REFINERY_RECIPES.fuel.crudeOil;
-          econ.refined.fuel = (econ.refined.fuel || 0) + maxConversions * REFINERY_RECIPES.fuel.output;
+          econ.resources.crudeOil -=
+            maxConversions * REFINERY_RECIPES.fuel.crudeOil;
+          econ.refined.fuel =
+            (econ.refined.fuel ?? 0) +
+            maxConversions * REFINERY_RECIPES.fuel.output;
         }
       }
 
       // Centrifuge: 4 Uranium Ore + 2 Coal -> 1 Enriched Uranium
-      const centrifuges = econ.buildingsCount[UnitType.Centrifuge] || 0;
+      const centrifuges = econ.buildingsCount[UnitType.Centrifuge] ?? 0;
       if (centrifuges > 0) {
         const maxConversions = Math.min(
           centrifuges,
-          Math.floor(econ.resources.uraniumOre / REFINERY_RECIPES.enrichedUranium.uraniumOre),
-          Math.floor(econ.resources.coal / REFINERY_RECIPES.enrichedUranium.coal),
+          Math.floor(
+            econ.resources.uraniumOre /
+              REFINERY_RECIPES.enrichedUranium.uraniumOre,
+          ),
+          Math.floor(
+            econ.resources.coal / REFINERY_RECIPES.enrichedUranium.coal,
+          ),
         );
         if (maxConversions > 0) {
-          econ.resources.uraniumOre -= maxConversions * REFINERY_RECIPES.enrichedUranium.uraniumOre;
-          econ.resources.coal -= maxConversions * REFINERY_RECIPES.enrichedUranium.coal;
+          econ.resources.uraniumOre -=
+            maxConversions * REFINERY_RECIPES.enrichedUranium.uraniumOre;
+          econ.resources.coal -=
+            maxConversions * REFINERY_RECIPES.enrichedUranium.coal;
           econ.refined.enrichedUranium =
-            (econ.refined.enrichedUranium || 0) + maxConversions * REFINERY_RECIPES.enrichedUranium.output;
+            (econ.refined.enrichedUranium ?? 0) +
+            maxConversions * REFINERY_RECIPES.enrichedUranium.output;
         }
       }
 
       // Fuel Drain & Starvation
       let fuelDrain = 0;
-      fuelDrain += (econ.buildingsCount[UnitType.Warship] || 0) * FUEL_CONSUMPTION.warshipPerTick;
-      fuelDrain += (econ.buildingsCount[UnitType.Destroyer] || 0) * FUEL_CONSUMPTION.destroyerPerTick;
-      fuelDrain += (econ.buildingsCount[UnitType.Battleship] || 0) * FUEL_CONSUMPTION.battleshipPerTick;
-      fuelDrain += (econ.buildingsCount[UnitType.Submarine] || 0) * FUEL_CONSUMPTION.submarinePerTick;
-      fuelDrain += (econ.buildingsCount[UnitType.TransportShip] || 0) * FUEL_CONSUMPTION.landingCraftPerTick;
+      fuelDrain +=
+        (econ.buildingsCount[UnitType.Warship] ?? 0) *
+        FUEL_CONSUMPTION.warshipPerTick;
+      fuelDrain +=
+        (econ.buildingsCount[UnitType.Destroyer] ?? 0) *
+        FUEL_CONSUMPTION.destroyerPerTick;
+      fuelDrain +=
+        (econ.buildingsCount[UnitType.Battleship] ?? 0) *
+        FUEL_CONSUMPTION.battleshipPerTick;
+      fuelDrain +=
+        (econ.buildingsCount[UnitType.Submarine] ?? 0) *
+        FUEL_CONSUMPTION.submarinePerTick;
+      fuelDrain +=
+        (econ.buildingsCount[UnitType.TransportShip] ?? 0) *
+        FUEL_CONSUMPTION.landingCraftPerTick;
 
       if (econ.refined.fuel >= fuelDrain) {
         econ.refined.fuel -= fuelDrain;
@@ -326,8 +374,13 @@ export class EconomyExecution implements Execution {
    * Calculates logistics latency tau based on distance to nearest processing hub or capital.
    * tau = min(40, max(0, floor(minDistance / 4))) ticks.
    */
-  public getLogisticsLatency(player: Player, mineUnit: Unit, res: ResourceType): number {
+  public getLogisticsLatency(
+    player: Player,
+    mineUnit: Unit,
+    res: ResourceType,
+  ): number {
     if (!this.mg) return 0;
+    this.latencyCache ??= new Map();
     const currentTick = this.mg.ticks();
     const cached = this.latencyCache.get(mineUnit.id());
     if (cached && currentTick - cached.cachedAtTick < 25) {
@@ -344,19 +397,19 @@ export class EconomyExecution implements Execution {
     for (const unit of player.units()) {
       const type = unit.type();
       let isEligible = false;
-      if (res === 'ironOre') {
+      if (res === "ironOre") {
         isEligible = type === UnitType.SteelMill || type === UnitType.City;
-      } else if (res === 'coal') {
+      } else if (res === "coal") {
         isEligible =
           type === UnitType.SteelMill ||
           type === UnitType.Centrifuge ||
           type === UnitType.City;
-      } else if (res === 'crudeOil') {
+      } else if (res === "crudeOil") {
         isEligible =
           type === UnitType.Refinery ||
           type === UnitType.Port ||
           type === UnitType.City;
-      } else if (res === 'uraniumOre') {
+      } else if (res === "uraniumOre") {
         isEligible = type === UnitType.Centrifuge || type === UnitType.City;
       }
 
@@ -364,7 +417,9 @@ export class EconomyExecution implements Execution {
         const uTile = unit.tile();
         const ux = this.mg.x(uTile);
         const uy = this.mg.y(uTile);
-        const d = Math.hypot(mx - ux, my - uy);
+        const dx = mx - ux;
+        const dy = my - uy;
+        const d = Math.sqrt(dx * dx + dy * dy);
         if (d < minDistance) {
           minDistance = d;
         }
@@ -377,7 +432,9 @@ export class EconomyExecution implements Execution {
       if (spawn !== null && spawn !== undefined) {
         const sx = this.mg.x(spawn);
         const sy = this.mg.y(spawn);
-        minDistance = Math.hypot(mx - sx, my - sy);
+        const dx = mx - sx;
+        const dy = my - sy;
+        minDistance = Math.sqrt(dx * dx + dy * dy);
       }
     }
 
@@ -386,7 +443,10 @@ export class EconomyExecution implements Execution {
       // Latency tau: gentle scaling (1 tick per 10 tiles), capped at 10 ticks
       latency = Math.min(10, Math.max(1, Math.floor(minDistance / 10)));
     }
-    this.latencyCache.set(mineUnit.id(), { latency, cachedAtTick: currentTick });
+    this.latencyCache.set(mineUnit.id(), {
+      latency,
+      cachedAtTick: currentTick,
+    });
     return latency;
   }
 
@@ -396,7 +456,8 @@ export class EconomyExecution implements Execution {
    */
   public onStructureCaptured(unit: Unit, newOwner: Player): void {
     const captorEcon =
-      this.playerEconomies.get(newOwner.smallID()) ?? this.initPlayerEconomy(newOwner);
+      this.playerEconomies.get(newOwner.smallID()) ??
+      this.initPlayerEconomy(newOwner);
     const unitId = unit.id();
 
     // 1. Loot 80% of local mine buffer
@@ -431,7 +492,8 @@ export class EconomyExecution implements Execution {
     } else if (type === UnitType.OilRig) {
       captorEcon.resources.crudeOil = (captorEcon.resources.crudeOil || 0) + 8; // 80% of 10
     } else if (type === UnitType.UraniumMine) {
-      captorEcon.resources.uraniumOre = (captorEcon.resources.uraniumOre || 0) + 4; // 80% of 5
+      captorEcon.resources.uraniumOre =
+        (captorEcon.resources.uraniumOre || 0) + 4; // 80% of 5
     } else if (type === UnitType.SteelMill) {
       captorEcon.refined.steel = (captorEcon.refined.steel || 0) + 8; // 80% of 10
     } else if (type === UnitType.Refinery) {
@@ -449,11 +511,14 @@ export class EconomyExecution implements Execution {
   public onPlayerConquered(conqueror: Player, conquered: Player): void {
     const conqueredEcon = this.playerEconomies.get(conquered.smallID());
     const conquerorEcon =
-      this.playerEconomies.get(conqueror.smallID()) ?? this.initPlayerEconomy(conqueror);
+      this.playerEconomies.get(conqueror.smallID()) ??
+      this.initPlayerEconomy(conqueror);
 
     if (conqueredEcon && conquerorEcon) {
       // 80% of raw resources taken over, 20% destroyed
-      for (const res of Object.keys(conqueredEcon.resources) as ResourceType[]) {
+      for (const res of Object.keys(
+        conqueredEcon.resources,
+      ) as ResourceType[]) {
         const amt = conqueredEcon.resources[res] || 0;
         if (amt > 0) {
           const looted = Math.floor(amt * 0.8);
@@ -498,6 +563,57 @@ export class EconomyExecution implements Execution {
   }
 
   public snapshot(_w: SnapshotWriter): ExecRecord {
-    return NoOpExecutionSnapshot.write({});
+    return EconomyExecutionSnapshot.write({
+      active: this.active,
+      initialized: Boolean(this.mg),
+      lastTickProcessed: this.lastTickProcessed,
+      nextShipmentId: this.nextShipmentId,
+      playerEconomies: Array.from(this.playerEconomies.entries()).sort(
+        (a, b) => a[0] - b[0],
+      ),
+      clusters: Array.from(this.clusters.entries()).sort((a, b) =>
+        a[0].localeCompare(b[0]),
+      ),
+      tileDeposits: Array.from(this.tileDeposits.entries()).sort(
+        (a, b) => a[0] - b[0],
+      ),
+      shipments: this.shipments.map((s) => ({ ...s })),
+      mineBuffers: Array.from(this.mineBuffers.entries()).sort(
+        (a, b) => a[0] - b[0],
+      ),
+    });
+  }
+
+  public restoreSnapshot(s: EconomyState, r: SnapshotReader): void {
+    this.active = s.active;
+    this.mg = s.initialized ? r.game : null;
+    this.lastTickProcessed = s.lastTickProcessed;
+    this.nextShipmentId = s.nextShipmentId;
+    this.playerEconomies = new Map(s.playerEconomies);
+    this.clusters = new Map(s.clusters);
+    this.tileDeposits = new Map(s.tileDeposits);
+    this.shipments = s.shipments.map((x) => ({ ...x }));
+    this.mineBuffers = new Map(s.mineBuffers);
+    this.latencyCache = new Map();
   }
 }
+
+const EconomyStateSchema = z.object({
+  active: z.boolean(),
+  initialized: z.boolean(),
+  lastTickProcessed: z.number().int(),
+  nextShipmentId: z.number().int(),
+  playerEconomies: z.array(z.tuple([z.number().int(), z.any()])),
+  clusters: z.array(z.tuple([z.string(), z.any()])),
+  tileDeposits: z.array(z.tuple([z.number().int(), z.any()])),
+  shipments: z.array(z.any()),
+  mineBuffers: z.array(z.tuple([z.number().int(), z.any()])),
+});
+type EconomyState = z.infer<typeof EconomyStateSchema>;
+
+export const EconomyExecutionSnapshot = execSnapshotType({
+  name: "Economy",
+  version: 1,
+  schema: EconomyStateSchema,
+  cls: () => EconomyExecution,
+});

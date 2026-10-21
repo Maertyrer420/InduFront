@@ -60,7 +60,8 @@ export class HoverHighlightController implements Controller {
         for (const u of myPlayer.units(...Structures.types)) {
           const ux = this.game.x(u.tile()) + 0.5;
           const uy = this.game.y(u.tile()) + 0.5;
-          const distSq = (world.x - ux) * (world.x - ux) + (world.y - uy) * (world.y - uy);
+          const distSq =
+            (world.x - ux) * (world.x - ux) + (world.y - uy) * (world.y - uy);
           if (distSq < minDistSq) {
             minDistSq = distSq;
             hoveredUnitId = u.id();

@@ -78,15 +78,17 @@ export function showDemolishConfirm(
   gamePortal.gameplayStop();
   document.body.appendChild(dialog);
 
-  return new Promise<{ confirmed: boolean; dontAskAgain: boolean }>((resolve) => {
-    const done = (confirmed: boolean, dontAskAgain: boolean) => {
-      dialog.remove();
-      gamePortal.gameplayStart();
-      resolve({ confirmed, dontAskAgain });
-    };
-    dialog.addEventListener("confirm", (e: any) =>
-      done(true, !!e.detail?.checkboxChecked),
-    );
-    dialog.addEventListener("cancel", () => done(false, false));
-  });
+  return new Promise<{ confirmed: boolean; dontAskAgain: boolean }>(
+    (resolve) => {
+      const done = (confirmed: boolean, dontAskAgain: boolean) => {
+        dialog.remove();
+        gamePortal.gameplayStart();
+        resolve({ confirmed, dontAskAgain });
+      };
+      dialog.addEventListener("confirm", (e: any) =>
+        done(true, !!e.detail?.checkboxChecked),
+      );
+      dialog.addEventListener("cancel", () => done(false, false));
+    },
+  );
 }

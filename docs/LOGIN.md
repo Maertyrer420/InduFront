@@ -7,18 +7,21 @@ npm run play-online
 ```
 
 Dieser Befehl startet **4 echte Prozesse** gleichzeitig:
+
 1. **Frontend & Single-Origin-Proxy** (Vite auf `http://localhost:9000`)
 2. **Game-Server Master & Worker** (`src/server/Server.ts` auf Ports `3000–3002`)
 3. **Echter Login- & Account-Server** (`src/server/auth/AuthServer.ts` auf Port `8787`)
 4. **Cloudflare Quick Tunnel** (`scripts/startTunnel.mjs` -> `cloudflared tunnel --url http://localhost:9000`)
 
 Im Terminal erscheint automatisch die öffentliche HTTPS-Adresse:
+
 ```text
 =============================================================
   OEFFENTLICHER GAME-SERVER LINK (fuer Freunde):
   https://<zufalls-name>.trycloudflare.com
 =============================================================
 ```
+
 **Keine Port-Freigabe im Router nötig!** Du schickst deinen Freunden einfach diesen `https://*.trycloudflare.com`-Link.
 
 ---

@@ -65,7 +65,9 @@ export class DesktopNavBar extends LitElement {
         const data = await res.json();
         this.onlineCount = Math.max(1, data.online ?? 1);
       }
-    } catch {}
+    } catch {
+      /* ignore online count fetch error */
+    }
   }
 
   private _onShowPage = (e: Event) => {
@@ -117,6 +119,11 @@ export class DesktopNavBar extends LitElement {
           data-i18n="main.leaderboard"
         ></button>
         <button
+          class="nav-menu-item text-white/70 hover:text-malibu-blue font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-malibu-blue"
+          data-page="page-inventory"
+          data-i18n="main.inventory"
+        ></button>
+        <button
           class="no-game-portal nav-menu-item text-white/70 hover:text-malibu-blue font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-malibu-blue"
           data-page="page-clan"
           data-i18n="main.clans"
@@ -133,13 +140,20 @@ export class DesktopNavBar extends LitElement {
         >
           <span>👥 Freunde</span>
           ${this.onlineFriendsCount > 0
-            ? html`<span class="px-1.5 py-0.2 bg-malibu-blue text-white text-[11px] font-bold rounded-full animate-pulse">${this.onlineFriendsCount}</span>`
+            ? html`<span
+                class="px-1.5 py-0.2 bg-malibu-blue text-white text-[11px] font-bold rounded-full animate-pulse"
+                >${this.onlineFriendsCount}</span
+              >`
             : ""}
         </button>
 
         <!-- Online Player Count -->
-        <div class="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10 text-xs text-white/80 shrink-0">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <div
+          class="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10 text-xs text-white/80 shrink-0"
+        >
+          <span
+            class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"
+          ></span>
           <span class="font-bold text-emerald-400">${this.onlineCount}</span>
           <span class="text-white/60">Spieler online</span>
         </div>

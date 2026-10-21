@@ -722,13 +722,19 @@ export class GameImpl implements Game {
       return this._cachedEconomyExec;
     }
     for (const exec of this.execs) {
-      if ('playerEconomies' in exec && typeof (exec as any).getEconomy === 'function') {
+      if (
+        "playerEconomies" in exec &&
+        typeof (exec as any).getEconomy === "function"
+      ) {
         this._cachedEconomyExec = exec;
         return exec as any;
       }
     }
     for (const exec of this.unInitExecs) {
-      if ('playerEconomies' in exec && typeof (exec as any).getEconomy === 'function') {
+      if (
+        "playerEconomies" in exec &&
+        typeof (exec as any).getEconomy === "function"
+      ) {
         this._cachedEconomyExec = exec;
         return exec as any;
       }

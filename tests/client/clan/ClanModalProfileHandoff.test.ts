@@ -294,7 +294,13 @@ describe("ClanModal — player-profile handoff", () => {
     )
       .modalConfig()
       .tabs.map((t) => t.key);
-    expect(tabs).toEqual(["overview", "members", "game-history", "donations"]);
+    expect(tabs).toEqual([
+      "overview",
+      "members",
+      "chat",
+      "game-history",
+      "donations",
+    ]);
   });
 
   it("returns a donor's profile to the clan's Donations tab", async () => {

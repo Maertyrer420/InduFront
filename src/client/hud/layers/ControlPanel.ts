@@ -1,5 +1,10 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { GameMode, GameType, Gold, ResourceType } from "@openfront/engine-api/game/GameTypes";
+import {
+  GameMode,
+  GameType,
+  Gold,
+  ResourceType,
+} from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { ClientID } from "@openfront/engine-api/Schemas";
 import { Config } from "@openfront/engine-lib/configuration/Config";
@@ -10,7 +15,10 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { keyed } from "lit/directives/keyed.js";
 import { Controller } from "../../Controller";
-import { AttackRatioEvent, ToggleGeologicalScoutingEvent } from "../../InputHandler";
+import {
+  AttackRatioEvent,
+  ToggleGeologicalScoutingEvent,
+} from "../../InputHandler";
 import { GeologicalDataService } from "../../render/gl/utils/GeologicalDataService";
 import { UIState } from "../../UIState";
 import { USER_SETTINGS_CHANGED_EVENT, UserSettings } from "../../UserSettings";
@@ -181,10 +189,16 @@ export class ControlPanel extends LitElement implements Controller {
       this._iron = Math.round(eco.resources?.ironOre ?? eco.iron ?? this._iron);
       this._coal = Math.round(eco.resources?.coal ?? eco.coal ?? this._coal);
       this._oil = Math.round(eco.resources?.crudeOil ?? eco.oil ?? this._oil);
-      this._uranium = Math.round(eco.resources?.uraniumOre ?? eco.uranium ?? this._uranium);
+      this._uranium = Math.round(
+        eco.resources?.uraniumOre ?? eco.uranium ?? this._uranium,
+      );
       this._steel = Math.round(eco.refined?.steel ?? eco.steel ?? this._steel);
       this._fuel = Math.round(eco.refined?.fuel ?? eco.fuel ?? this._fuel);
-      this._enrichedUranium = Math.round(eco.refined?.enrichedUranium ?? eco.enrichedUranium ?? this._enrichedUranium);
+      this._enrichedUranium = Math.round(
+        eco.refined?.enrichedUranium ??
+          eco.enrichedUranium ??
+          this._enrichedUranium,
+      );
     }
 
     const config = this.game.config();
@@ -603,55 +617,91 @@ export class ControlPanel extends LitElement implements Controller {
         : ""}
 
       <!-- High-Visibility Geological Scouting Heatmap Control -->
-      <div class="flex items-center justify-between gap-1 mb-1 text-xs bg-slate-900/90 border border-slate-700/80 rounded px-2 py-1 shadow-md">
+      <div
+        class="flex items-center justify-between gap-1 mb-1 text-xs bg-slate-900/90 border border-slate-700/80 rounded px-2 py-1 shadow-md"
+      >
         <div class="flex items-center gap-1.5">
           <button
-            class="flex items-center gap-1.5 px-3 py-1 rounded font-extrabold text-xs tracking-wide transition-all shadow-lg ${this._activeScouting !== "none"
+            class="flex items-center gap-1.5 px-3 py-1 rounded font-extrabold text-xs tracking-wide transition-all shadow-lg ${this
+              ._activeScouting !== "none"
               ? "bg-amber-400 text-slate-950 ring-2 ring-amber-300 ring-offset-1 ring-offset-slate-900 shadow-amber-500/50"
               : "bg-slate-800 text-slate-200 border border-slate-600 hover:bg-slate-700 hover:text-white"}"
-            @click=${() => this.toggleScouting(this._activeScouting === "none" ? "all" : "none")}
+            @click=${() =>
+              this.toggleScouting(
+                this._activeScouting === "none" ? "all" : "none",
+              )}
             title="Rohstoff-Heatmap ein-/ausschalten (Taste: H)"
           >
-            <img src=${highlightIcon} class="w-3.5 h-3.5 ${this._activeScouting !== "none" ? "filter invert" : ""}" />
-            <span>HEATMAP: ${this._activeScouting !== "none" ? "AKTIV" : "AUS"}</span>
-            <span class="text-[10px] opacity-75 font-mono px-1 py-0.2 bg-black/30 rounded text-white">[H]</span>
+            <img
+              src=${highlightIcon}
+              class="w-3.5 h-3.5 ${this._activeScouting !== "none"
+                ? "filter invert"
+                : ""}"
+            />
+            <span
+              >HEATMAP:
+              ${this._activeScouting !== "none" ? "AKTIV" : "AUS"}</span
+            >
+            <span
+              class="text-[10px] opacity-75 font-mono px-1 py-0.2 bg-black/30 rounded text-white"
+              >[H]</span
+            >
           </button>
         </div>
 
         <!-- High-Contrast Resource Filter Chips (No Emojis) -->
         <div class="flex items-center gap-1">
           <button
-            class="flex items-center gap-1 px-2 py-0.5 rounded font-bold transition-all text-[11px] ${this._activeScouting === "all"
+            class="flex items-center gap-1 px-2 py-0.5 rounded font-bold transition-all text-[11px] ${this
+              ._activeScouting === "all"
               ? "bg-cyan-500 text-slate-950 font-black shadow-md ring-1 ring-cyan-300"
               : "bg-slate-800/80 text-cyan-300 hover:bg-slate-700 border border-cyan-800/50"}"
             @click=${() => this.toggleScouting("all")}
             title="Alle Rohstoffe hervorheben"
           >
-            <img src=${highlightIcon} class="w-3 h-3 ${this._activeScouting === "all" ? "filter invert" : ""}" />
+            <img
+              src=${highlightIcon}
+              class="w-3 h-3 ${this._activeScouting === "all"
+                ? "filter invert"
+                : ""}"
+            />
             <span>Alle</span>
           </button>
           <button
-            class="flex items-center gap-1 px-2 py-0.5 rounded font-bold transition-all text-[11px] ${this._activeScouting === "ironOre"
+            class="flex items-center gap-1 px-2 py-0.5 rounded font-bold transition-all text-[11px] ${this
+              ._activeScouting === "ironOre"
               ? "bg-amber-500 text-slate-950 font-black shadow-md ring-1 ring-amber-300"
               : "bg-slate-800/80 text-amber-300 hover:bg-slate-700 border border-amber-800/50"}"
             @click=${() => this.toggleScouting("ironOre")}
             title="Eisenerz-Vorkommen anzeigen"
           >
-            <img src=${ironMineIcon} class="w-3 h-3 ${this._activeScouting === "ironOre" ? "filter invert" : ""}" />
+            <img
+              src=${ironMineIcon}
+              class="w-3 h-3 ${this._activeScouting === "ironOre"
+                ? "filter invert"
+                : ""}"
+            />
             <span>Eisen</span>
           </button>
           <button
-            class="flex items-center gap-1 px-2 py-0.5 rounded font-bold transition-all text-[11px] ${this._activeScouting === "coal"
+            class="flex items-center gap-1 px-2 py-0.5 rounded font-bold transition-all text-[11px] ${this
+              ._activeScouting === "coal"
               ? "bg-stone-300 text-slate-950 font-black shadow-md ring-1 ring-stone-100"
               : "bg-slate-800/80 text-stone-300 hover:bg-slate-700 border border-stone-700/50"}"
             @click=${() => this.toggleScouting("coal")}
             title="Kohle-Vorkommen anzeigen"
           >
-            <img src=${coalMineIcon} class="w-3 h-3 ${this._activeScouting === "coal" ? "filter invert" : ""}" />
+            <img
+              src=${coalMineIcon}
+              class="w-3 h-3 ${this._activeScouting === "coal"
+                ? "filter invert"
+                : ""}"
+            />
             <span>Kohle</span>
           </button>
           <button
-            class="flex items-center gap-1 px-2 py-0.5 rounded font-bold transition-all text-[11px] ${this._activeScouting === "crudeOil"
+            class="flex items-center gap-1 px-2 py-0.5 rounded font-bold transition-all text-[11px] ${this
+              ._activeScouting === "crudeOil"
               ? "bg-purple-500 text-white font-black shadow-md ring-1 ring-purple-300"
               : "bg-slate-800/80 text-purple-300 hover:bg-slate-700 border border-purple-800/50"}"
             @click=${() => this.toggleScouting("crudeOil")}
@@ -661,64 +711,121 @@ export class ControlPanel extends LitElement implements Controller {
             <span>Öl</span>
           </button>
           <button
-            class="flex items-center gap-1 px-2 py-0.5 rounded font-bold transition-all text-[11px] ${this._activeScouting === "uraniumOre"
+            class="flex items-center gap-1 px-2 py-0.5 rounded font-bold transition-all text-[11px] ${this
+              ._activeScouting === "uraniumOre"
               ? "bg-emerald-400 text-slate-950 font-black shadow-md ring-1 ring-emerald-200"
               : "bg-slate-800/80 text-emerald-300 hover:bg-slate-700 border border-emerald-800/50"}"
             @click=${() => this.toggleScouting("uraniumOre")}
             title="Uranerz-Vorkommen anzeigen"
           >
-            <img src=${uraniumMineIcon} class="w-3 h-3 ${this._activeScouting === "uraniumOre" ? "filter invert" : ""}" />
+            <img
+              src=${uraniumMineIcon}
+              class="w-3 h-3 ${this._activeScouting === "uraniumOre"
+                ? "filter invert"
+                : ""}"
+            />
             <span>Uran</span>
           </button>
         </div>
       </div>
 
       <!-- Demographics & Economy Resource Bar -->
-      <div class="flex flex-wrap items-center justify-between gap-1 mb-1 text-xs font-semibold bg-gray-950/80 border border-gray-700/60 rounded px-2 py-0.5">
+      <div
+        class="flex flex-wrap items-center justify-between gap-1 mb-1 text-xs font-semibold bg-gray-950/80 border border-gray-700/60 rounded px-2 py-0.5"
+      >
         <!-- Demography -->
-        <div class="flex items-center gap-1.5 text-sky-300 cursor-pointer hover:underline" @click=${this.openEconomyPanel} title="Bevölkerung / Limit (Klicken für Details)">
+        <div
+          class="flex items-center gap-1.5 text-sky-300 cursor-pointer hover:underline"
+          @click=${this.openEconomyPanel}
+          title="Bevölkerung / Limit (Klicken für Details)"
+        >
           <img src=${populationIcon} class="w-3.5 h-3.5 object-contain" />
-          <span class="tabular-nums font-bold">${renderNumber(this._population)}</span>
+          <span class="tabular-nums font-bold"
+            >${renderNumber(this._population)}</span
+          >
           <span class="text-gray-400">/ ${renderNumber(this._maxPop)}</span>
         </div>
 
         <div class="h-3 w-px bg-gray-700"></div>
 
         <!-- Tier 1 Raw Resources -->
-        <div class="flex items-center gap-2 cursor-pointer hover:brightness-125 transition-all" @click=${this.openEconomyPanel} title="Klicken für Bergbau & Minen-Verwaltung">
-          <span class="text-amber-400 flex items-center gap-1" title="Eisenerz (Fe)">
+        <div
+          class="flex items-center gap-2 cursor-pointer hover:brightness-125 transition-all"
+          @click=${this.openEconomyPanel}
+          title="Klicken für Bergbau & Minen-Verwaltung"
+        >
+          <span
+            class="text-amber-400 flex items-center gap-1"
+            title="Eisenerz (Fe)"
+          >
             <img src=${ironMineIcon} class="w-3.5 h-3.5 object-contain" />
-            <span class="font-bold">Fe:</span> <span class="tabular-nums">${renderNumber(this._iron)}</span>
+            <span class="font-bold">Fe:</span>
+            <span class="tabular-nums">${renderNumber(this._iron)}</span>
           </span>
-          <span class="text-stone-300 flex items-center gap-1" title="Kohle (C)">
+          <span
+            class="text-stone-300 flex items-center gap-1"
+            title="Kohle (C)"
+          >
             <img src=${coalMineIcon} class="w-3.5 h-3.5 object-contain" />
-            <span class="font-bold">C:</span> <span class="tabular-nums">${renderNumber(this._coal)}</span>
+            <span class="font-bold">C:</span>
+            <span class="tabular-nums">${renderNumber(this._coal)}</span>
           </span>
-          <span class="text-purple-400 flex items-center gap-1" title="Rohöl (Oil)">
+          <span
+            class="text-purple-400 flex items-center gap-1"
+            title="Rohöl (Oil)"
+          >
             <img src=${oilRigIcon} class="w-3.5 h-3.5 object-contain" />
-            <span class="font-bold">Oil:</span> <span class="tabular-nums">${renderNumber(this._oil)}</span>
+            <span class="font-bold">Oil:</span>
+            <span class="tabular-nums">${renderNumber(this._oil)}</span>
           </span>
-          <span class="text-emerald-400 flex items-center gap-1" title="Uranerz (U)">
+          <span
+            class="text-emerald-400 flex items-center gap-1"
+            title="Uranerz (U)"
+          >
             <img src=${uraniumMineIcon} class="w-3.5 h-3.5 object-contain" />
-            <span class="font-bold">U:</span> <span class="tabular-nums">${renderNumber(this._uranium)}</span>
+            <span class="font-bold">U:</span>
+            <span class="tabular-nums">${renderNumber(this._uranium)}</span>
           </span>
         </div>
 
         <div class="h-3 w-px bg-gray-700"></div>
 
         <!-- Tier 2 Refined Goods -->
-        <div class="flex items-center gap-2 cursor-pointer hover:brightness-125 transition-all" @click=${this.openEconomyPanel} title="Klicken für Veredelung & Raffinerie-Details">
-          <span class="text-cyan-300 flex items-center gap-1" title="Panzerstahl">
+        <div
+          class="flex items-center gap-2 cursor-pointer hover:brightness-125 transition-all"
+          @click=${this.openEconomyPanel}
+          title="Klicken für Veredelung & Raffinerie-Details"
+        >
+          <span
+            class="text-cyan-300 flex items-center gap-1"
+            title="Panzerstahl"
+          >
             <img src=${steelMillIcon} class="w-3.5 h-3.5 object-contain" />
-            <span class="font-bold">Stahl:</span> <span class="tabular-nums">${renderNumber(this._steel)}</span>
+            <span class="font-bold">Stahl:</span>
+            <span class="tabular-nums">${renderNumber(this._steel)}</span>
           </span>
-          <span class="text-orange-400 flex items-center gap-1" title="Treibstoff (Fuel)">
+          <span
+            class="text-orange-400 flex items-center gap-1"
+            title="Treibstoff (Fuel)"
+          >
             <img src=${refineryIcon} class="w-3.5 h-3.5 object-contain" />
-            <span class="font-bold">Fuel:</span> <span class="tabular-nums font-bold ${this._fuel <= 0 ? "text-red-400 animate-pulse" : ""}">${renderNumber(this._fuel)}</span>
+            <span class="font-bold">Fuel:</span>
+            <span
+              class="tabular-nums font-bold ${this._fuel <= 0
+                ? "text-red-400 animate-pulse"
+                : ""}"
+              >${renderNumber(this._fuel)}</span
+            >
           </span>
-          <span class="text-lime-300 flex items-center gap-1" title="Spaltmaterial / Enriched Uranium">
+          <span
+            class="text-lime-300 flex items-center gap-1"
+            title="Spaltmaterial / Enriched Uranium"
+          >
             <img src=${centrifugeIcon} class="w-3.5 h-3.5 object-contain" />
-            <span class="font-bold">U-Ref:</span> <span class="tabular-nums">${renderNumber(this._enrichedUranium)}</span>
+            <span class="font-bold">U-Ref:</span>
+            <span class="tabular-nums"
+              >${renderNumber(this._enrichedUranium)}</span
+            >
           </span>
         </div>
 
@@ -826,15 +933,21 @@ export class ControlPanel extends LitElement implements Controller {
           <button
             class="px-1.5 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold"
             @click=${() => this.setAttackRatioPreset(20)}
-          >20%</button>
+          >
+            20%
+          </button>
           <button
             class="px-1.5 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold"
             @click=${() => this.setAttackRatioPreset(50)}
-          >50%</button>
+          >
+            50%
+          </button>
           <button
             class="px-1.5 py-0.5 rounded bg-gray-800 hover:bg-gray-700 text-gray-200 font-bold"
             @click=${() => this.setAttackRatioPreset(100)}
-          >100%</button>
+          >
+            100%
+          </button>
         </div>
       </div>
     `;

@@ -550,7 +550,9 @@ export class GameConfigSettings extends LitElement {
                             ? o === HumansVsNations
                               ? translateText("public_lobby.teams_hvn")
                               : translateText(`host_modal.teams_${o}`)
-                            : translateText("public_lobby.teams", { num: o })}
+                            : translateText("public_lobby.teams", {
+                                num: o,
+                              })}
                         </span>
                       </button>
                     `;

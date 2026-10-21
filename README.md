@@ -62,6 +62,7 @@ InduFront is pre-configured for 1-click cloud deployment on [Render](https://ren
 - [Privacy Policy](resources/public/privacy-policy.html)
 
 InduFront collects strictly the minimum information required for multiplayer play:
+
 - Account username, optional email for password reset, and cryptographic password hash (scrypt).
 - In-game statistics and match history.
 - Immediate, permanent account deletion is supported directly within game settings.

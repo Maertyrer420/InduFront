@@ -3,7 +3,7 @@ import { base64urlToUuid } from "@openfront/shared/Base64";
 import { decodeJwt } from "jose";
 import { UserSettings } from "src/client/UserSettings";
 import { z } from "zod";
-import { getApiBase, getAudience } from "./Api";
+import { getApiBase } from "./Api";
 import { ClientEnv } from "./ClientEnv";
 import type { DesktopSessionState, SessionFailureKind } from "./DesktopShell";
 import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
@@ -12,7 +12,6 @@ import { showInGameAlert } from "./InGameModal";
 import type { SteamTicketResult } from "./SteamSDK";
 import { steamSDK } from "./SteamSDK";
 import { generateCryptoRandomUUID, translateText } from "./Utils";
-
 
 export type UserAuth = { jwt: string; claims: TokenPayload } | false;
 
@@ -348,7 +347,9 @@ export function clearLocalSession(): void {
   try {
     localStorage.removeItem(INDUFRONT_JWT_KEY);
     localStorage.removeItem("indufront_refresh_token");
-  } catch {}
+  } catch {
+    /* ignore storage errors */
+  }
   updateUserSettingsForJwt(null);
   localStorage.removeItem(PERSISTENT_ID_KEY);
   // Switch cosmetics back to the logged-out scope (via updateUserSettingsForJwt).
@@ -577,7 +578,9 @@ async function doRefreshJwt(): Promise<void> {
       if (refreshToken) {
         localStorage.setItem("indufront_refresh_token", refreshToken);
       }
-    } catch {}
+    } catch {
+      /* ignore storage errors */
+    }
     updateUserSettingsForJwt(jwt);
   } catch (e) {
     console.warn("Refresh failed", e);

@@ -245,14 +245,23 @@ export class ClientEnv {
     return ClientEnv.get().gitCommit;
   }
   static jwtIssuer(): string {
-    if (typeof window !== "undefined" && window.location) {
+    const audience = ClientEnv.jwtAudience();
+    // Single-service hosting: the page's own host is the audience and there is
+    // no api.<domain> subdomain, so the issuer lives under the page's /idp.
+    if (
+      typeof window !== "undefined" &&
+      window.location &&
+      typeof window.location.origin === "string" &&
+      window.location.origin.startsWith("http") &&
+      audience !== "localhost" &&
+      window.location.hostname === audience
+    ) {
       return `${window.location.origin}/idp`;
     }
-    const audience = ClientEnv.jwtAudience();
     if (audience === "localhost") {
       return "http://localhost:8787";
     }
-    return `https://${audience}/idp`;
+    return `https://api.${audience}`;
   }
   static async jwkPublicKey(): Promise<JWK> {
     if (ClientEnv.publicKey) return ClientEnv.publicKey;

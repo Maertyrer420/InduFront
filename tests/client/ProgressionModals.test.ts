@@ -237,7 +237,7 @@ describe("player profile level", () => {
     expect(levelLine()!.textContent).not.toContain("progression.prestige");
     expect(
       modal.querySelector("[data-profile-lifetime]")!.textContent,
-    ).toContain("4,200");
+    ).toMatch(/4[,.]200/);
     // No XP-in-level from this API: no bar.
     expect(modal.querySelector("profile-card [data-xp-bar]")).toBeNull();
     expect(fetchPublicPlayerProgress).toHaveBeenCalledWith("someone-else");

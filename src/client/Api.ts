@@ -258,7 +258,9 @@ async function requestUserMe(): Promise<{
             signal: AbortSignal.timeout(10_000),
           });
         }
-      } catch {}
+      } catch {
+        /* ignore sync failure */
+      }
     }
     if (response.status === 401) {
       // Only when the session that issued this request is still the current

@@ -133,7 +133,11 @@ export class NationAllianceBehavior {
 
     for (const alliance of this.player.alliances()) {
       const ally = alliance.other(this.player);
-      if (!ally || !ally.isAlive() || this.player.relation(ally) < Relation.Friendly) {
+      if (
+        !ally ||
+        !ally.isAlive() ||
+        this.player.relation(ally) < Relation.Friendly
+      ) {
         continue;
       }
 
@@ -154,7 +158,10 @@ export class NationAllianceBehavior {
         aidAmt = 25;
       }
       // Priority 3: Crude Oil
-      else if (allyEcon.resources.crudeOil < 20 && botEcon.resources.crudeOil >= 60) {
+      else if (
+        allyEcon.resources.crudeOil < 20 &&
+        botEcon.resources.crudeOil >= 60
+      ) {
         aidRes = "crudeOil";
         aidAmt = 20;
       }
@@ -162,12 +169,18 @@ export class NationAllianceBehavior {
       else if (allyEcon.resources.coal < 20 && botEcon.resources.coal >= 60) {
         aidRes = "coal";
         aidAmt = 25;
-      } else if (allyEcon.resources.ironOre < 20 && botEcon.resources.ironOre >= 60) {
+      } else if (
+        allyEcon.resources.ironOre < 20 &&
+        botEcon.resources.ironOre >= 60
+      ) {
         aidRes = "ironOre";
         aidAmt = 25;
       }
       // Priority 5: Enriched Uranium (for advanced allies)
-      else if (allyEcon.refined.enrichedUranium < 5 && botEcon.refined.enrichedUranium >= 25) {
+      else if (
+        allyEcon.refined.enrichedUranium < 5 &&
+        botEcon.refined.enrichedUranium >= 25
+      ) {
         aidRes = "enrichedUranium";
         aidAmt = 5;
       }

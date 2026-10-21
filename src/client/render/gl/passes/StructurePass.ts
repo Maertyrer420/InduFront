@@ -14,6 +14,17 @@
  *   FrameSnapshot.units → filter structures → instance VBO → GPU
  */
 
+import {
+  bunkerIcon,
+  centrifugeIcon,
+  coalMineIcon,
+  ironMineIcon,
+  oilRigIcon,
+  radarIcon,
+  refineryIcon,
+  steelMillIcon,
+  uraniumMineIcon,
+} from "../../../hud/HotbarIcons";
 import type { GhostPreviewData, RendererConfig, UnitState } from "../../types";
 import {
   UT_BUNKER,
@@ -32,17 +43,6 @@ import {
   UT_STEEL_MILL,
   UT_URANIUM_MINE,
 } from "../../types";
-import {
-  bunkerIcon,
-  centrifugeIcon,
-  coalMineIcon,
-  ironMineIcon,
-  oilRigIcon,
-  radarIcon,
-  refineryIcon,
-  steelMillIcon,
-  uraniumMineIcon,
-} from "../../../hud/HotbarIcons";
 import { DynamicInstanceBuffer } from "../DynamicBuffer";
 import type { RenderSettings } from "../RenderSettings";
 import {
@@ -181,18 +181,30 @@ export class StructurePass {
         type as (typeof STRUCTURE_ORDER)[number],
       );
       if (col < 0) {
-        if (type.includes("IronMine") || type.includes("Iron Mine")) col = STRUCTURE_ORDER.indexOf(UT_IRON_MINE);
-        else if (type.includes("CoalMine") || type.includes("Coal Mine")) col = STRUCTURE_ORDER.indexOf(UT_COAL_MINE);
-        else if (type.includes("OilRig") || type.includes("Oil Rig")) col = STRUCTURE_ORDER.indexOf(UT_OIL_RIG);
-        else if (type.includes("UraniumMine") || type.includes("Uranium Mine")) col = STRUCTURE_ORDER.indexOf(UT_URANIUM_MINE);
-        else if (type.includes("SteelMill") || type.includes("Steel Mill")) col = STRUCTURE_ORDER.indexOf(UT_STEEL_MILL);
-        else if (type.includes("Refinery")) col = STRUCTURE_ORDER.indexOf(UT_REFINERY);
-        else if (type.includes("Centrifuge")) col = STRUCTURE_ORDER.indexOf(UT_CENTRIFUGE);
-        else if (type.includes("Bunker")) col = STRUCTURE_ORDER.indexOf(UT_BUNKER);
-        else if (type.includes("Radar")) col = STRUCTURE_ORDER.indexOf(UT_RADAR);
-        else if (type.includes("Residential")) col = STRUCTURE_ORDER.indexOf(UT_CITY);
-        else if (type.includes("Mine") || type.includes("Mill")) col = STRUCTURE_ORDER.indexOf(UT_FACTORY);
-        else if (type.includes("Rig") || type.includes("Shipyard")) col = STRUCTURE_ORDER.indexOf(UT_PORT);
+        if (type.includes("IronMine") || type.includes("Iron Mine"))
+          col = STRUCTURE_ORDER.indexOf(UT_IRON_MINE);
+        else if (type.includes("CoalMine") || type.includes("Coal Mine"))
+          col = STRUCTURE_ORDER.indexOf(UT_COAL_MINE);
+        else if (type.includes("OilRig") || type.includes("Oil Rig"))
+          col = STRUCTURE_ORDER.indexOf(UT_OIL_RIG);
+        else if (type.includes("UraniumMine") || type.includes("Uranium Mine"))
+          col = STRUCTURE_ORDER.indexOf(UT_URANIUM_MINE);
+        else if (type.includes("SteelMill") || type.includes("Steel Mill"))
+          col = STRUCTURE_ORDER.indexOf(UT_STEEL_MILL);
+        else if (type.includes("Refinery"))
+          col = STRUCTURE_ORDER.indexOf(UT_REFINERY);
+        else if (type.includes("Centrifuge"))
+          col = STRUCTURE_ORDER.indexOf(UT_CENTRIFUGE);
+        else if (type.includes("Bunker"))
+          col = STRUCTURE_ORDER.indexOf(UT_BUNKER);
+        else if (type.includes("Radar"))
+          col = STRUCTURE_ORDER.indexOf(UT_RADAR);
+        else if (type.includes("Residential"))
+          col = STRUCTURE_ORDER.indexOf(UT_CITY);
+        else if (type.includes("Mine") || type.includes("Mill"))
+          col = STRUCTURE_ORDER.indexOf(UT_FACTORY);
+        else if (type.includes("Rig") || type.includes("Shipyard"))
+          col = STRUCTURE_ORDER.indexOf(UT_PORT);
       }
       if (col >= 0) {
         this.typeToAtlasCol.set(type, col);
@@ -417,7 +429,10 @@ export class StructurePass {
       this.instanceBuf.float32[off + 3] = unit.underConstruction ? 1 : 0;
       this.instanceBuf.float32[off + 4] = atlasIdx;
       this.instanceBuf.float32[off + 5] =
-        unit.markedForDeletion !== false || this.hoveredDemolishUnitId === unit.id ? 1 : 0;
+        unit.markedForDeletion !== false ||
+        this.hoveredDemolishUnitId === unit.id
+          ? 1
+          : 0;
 
       count++;
     }

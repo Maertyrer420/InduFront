@@ -423,7 +423,10 @@ export class UnitPass {
     ctx.drawImage(img, 0, 0);
 
     // 2. Helper to draw indexed gray pixels onto the atlas cell
-    const drawPixels = (col: number, pixels: Array<[number, number, number]>) => {
+    const drawPixels = (
+      col: number,
+      pixels: Array<[number, number, number]>,
+    ) => {
       const imgData = ctx.getImageData(col * 13, 0, 13, 13);
       const data = imgData.data;
       for (const [px, py, gray] of pixels) {
@@ -441,30 +444,64 @@ export class UnitPass {
     // Col 12: Destroyer (sleek, sharp arrowhead combat vessel with turrets and aggressive hull contours)
     const destroyerPixels: Array<[number, number, number]> = [
       [6, 1, 180],
-      [5, 2, 180], [7, 2, 76],
-      [4, 3, 180], [6, 3, 130], [8, 3, 76],
-      [4, 4, 180], [8, 4, 76],
-      [3, 5, 180], [6, 5, 180], [9, 5, 76],
-      [3, 6, 180], [5, 6, 100], [7, 6, 100], [9, 6, 76],
-      [3, 7, 180], [6, 7, 180], [9, 7, 76],
-      [4, 8, 180], [8, 8, 76],
-      [4, 9, 180], [6, 9, 130], [8, 9, 76],
-      [5, 10, 180], [7, 10, 76],
+      [5, 2, 180],
+      [7, 2, 76],
+      [4, 3, 180],
+      [6, 3, 130],
+      [8, 3, 76],
+      [4, 4, 180],
+      [8, 4, 76],
+      [3, 5, 180],
+      [6, 5, 180],
+      [9, 5, 76],
+      [3, 6, 180],
+      [5, 6, 100],
+      [7, 6, 100],
+      [9, 6, 76],
+      [3, 7, 180],
+      [6, 7, 180],
+      [9, 7, 76],
+      [4, 8, 180],
+      [8, 8, 76],
+      [4, 9, 180],
+      [6, 9, 130],
+      [8, 9, 76],
+      [5, 10, 180],
+      [7, 10, 76],
       [6, 11, 76],
     ];
     drawPixels(DESTROYER_COL, destroyerPixels);
 
     // Col 13: Submarine / Repair Ship (sleek support naval vessel with central repair cross '+' emblem)
     const repairShipPixels: Array<[number, number, number]> = [
-      [5, 2, 180], [6, 2, 180], [7, 2, 76],
-      [4, 3, 180], [8, 3, 76],
-      [3, 4, 180], [6, 4, 180], [9, 4, 76],
-      [3, 5, 180], [4, 5, 180], [5, 5, 180], [6, 5, 180], [7, 5, 180], [8, 5, 180], [9, 5, 76],
-      [3, 6, 180], [6, 6, 180], [9, 6, 76],
-      [3, 7, 180], [6, 7, 180], [9, 7, 76],
-      [3, 8, 180], [9, 8, 76],
-      [4, 9, 180], [8, 9, 76],
-      [5, 10, 180], [6, 10, 76], [7, 10, 76],
+      [5, 2, 180],
+      [6, 2, 180],
+      [7, 2, 76],
+      [4, 3, 180],
+      [8, 3, 76],
+      [3, 4, 180],
+      [6, 4, 180],
+      [9, 4, 76],
+      [3, 5, 180],
+      [4, 5, 180],
+      [5, 5, 180],
+      [6, 5, 180],
+      [7, 5, 180],
+      [8, 5, 180],
+      [9, 5, 76],
+      [3, 6, 180],
+      [6, 6, 180],
+      [9, 6, 76],
+      [3, 7, 180],
+      [6, 7, 180],
+      [9, 7, 76],
+      [3, 8, 180],
+      [9, 8, 76],
+      [4, 9, 180],
+      [8, 9, 76],
+      [5, 10, 180],
+      [6, 10, 76],
+      [7, 10, 76],
     ];
     drawPixels(SUBMARINE_COL, repairShipPixels);
 
@@ -570,9 +607,11 @@ export class UnitPass {
       if (atlasIdx === undefined) continue;
 
       const isRetreatingWarship =
-        (unit.unitType === UT_WARSHIP || unit.unitType === UT_DESTROYER) && unit.retreating;
+        (unit.unitType === UT_WARSHIP || unit.unitType === UT_DESTROYER) &&
+        unit.retreating;
       const isAngryWarship =
-        (unit.unitType === UT_WARSHIP || unit.unitType === UT_DESTROYER) && unit.targetUnitId !== null;
+        (unit.unitType === UT_WARSHIP || unit.unitType === UT_DESTROYER) &&
+        unit.targetUnitId !== null;
       const isFlicker = FLICKER_TYPES.has(unit.unitType);
 
       // Alt-view trade ship color from owner + destination port owner:

@@ -192,7 +192,9 @@ export class GameSocialStore {
         this.data = JSON.parse(raw);
         loaded = true;
       } catch {
-        console.warn(`[social-store] Failed to parse ${filePath}, checking backup...`);
+        console.warn(
+          `[social-store] Failed to parse ${filePath}, checking backup...`,
+        );
       }
     }
 
@@ -201,7 +203,9 @@ export class GameSocialStore {
         const raw = fs.readFileSync(this.backupPath, "utf8");
         this.data = JSON.parse(raw);
         console.log(`[social-store] Restored from backup: ${this.backupPath}`);
-      } catch {}
+      } catch {
+        /* ignore corrupted backup */
+      }
     }
 
     this.data.clans ??= [];
@@ -218,13 +222,20 @@ export class GameSocialStore {
     try {
       const dbData = await dbLoadSocialData();
       if (dbData) {
-        if (dbData.clans && dbData.clans.length > 0) this.data.clans = dbData.clans;
+        if (dbData.clans && dbData.clans.length > 0)
+          this.data.clans = dbData.clans;
         if (dbData.playerStats && Object.keys(dbData.playerStats).length > 0) {
-          this.data.playerStats = { ...this.data.playerStats, ...dbData.playerStats };
+          this.data.playerStats = {
+            ...this.data.playerStats,
+            ...dbData.playerStats,
+          };
         }
-        if (dbData.matches && dbData.matches.length > 0) this.data.matches = dbData.matches;
-        if (dbData.globalChat && dbData.globalChat.length > 0) this.data.globalChat = dbData.globalChat;
-        if (dbData.directChat && dbData.directChat.length > 0) this.data.directChat = dbData.directChat;
+        if (dbData.matches && dbData.matches.length > 0)
+          this.data.matches = dbData.matches;
+        if (dbData.globalChat && dbData.globalChat.length > 0)
+          this.data.globalChat = dbData.globalChat;
+        if (dbData.directChat && dbData.directChat.length > 0)
+          this.data.directChat = dbData.directChat;
         this.save(false);
         console.log("[social-store] Synchronized social data from PostgreSQL.");
       }
@@ -257,7 +268,7 @@ export class GameSocialStore {
   public getOnlineCount(): number {
     const now = Date.now();
     let count = 0;
-    for (const [_, lastSeen] of this.presence.entries()) {
+    for (const lastSeen of this.presence.values()) {
       if (now - lastSeen < 120_000) count++;
     }
     // Return at least 1 when active, plus a realistic baseline if few players
@@ -360,7 +371,10 @@ export class GameSocialStore {
       (m) => m.publicId.toLowerCase() === user.publicId.toLowerCase(),
     );
     if (!member || (member.role !== "Owner" && member.role !== "Admin")) {
-      return { ok: false, error: "Nur Owner und Admin dürfen Clan-Einstellungen ändern" };
+      return {
+        ok: false,
+        error: "Nur Owner und Admin dürfen Clan-Einstellungen ändern",
+      };
     }
 
     if (patch.name && patch.name.trim().length >= 3) {
@@ -397,7 +411,8 @@ export class GameSocialStore {
     if (newRole === "Owner") {
       return {
         ok: false,
-        error: "Owner-Rang kann nicht vergeben werden (nur der Clan-Gründer ist Owner)",
+        error:
+          "Owner-Rang kann nicht vergeben werden (nur der Clan-Gründer ist Owner)",
       };
     }
 
@@ -407,12 +422,22 @@ export class GameSocialStore {
     if (!target) return { ok: false, error: "Mitglied nicht gefunden" };
 
     if (target.role === "Owner") {
-      return { ok: false, error: "Der Rang des Clan-Owners kann nicht geändert werden" };
+      return {
+        ok: false,
+        error: "Der Rang des Clan-Owners kann nicht geändert werden",
+      };
     }
 
     // Admins cannot change other Admins or demote without being Owner
-    if (caller.role === "Admin" && target.role === "Admin" && caller.publicId !== target.publicId) {
-      return { ok: false, error: "Admins können andere Admins nicht bearbeiten" };
+    if (
+      caller.role === "Admin" &&
+      target.role === "Admin" &&
+      caller.publicId !== target.publicId
+    ) {
+      return {
+        ok: false,
+        error: "Admins können andere Admins nicht bearbeiten",
+      };
     }
 
     target.role = newRole;
@@ -431,7 +456,8 @@ export class GameSocialStore {
     const caller = clan.members.find(
       (m) => m.publicId.toLowerCase() === user.publicId.toLowerCase(),
     );
-    if (!caller) return { ok: false, error: "Du bist kein Mitglied dieses Clans" };
+    if (!caller)
+      return { ok: false, error: "Du bist kein Mitglied dieses Clans" };
 
     const target = clan.members.find(
       (m) => m.publicId.toLowerCase() === targetPublicId.toLowerCase(),
@@ -448,7 +474,10 @@ export class GameSocialStore {
     // Mitglied: cannot kick
     if (caller.role === "Supporter") {
       if (target.role !== "Mitglied") {
-        return { ok: false, error: "Supporter können nur normale Mitglieder kicken" };
+        return {
+          ok: false,
+          error: "Supporter können nur normale Mitglieder kicken",
+        };
       }
     } else if (caller.role === "Admin") {
       if (target.role === "Admin" && caller.publicId !== target.publicId) {
@@ -468,7 +497,9 @@ export class GameSocialStore {
   public joinOrRequestClan(
     user: UserRecord,
     tag: string,
-  ): { ok: true; status: "joined" | "requested" } | { ok: false; error: string } {
+  ):
+    | { ok: true; status: "joined" | "requested" }
+    | { ok: false; error: string } {
     const clan = this.getClan(tag);
     if (!clan) return { ok: false, error: "Clan nicht gefunden" };
 
@@ -489,7 +520,9 @@ export class GameSocialStore {
         stats: { total: { wins: 0, losses: 0 } },
         eloContributed: 0,
       });
-      clan.requests = clan.requests.filter((r) => r.publicId.toLowerCase() !== p);
+      clan.requests = clan.requests.filter(
+        (r) => r.publicId.toLowerCase() !== p,
+      );
       this.save();
       return { ok: true, status: "joined" };
     } else {
@@ -540,8 +573,16 @@ export class GameSocialStore {
       (m) => m.publicId.toLowerCase() === user.publicId.toLowerCase(),
     );
     // Owner, Admin, and Supporter can approve join requests
-    if (!caller || (caller.role !== "Owner" && caller.role !== "Admin" && caller.role !== "Supporter")) {
-      return { ok: false, error: "Keine Berechtigung zum Annehmen von Anfragen" };
+    if (
+      !caller ||
+      (caller.role !== "Owner" &&
+        caller.role !== "Admin" &&
+        caller.role !== "Supporter")
+    ) {
+      return {
+        ok: false,
+        error: "Keine Berechtigung zum Annehmen von Anfragen",
+      };
     }
 
     const reqIdx = clan.requests.findIndex(
@@ -552,7 +593,11 @@ export class GameSocialStore {
     const req = clan.requests[reqIdx];
     clan.requests.splice(reqIdx, 1);
 
-    if (!clan.members.some((m) => m.publicId.toLowerCase() === targetPublicId.toLowerCase())) {
+    if (
+      !clan.members.some(
+        (m) => m.publicId.toLowerCase() === targetPublicId.toLowerCase(),
+      )
+    ) {
       clan.members.push({
         publicId: req.publicId,
         username: req.username,
@@ -577,8 +622,16 @@ export class GameSocialStore {
     const caller = clan.members.find(
       (m) => m.publicId.toLowerCase() === user.publicId.toLowerCase(),
     );
-    if (!caller || (caller.role !== "Owner" && caller.role !== "Admin" && caller.role !== "Supporter")) {
-      return { ok: false, error: "Keine Berechtigung zum Ablehnen von Anfragen" };
+    if (
+      !caller ||
+      (caller.role !== "Owner" &&
+        caller.role !== "Admin" &&
+        caller.role !== "Supporter")
+    ) {
+      return {
+        ok: false,
+        error: "Keine Berechtigung zum Ablehnen von Anfragen",
+      };
     }
 
     clan.requests = clan.requests.filter(
@@ -808,7 +861,8 @@ export class GameSocialStore {
           member.stats ??= { total: { wins: 0, losses: 0 } };
           if (p.winner) member.stats.total.wins++;
           else member.stats.total.losses++;
-          member.eloContributed = (member.eloContributed ?? 0) + (p.winner ? 15 : -10);
+          member.eloContributed =
+            (member.eloContributed ?? 0) + (p.winner ? 15 : -10);
         }
       }
     }

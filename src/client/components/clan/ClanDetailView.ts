@@ -518,7 +518,10 @@ export class ClanDetailView extends LitElement {
         ? html`<clan-donate-dialog
             .clanTag=${clan.tag}
             @donated=${(
-              e: CustomEvent<{ currencyType: "soft" | "hard"; amount: string }>,
+              e: CustomEvent<{
+                currencyType: "soft" | "hard";
+                amount: string;
+              }>,
             ) => void this.handleDonated(e)}
             @cancel=${() => (this.donateOpen = false)}
           ></clan-donate-dialog>`

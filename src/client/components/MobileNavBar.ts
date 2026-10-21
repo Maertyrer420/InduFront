@@ -71,7 +71,9 @@ export class MobileNavBar extends LitElement {
         const data = await res.json();
         this.onlineCount = Math.max(1, data.online ?? 1);
       }
-    } catch {}
+    } catch {
+      /* ignore online count fetch error */
+    }
   }
 
   private _onShowPage = (e: Event) => {
@@ -145,6 +147,11 @@ export class MobileNavBar extends LitElement {
           data-i18n="main.leaderboard"
         ></button>
         <button
+          class="${MOBILE_ITEM}"
+          data-page="page-inventory"
+          data-i18n="main.inventory"
+        ></button>
+        <button
           class="no-game-portal ${MOBILE_ITEM}"
           data-page="page-clan"
           data-i18n="main.clans"
@@ -161,12 +168,19 @@ export class MobileNavBar extends LitElement {
         >
           <span>👥 Freunde</span>
           ${this.onlineFriendsCount > 0
-            ? html`<span class="px-2 py-0.5 bg-malibu-blue text-white text-xs font-bold rounded-full">${this.onlineFriendsCount}</span>`
+            ? html`<span
+                class="px-2 py-0.5 bg-malibu-blue text-white text-xs font-bold rounded-full"
+                >${this.onlineFriendsCount}</span
+              >`
             : ""}
         </button>
 
-        <div class="mt-4 pt-4 border-t border-white/10 flex items-center gap-2 text-xs text-white/80">
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <div
+          class="mt-4 pt-4 border-t border-white/10 flex items-center gap-2 text-xs text-white/80"
+        >
+          <span
+            class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"
+          ></span>
           <span class="font-bold text-emerald-400">${this.onlineCount}</span>
           <span>Spieler online</span>
         </div>

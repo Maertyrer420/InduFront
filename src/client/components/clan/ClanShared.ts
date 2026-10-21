@@ -40,27 +40,40 @@ export function formatClanDate(iso: string): string {
   return cached;
 }
 
-export function translateClanRole(role: string): string {
+export function normalizeClanRole(
+  role: string,
+): "leader" | "officer" | "supporter" | "member" {
   const r = (role ?? "").toLowerCase();
-  if (r === "owner" || r === "leader") return "Owner";
-  if (r === "admin" || r === "officer") return "Admin";
-  if (r === "supporter") return "Supporter";
-  if (r === "mitglied" || r === "member") return "Mitglied";
-  return translateText(`clan_modal.role_${role}`);
+  if (r === "owner" || r === "leader") return "leader";
+  if (r === "admin" || r === "officer") return "officer";
+  if (r === "supporter") return "supporter";
+  return "member";
+}
+
+export function translateClanRole(role: string): string {
+  return translateText(`clan_modal.role_${normalizeClanRole(role)}`);
 }
 
 export function renderRoleIcon(role: string): TemplateResult {
-  const r = (role ?? "").toLowerCase();
-  if (r === "owner" || r === "leader") {
-    return html`<span class="text-base" title="Owner">👑</span>`;
+  const r = normalizeClanRole(role);
+  if (r === "leader") {
+    return html`<span class="text-base" title=${translateClanRole(role)}
+      >👑</span
+    >`;
   }
-  if (r === "admin" || r === "officer") {
-    return html`<span class="text-base" title="Admin">🛡️</span>`;
+  if (r === "officer") {
+    return html`<span class="text-base" title=${translateClanRole(role)}
+      >🛡️</span
+    >`;
   }
   if (r === "supporter") {
-    return html`<span class="text-base" title="Supporter">🤝</span>`;
+    return html`<span class="text-base" title=${translateClanRole(role)}
+      >🤝</span
+    >`;
   }
-  return html`<span class="text-base" title="Mitglied">👤</span>`;
+  return html`<span class="text-base" title=${translateClanRole(role)}
+    >👤</span
+  >`;
 }
 
 export function renderStat(label: string, value: string): TemplateResult {

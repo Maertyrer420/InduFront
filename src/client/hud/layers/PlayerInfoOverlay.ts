@@ -34,18 +34,6 @@ import {
 } from "../../Utils";
 import { GameView, PlayerView, UnitView } from "../../view";
 import {
-  EMOJI_ICON_KIND,
-  getFirstPlacePlayer,
-  getPlayerIcons,
-  IMAGE_ICON_KIND,
-} from "../PlayerIcons";
-import { ShowPlayerChatEvent } from "./ChatModal";
-import { ShowPlayerEmojiMenuEvent } from "./EmojiTable";
-import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
-import { CloseRadialMenuEvent } from "./RadialMenu";
-import "./RelationSmiley";
-import { SpawnBarVisibleEvent } from "./SpawnTimer";
-import {
   bunkerIcon,
   centrifugeIcon,
   coalMineIcon,
@@ -56,6 +44,18 @@ import {
   steelMillIcon,
   uraniumMineIcon,
 } from "../HotbarIcons";
+import {
+  EMOJI_ICON_KIND,
+  getFirstPlacePlayer,
+  getPlayerIcons,
+  IMAGE_ICON_KIND,
+} from "../PlayerIcons";
+import { ShowPlayerChatEvent } from "./ChatModal";
+import { ShowPlayerEmojiMenuEvent } from "./EmojiTable";
+import { ImmunityBarVisibleEvent } from "./ImmunityTimer";
+import "./RelationSmiley";
+import { CloseRadialMenuEvent } from "./RadialMenu";
+import { SpawnBarVisibleEvent } from "./SpawnTimer";
 const soldierIconAquarius = assetUrl("images/SoldierIconAquarius.svg");
 const allianceIcon = assetUrl("images/AllianceIcon.svg");
 const traitorIcon = assetUrl("images/TraitorIcon.svg");
@@ -737,18 +737,87 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
             ${allianceHtml ?? ""}
           </div>
           <div class="flex flex-wrap gap-1 items-center mt-1">
-            ${this.displayUnitCount(player, UnitType.City, cityIcon, "Wohnstädte")}
-            ${this.displayUnitCount(player, UnitType.Factory, factoryIcon, "Fabriken")}
-            ${this.displayUnitCount(player, UnitType.Port, portIcon, "Marinehäfen")}
-            ${this.displayUnitCount(player, UnitType.IronMine, ironMineIcon, "Eisenminen", true)}
-            ${this.displayUnitCount(player, UnitType.CoalMine, coalMineIcon, "Kohleminen", true)}
-            ${this.displayUnitCount(player, UnitType.OilRig, oilRigIcon, "Öltürme", true)}
-            ${this.displayUnitCount(player, UnitType.UraniumMine, uraniumMineIcon, "Uranminen", true)}
-            ${this.displayUnitCount(player, UnitType.SteelMill, steelMillIcon, "Stahlwerke", true)}
-            ${this.displayUnitCount(player, UnitType.Refinery, refineryIcon, "Raffinerien", true)}
-            ${this.displayUnitCount(player, UnitType.Centrifuge, centrifugeIcon, "Zentrifugen", true)}
-            ${this.displayUnitCount(player, UnitType.Bunker, bunkerIcon, "Bunker", true)}
-            ${this.displayUnitCount(player, UnitType.Radar, radarIcon, "Radar", true)}
+            ${this.displayUnitCount(
+              player,
+              UnitType.City,
+              cityIcon,
+              "Wohnstädte",
+            )}
+            ${this.displayUnitCount(
+              player,
+              UnitType.Factory,
+              factoryIcon,
+              "Fabriken",
+            )}
+            ${this.displayUnitCount(
+              player,
+              UnitType.Port,
+              portIcon,
+              "Marinehäfen",
+            )}
+            ${this.displayUnitCount(
+              player,
+              UnitType.IronMine,
+              ironMineIcon,
+              "Eisenminen",
+              true,
+            )}
+            ${this.displayUnitCount(
+              player,
+              UnitType.CoalMine,
+              coalMineIcon,
+              "Kohleminen",
+              true,
+            )}
+            ${this.displayUnitCount(
+              player,
+              UnitType.OilRig,
+              oilRigIcon,
+              "Öltürme",
+              true,
+            )}
+            ${this.displayUnitCount(
+              player,
+              UnitType.UraniumMine,
+              uraniumMineIcon,
+              "Uranminen",
+              true,
+            )}
+            ${this.displayUnitCount(
+              player,
+              UnitType.SteelMill,
+              steelMillIcon,
+              "Stahlwerke",
+              true,
+            )}
+            ${this.displayUnitCount(
+              player,
+              UnitType.Refinery,
+              refineryIcon,
+              "Raffinerien",
+              true,
+            )}
+            ${this.displayUnitCount(
+              player,
+              UnitType.Centrifuge,
+              centrifugeIcon,
+              "Zentrifugen",
+              true,
+            )}
+            ${this.displayUnitCount(
+              player,
+              UnitType.Bunker,
+              bunkerIcon,
+              "Bunker",
+              true,
+            )}
+            ${this.displayUnitCount(
+              player,
+              UnitType.Radar,
+              radarIcon,
+              "Radar",
+              true,
+            )}
             ${this.displayUnitCount(
               player,
               UnitType.MissileSilo,
@@ -763,7 +832,13 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
               "SAM-Flugabwehr",
               true,
             )}
-            ${this.displayUnitCount(player, UnitType.Warship, warshipIcon, "Kriegsschiffe", true)}
+            ${this.displayUnitCount(
+              player,
+              UnitType.Warship,
+              warshipIcon,
+              "Kriegsschiffe",
+              true,
+            )}
           </div>
         </div>
         ${myPlayer && this.showShortcutButtons()

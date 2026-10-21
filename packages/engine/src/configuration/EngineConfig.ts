@@ -73,10 +73,10 @@ const TERRA_NULLIUS_MAX_COST = 100;
 // tail that every defender used to get. DENSITY sets which stack size pays
 // the old 0.0052 density weight: at 0.0039 a stack of 3/4 the defender's
 // army matches the old cost, bigger stacks pay less, smaller pay more.
-const ATTACKER_LOSS_BASE = 0.463;
+export const ATTACKER_LOSS_BASE = 0.463;
 /** Defender troops per attacking troop at or below which the attacker's losses stop shrinking */
 export const CHEAPEST_TROOP_RATIO = 0.6;
-const ATTACKER_LOSS_PER_DENSITY = 0.0039;
+export const ATTACKER_LOSS_PER_DENSITY = 0.0039;
 // Speed divisor: 8.25 / 0.965, absorbing the same sigmoid tail. 8.25 is the
 // old 7.5 raised ~10%: v34 pace feedback said attacks felt a bit too slow, so
 // every player-vs-player attack lands ~10% faster across the board.
@@ -391,29 +391,65 @@ export class EngineConfig extends Config {
           UnitType.Port,
         );
       case UnitType.Residential:
-        return this.costWrapper((n: number) => Math.round(100 * detPow(1.15, n)), UnitType.Residential);
+        return this.costWrapper(
+          (n: number) => Math.round(100 * detPow(1.15, n)),
+          UnitType.Residential,
+        );
       case UnitType.IronMine:
-        return this.costWrapper((n: number) => Math.round(200 * detPow(1.15, n)), UnitType.IronMine);
+        return this.costWrapper(
+          (n: number) => Math.round(200 * detPow(1.15, n)),
+          UnitType.IronMine,
+        );
       case UnitType.CoalMine:
-        return this.costWrapper((n: number) => Math.round(150 * detPow(1.15, n)), UnitType.CoalMine);
+        return this.costWrapper(
+          (n: number) => Math.round(150 * detPow(1.15, n)),
+          UnitType.CoalMine,
+        );
       case UnitType.OilRig:
-        return this.costWrapper((n: number) => Math.round(350 * detPow(1.15, n)), UnitType.OilRig);
+        return this.costWrapper(
+          (n: number) => Math.round(350 * detPow(1.15, n)),
+          UnitType.OilRig,
+        );
       case UnitType.UraniumMine:
-        return this.costWrapper((n: number) => Math.round(800 * detPow(1.15, n)), UnitType.UraniumMine);
+        return this.costWrapper(
+          (n: number) => Math.round(800 * detPow(1.15, n)),
+          UnitType.UraniumMine,
+        );
       case UnitType.SteelMill:
-        return this.costWrapper((n: number) => Math.round(400 * detPow(1.15, n)), UnitType.SteelMill);
+        return this.costWrapper(
+          (n: number) => Math.round(400 * detPow(1.15, n)),
+          UnitType.SteelMill,
+        );
       case UnitType.Refinery:
-        return this.costWrapper((n: number) => Math.round(500 * detPow(1.15, n)), UnitType.Refinery);
+        return this.costWrapper(
+          (n: number) => Math.round(500 * detPow(1.15, n)),
+          UnitType.Refinery,
+        );
       case UnitType.Centrifuge:
-        return this.costWrapper((n: number) => Math.round(1200 * detPow(1.15, n)), UnitType.Centrifuge);
+        return this.costWrapper(
+          (n: number) => Math.round(1200 * detPow(1.15, n)),
+          UnitType.Centrifuge,
+        );
       case UnitType.Shipyard:
-        return this.costWrapper((n: number) => Math.round(600 * detPow(1.15, n)), UnitType.Shipyard);
+        return this.costWrapper(
+          (n: number) => Math.round(600 * detPow(1.15, n)),
+          UnitType.Shipyard,
+        );
       case UnitType.Airbase:
-        return this.costWrapper((n: number) => Math.round(750 * detPow(1.15, n)), UnitType.Airbase);
+        return this.costWrapper(
+          (n: number) => Math.round(750 * detPow(1.15, n)),
+          UnitType.Airbase,
+        );
       case UnitType.Bunker:
-        return this.costWrapper((n: number) => Math.round(150 * detPow(1.15, n)), UnitType.Bunker);
+        return this.costWrapper(
+          (n: number) => Math.round(150 * detPow(1.15, n)),
+          UnitType.Bunker,
+        );
       case UnitType.Radar:
-        return this.costWrapper((n: number) => Math.round(800 * detPow(1.15, n)), UnitType.Radar);
+        return this.costWrapper(
+          (n: number) => Math.round(800 * detPow(1.15, n)),
+          UnitType.Radar,
+        );
       case UnitType.Tank:
         return () => 250n;
       case UnitType.Destroyer:
@@ -620,16 +656,20 @@ export class EngineConfig extends Config {
     const traitorCostMod = defender.isTraitor ? this.traitorSpeedDebuff() : 1;
 
     // Defender losses based on troops-per-tile
-    const defenderTroopLoss = defender.troops > 0
-      ? Math.max(1, defender.troops / Math.max(1, defender.numTiles))
-      : 0;
+    const defenderTroopLoss =
+      defender.troops > 0
+        ? Math.max(1, defender.troops / Math.max(1, defender.numTiles))
+        : 0;
 
     // Master Prompt: Lanchester's Square Law
     // Delta = sqrt(|Attacker^2 - (Defender * DefBonus)^2|)
     // DefBonus: 1.0 (Plains), 1.2 (Mountain/Forest), 1.8 (Steel Bunker)
     // Tank breakthrough bonus: 5x effectiveness
     let defBonus = 1.0;
-    if (input.terrain === TerrainType.Mountain || input.terrain === TerrainType.Highland) {
+    if (
+      input.terrain === TerrainType.Mountain ||
+      input.terrain === TerrainType.Highland
+    ) {
       defBonus = 1.2;
     }
     if (input.defenderHasBunker) {
@@ -643,7 +683,10 @@ export class EngineConfig extends Config {
     const effectiveDefender = defenderTroopLoss * defBonus;
 
     // Square difference delta
-    const diffSq = Math.abs(effectiveAttacker * effectiveAttacker - effectiveDefender * effectiveDefender);
+    const diffSq = Math.abs(
+      effectiveAttacker * effectiveAttacker -
+        effectiveDefender * effectiveDefender,
+    );
     const delta = Math.sqrt(diffSq);
 
     let attackerTroopLoss: number;
@@ -653,11 +696,20 @@ export class EngineConfig extends Config {
     } else if (effectiveAttacker >= effectiveDefender) {
       // Attacker breakthrough: loss is difference divided by tank effectiveness
       const effectiveLoss = effectiveAttacker - delta;
-      attackerTroopLoss = Math.max(1, effectiveLoss / tankMult) * mag * traitorLossMod * largeAttackerBonus * largeDefenderBonus;
+      attackerTroopLoss =
+        Math.max(1, effectiveLoss / tankMult) *
+        mag *
+        traitorLossMod *
+        largeAttackerBonus *
+        largeDefenderBonus;
     } else {
       // Repelled or heavily contested
-      const effectiveLoss = Math.min(effectiveAttacker, effectiveDefender - delta);
-      attackerTroopLoss = Math.max(1, effectiveLoss / tankMult) * mag * traitorLossMod;
+      const effectiveLoss = Math.min(
+        effectiveAttacker,
+        effectiveDefender - delta,
+      );
+      attackerTroopLoss =
+        Math.max(1, effectiveLoss / tankMult) * mag * traitorLossMod;
     }
 
     const troopRatio = defender.troops / attackTroops;

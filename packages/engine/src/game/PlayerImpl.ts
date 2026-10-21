@@ -1439,17 +1439,32 @@ export class PlayerImpl implements Player {
 
     // Deduct refined resource costs for advanced structures & units
     const buildResCost = getUnitResourceCost(type);
-    if (buildResCost.enrichedUranium > 0 || buildResCost.steel > 0 || buildResCost.fuel > 0) {
+    if (
+      !this.mg.config().infiniteGold() &&
+      this.type() === PlayerType.Human &&
+      (buildResCost.enrichedUranium > 0 ||
+        buildResCost.steel > 0 ||
+        buildResCost.fuel > 0)
+    ) {
       const econ = this.mg.economyExecution()?.getEconomy(this.smallID());
       if (econ) {
         if (buildResCost.enrichedUranium > 0) {
-          econ.refined.enrichedUranium = Math.max(0, (econ.refined.enrichedUranium || 0) - buildResCost.enrichedUranium);
+          econ.refined.enrichedUranium = Math.max(
+            0,
+            (econ.refined.enrichedUranium ?? 0) - buildResCost.enrichedUranium,
+          );
         }
         if (buildResCost.steel > 0) {
-          econ.refined.steel = Math.max(0, (econ.refined.steel || 0) - buildResCost.steel);
+          econ.refined.steel = Math.max(
+            0,
+            (econ.refined.steel ?? 0) - buildResCost.steel,
+          );
         }
         if (buildResCost.fuel > 0) {
-          econ.refined.fuel = Math.max(0, (econ.refined.fuel || 0) - buildResCost.fuel);
+          econ.refined.fuel = Math.max(
+            0,
+            (econ.refined.fuel ?? 0) - buildResCost.fuel,
+          );
         }
       }
     }
@@ -1503,16 +1518,23 @@ export class PlayerImpl implements Player {
 
     // Master Prompt: Units & structures strictly require their required refined resources
     const resCost = getUnitResourceCost(unitType);
-    if (resCost.enrichedUranium > 0 || resCost.steel > 0 || resCost.fuel > 0) {
+    if (
+      !this.mg.config().infiniteGold() &&
+      this.type() === PlayerType.Human &&
+      (resCost.enrichedUranium > 0 || resCost.steel > 0 || resCost.fuel > 0)
+    ) {
       const econ = this.mg.economyExecution()?.getEconomy(this.smallID());
       if (econ) {
-        if (resCost.enrichedUranium > 0 && (econ.refined.enrichedUranium || 0) < resCost.enrichedUranium) {
+        if (
+          resCost.enrichedUranium > 0 &&
+          (econ.refined.enrichedUranium ?? 0) < resCost.enrichedUranium
+        ) {
           return false;
         }
-        if (resCost.steel > 0 && (econ.refined.steel || 0) < resCost.steel) {
+        if (resCost.steel > 0 && (econ.refined.steel ?? 0) < resCost.steel) {
           return false;
         }
-        if (resCost.fuel > 0 && (econ.refined.fuel || 0) < resCost.fuel) {
+        if (resCost.fuel > 0 && (econ.refined.fuel ?? 0) < resCost.fuel) {
           return false;
         }
       }
@@ -1697,8 +1719,6 @@ export class PlayerImpl implements Player {
       case UnitType.Fighter:
       case UnitType.Bomber:
       case UnitType.ICBM:
-      case UnitType.Shell:
-      case UnitType.SAMMissile:
         return targetTile;
       default:
         assertNever(unitType);
@@ -1749,7 +1769,9 @@ export class PlayerImpl implements Player {
       // Cruise missiles can launch from ready missile silos, bunkers, cities, or base territory
       const readySilos = this.units(UnitType.MissileSilo).filter(
         (silo) =>
-          silo.isActive() && !silo.isInCooldown() && !silo.isUnderConstruction(),
+          silo.isActive() &&
+          !silo.isInCooldown() &&
+          !silo.isUnderConstruction(),
       );
       if (readySilos.length > 0) {
         readySilos.sort(
@@ -1861,7 +1883,10 @@ export class PlayerImpl implements Player {
     return tiles[0];
   }
 
-  private validStructureSpawnTiles(tile: TileRef, onlyFirst: boolean = false): TileRef[] {
+  private validStructureSpawnTiles(
+    tile: TileRef,
+    onlyFirst: boolean = false,
+  ): TileRef[] {
     if (this.mg.owner(tile) !== this) {
       return [];
     }

@@ -451,7 +451,10 @@ export class TerritoryPass {
     );
     gl.uniform1i(this.uIsTeamMode, this.isTeamMode ? 1 : 0);
     gl.uniform1f(this.uDefenseDarken, mo.territoryDefenseDarken);
-    gl.uniform1f(this.uSaturation, this.saturationOverride ?? mo.territorySaturation);
+    gl.uniform1f(
+      this.uSaturation,
+      this.saturationOverride ?? mo.territorySaturation,
+    );
     gl.uniform1f(this.uTerritoryAlpha, mo.territoryAlpha);
     gl.uniform1f(this.uAltFillAlpha, this.settings.altView.fillAlpha);
 

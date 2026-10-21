@@ -1,23 +1,13 @@
-import { TileRef } from "@openfront/engine-api/game/GameMap";
-import {
-  BuildableUnit,
-  RefinedType,
-  ResourceType,
-  UnitType,
-} from "@openfront/engine-api/game/GameTypes";
+import { ResourceType, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { renderNumber } from "@openfront/engine-lib/Format";
-import {
-  BUILDING_BASE_COSTS,
-  calculateBuildingCost,
-  EXPONENTIAL_COST_BASE,
-} from "@openfront/engine-lib/game/EconomyConfig";
+import { calculateBuildingCost } from "@openfront/engine-lib/game/EconomyConfig";
 import { EventBus } from "@openfront/shared/EventBus";
 import { css, html, LitElement } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
 import { Controller } from "../../Controller";
 import { ToggleGeologicalScoutingEvent } from "../../InputHandler";
-import { BuildUnitIntentEvent } from "../../Transport";
 import { GeologicalDataService } from "../../render/gl/utils/GeologicalDataService";
+import { BuildUnitIntentEvent } from "../../Transport";
 import { GameView } from "../../view";
 import {
   bunkerIcon,
@@ -30,7 +20,6 @@ import {
   radarIcon,
   refineryIcon,
   residentialIcon,
-  soldierIcon,
   steelMillIcon,
   uraniumMineIcon,
 } from "../HotbarIcons";
@@ -99,7 +88,8 @@ export const MINE_BUILDINGS: MineBuildingInfo[] = [
     title: "Treibstoff-Raffinerie (Refinery)",
     category: "refinement",
     icon: refineryIcon,
-    description: "Destilliert Rohöl zu Treibstoff für Panzer, Schiffe & Flotte.",
+    description:
+      "Destilliert Rohöl zu Treibstoff für Panzer, Schiffe & Flotte.",
     yieldInfo: "Rezept: 2 Rohöl ➔ 1 Treibstoff (Fuel)",
     baseCost: 500,
   },
@@ -137,7 +127,8 @@ export const MINE_BUILDINGS: MineBuildingInfo[] = [
     title: "Radarstation (Early Warning)",
     category: "defense",
     icon: radarIcon,
-    description: "Frühwarnung (R=30), Sonar gegen U-Boote, +50% SAM-Reichweite.",
+    description:
+      "Frühwarnung (R=30), Sonar gegen U-Boote, +50% SAM-Reichweite.",
     yieldInfo: "Sensor-Netzwerk & SAM-Kopplung (12➔18)",
     baseCost: 800,
     refinedCost: { steel: 40, enrichedUranium: 5 },
@@ -478,23 +469,38 @@ export class MiningEconomyPanel extends LitElement implements Controller {
 
     const playerGold = this.getPlayerGold();
     const filteredBuildings = MINE_BUILDINGS.filter(
-      (b) => this._activeTab === "all" || b.category === this._activeTab
+      (b) => this._activeTab === "all" || b.category === this._activeTab,
     );
 
     return html`
-      <div class="modal-backdrop" @click=${(e: MouseEvent) => {
-        if (e.target === e.currentTarget) this.close();
-      }}>
-        <div class="panel-container" @click=${(e: MouseEvent) => e.stopPropagation()}>
+      <div
+        class="modal-backdrop"
+        @click=${(e: MouseEvent) => {
+          if (e.target === e.currentTarget) this.close();
+        }}
+      >
+        <div
+          class="panel-container"
+          @click=${(e: MouseEvent) => e.stopPropagation()}
+        >
           <!-- Header -->
           <div class="header-strip">
             <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <img src=${factoryIcon} width="28" height="28" style="object-fit: contain;" />
+              <img
+                src=${factoryIcon}
+                width="28"
+                height="28"
+                style="object-fit: contain;"
+              />
               <div>
-                <h2 style="font-size: 1.15rem; font-weight: 800; margin: 0; color: #fff; letter-spacing: -0.01em;">
+                <h2
+                  style="font-size: 1.15rem; font-weight: 800; margin: 0; color: #fff; letter-spacing: -0.01em;"
+                >
                   INDUSTRIE & BERGBAU-VERWALTUNG
                 </h2>
-                <div style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.15rem;">
+                <div
+                  style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.15rem;"
+                >
                   Rohstoff-Extraktion, Veredelungswerke & Geologische Heatmap
                 </div>
               </div>
@@ -512,25 +518,37 @@ export class MiningEconomyPanel extends LitElement implements Controller {
           <div class="tabs-bar">
             <button
               class="tab-btn ${this._activeTab === "all" ? "active" : ""}"
-              @click=${() => { this._activeTab = "all"; }}
+              @click=${() => {
+                this._activeTab = "all";
+              }}
             >
               Alle Bauten
             </button>
             <button
-              class="tab-btn ${this._activeTab === "extraction" ? "active" : ""}"
-              @click=${() => { this._activeTab = "extraction"; }}
+              class="tab-btn ${this._activeTab === "extraction"
+                ? "active"
+                : ""}"
+              @click=${() => {
+                this._activeTab = "extraction";
+              }}
             >
               Minen (Tier 1)
             </button>
             <button
-              class="tab-btn ${this._activeTab === "refinement" ? "active" : ""}"
-              @click=${() => { this._activeTab = "refinement"; }}
+              class="tab-btn ${this._activeTab === "refinement"
+                ? "active"
+                : ""}"
+              @click=${() => {
+                this._activeTab = "refinement";
+              }}
             >
               Veredelung (Tier 2)
             </button>
             <button
               class="tab-btn ${this._activeTab === "defense" ? "active" : ""}"
-              @click=${() => { this._activeTab = "defense"; }}
+              @click=${() => {
+                this._activeTab = "defense";
+              }}
             >
               Verteidigung & Radar
             </button>
@@ -545,7 +563,9 @@ export class MiningEconomyPanel extends LitElement implements Controller {
 
               return html`
                 <div class="building-card">
-                  <div class="count-chip" title="Aktive Anzahl">${count}x Aktiv</div>
+                  <div class="count-chip" title="Aktive Anzahl">
+                    ${count}x Aktiv
+                  </div>
                   <div>
                     <div class="card-top">
                       <div class="card-icon-box">
@@ -561,11 +581,31 @@ export class MiningEconomyPanel extends LitElement implements Controller {
 
                   <div class="cost-row">
                     <div class="cost-badge" title="Baukosten (Gold)">
-                      <img src=${goldCoinIcon} width="14" height="14" alt="Gold" />
+                      <img
+                        src=${goldCoinIcon}
+                        width="14"
+                        height="14"
+                        alt="Gold"
+                      />
                       <span>${renderNumber(costObj.gold)}</span>
-                      ${costObj.steel > 0 ? html`<span style="color: #60a5fa; font-size: 0.7rem; margin-left: 0.25rem;">+${costObj.steel} Stahl</span>` : ""}
-                      ${costObj.fuel > 0 ? html`<span style="color: #a855f7; font-size: 0.7rem; margin-left: 0.25rem;">+${costObj.fuel} Fuel</span>` : ""}
-                      ${costObj.enrichedUranium > 0 ? html`<span style="color: #34d399; font-size: 0.7rem; margin-left: 0.25rem;">+${costObj.enrichedUranium} Spalt</span>` : ""}
+                      ${costObj.steel > 0
+                        ? html`<span
+                            style="color: #60a5fa; font-size: 0.7rem; margin-left: 0.25rem;"
+                            >+${costObj.steel} Stahl</span
+                          >`
+                        : ""}
+                      ${costObj.fuel > 0
+                        ? html`<span
+                            style="color: #a855f7; font-size: 0.7rem; margin-left: 0.25rem;"
+                            >+${costObj.fuel} Fuel</span
+                          >`
+                        : ""}
+                      ${costObj.enrichedUranium > 0
+                        ? html`<span
+                            style="color: #34d399; font-size: 0.7rem; margin-left: 0.25rem;"
+                            >+${costObj.enrichedUranium} Spalt</span
+                          >`
+                        : ""}
                     </div>
                     <button
                       class="btn-build"
@@ -584,39 +624,59 @@ export class MiningEconomyPanel extends LitElement implements Controller {
           <!-- Geological Scouting Footer -->
           <div class="scouting-footer">
             <div class="scouting-btns">
-              <span style="font-size: 0.72rem; font-weight: 700; color: #9ca3af; text-transform: uppercase;">
+              <span
+                style="font-size: 0.72rem; font-weight: 700; color: #9ca3af; text-transform: uppercase;"
+              >
                 Geologisches Scouting:
               </span>
               <button
-                class="scout-btn ${this._activeScouting === "none" ? "active" : ""}"
+                class="scout-btn ${this._activeScouting === "none"
+                  ? "active"
+                  : ""}"
                 @click=${() => this.toggleScouting("none")}
               >
                 Normal
               </button>
               <button
-                class="scout-btn ${this._activeScouting === "ironOre" ? "active" : ""}"
-                style="${this._activeScouting === "ironOre" ? "background: #d97706; border-color: #f59e0b;" : ""}"
+                class="scout-btn ${this._activeScouting === "ironOre"
+                  ? "active"
+                  : ""}"
+                style="${this._activeScouting === "ironOre"
+                  ? "background: #d97706; border-color: #f59e0b;"
+                  : ""}"
                 @click=${() => this.toggleScouting("ironOre")}
               >
                 Fe (Eisen)
               </button>
               <button
-                class="scout-btn ${this._activeScouting === "coal" ? "active" : ""}"
-                style="${this._activeScouting === "coal" ? "background: #4b5563; border-color: #6b7280;" : ""}"
+                class="scout-btn ${this._activeScouting === "coal"
+                  ? "active"
+                  : ""}"
+                style="${this._activeScouting === "coal"
+                  ? "background: #4b5563; border-color: #6b7280;"
+                  : ""}"
                 @click=${() => this.toggleScouting("coal")}
               >
                 C (Kohle)
               </button>
               <button
-                class="scout-btn ${this._activeScouting === "crudeOil" ? "active" : ""}"
-                style="${this._activeScouting === "crudeOil" ? "background: #7e22ce; border-color: #a855f7;" : ""}"
+                class="scout-btn ${this._activeScouting === "crudeOil"
+                  ? "active"
+                  : ""}"
+                style="${this._activeScouting === "crudeOil"
+                  ? "background: #7e22ce; border-color: #a855f7;"
+                  : ""}"
                 @click=${() => this.toggleScouting("crudeOil")}
               >
                 Oil (Rohöl)
               </button>
               <button
-                class="scout-btn ${this._activeScouting === "uraniumOre" ? "active" : ""}"
-                style="${this._activeScouting === "uraniumOre" ? "background: #059669; border-color: #10b981;" : ""}"
+                class="scout-btn ${this._activeScouting === "uraniumOre"
+                  ? "active"
+                  : ""}"
+                style="${this._activeScouting === "uraniumOre"
+                  ? "background: #059669; border-color: #10b981;"
+                  : ""}"
                 @click=${() => this.toggleScouting("uraniumOre")}
               >
                 U (Uran)
@@ -625,7 +685,10 @@ export class MiningEconomyPanel extends LitElement implements Controller {
 
             <div class="info-footer-text">
               <span>ℹ️</span>
-              <span>Dynamische Erschöpfung: Cluster fördern unendlich mit 15%-Basis-Tiefenförderung fort.</span>
+              <span
+                >Dynamische Erschöpfung: Cluster fördern unendlich mit
+                15%-Basis-Tiefenförderung fort.</span
+              >
             </div>
           </div>
         </div>

@@ -316,10 +316,10 @@ export class PlayerPanel extends LitElement implements Controller {
     const eco = (viewer as any).economy?.() ?? (viewer.state as any)?.economy;
     if (!eco) return 0;
     if (eco.resources && mode in eco.resources) {
-      return Math.floor(eco.resources[mode] || 0);
+      return Math.floor(eco.resources[mode] ?? 0);
     }
     if (eco.refined && mode in eco.refined) {
-      return Math.floor(eco.refined[mode] || 0);
+      return Math.floor(eco.refined[mode] ?? 0);
     }
     return 0;
   }
@@ -1074,8 +1074,6 @@ export class PlayerPanel extends LitElement implements Controller {
     const other = owner as PlayerView;
     // Spectators (replay viewers, dead, or pre-spawn) have no live player; use other as a read-only stand-in
     const viewer = my ?? other;
-    const myGoldNum = viewer.gold();
-    const myTroopsNum = Number(viewer.troops());
 
     return html`
       <style>
@@ -1157,7 +1155,10 @@ export class PlayerPanel extends LitElement implements Controller {
                           <send-resource-modal
                             .open=${this.sendMode !== "none"}
                             .mode=${this.sendMode}
-                            .total=${this.getResourceTotal(this.sendMode, viewer)}
+                            .total=${this.getResourceTotal(
+                              this.sendMode,
+                              viewer,
+                            )}
                             .uiState=${this.uiState}
                             .myPlayer=${viewer}
                             .target=${this.sendTarget}

@@ -19,7 +19,9 @@ try {
   if (externalUrl.startsWith("http")) {
     derivedDomain = new URL(externalUrl).host;
   }
-} catch {}
+} catch {
+  /* ignore url parsing error */
+}
 
 const env: NodeJS.ProcessEnv = {
   ...process.env,
@@ -28,7 +30,9 @@ const env: NodeJS.ProcessEnv = {
   GIT_COMMIT: process.env.GIT_COMMIT ?? "DEV",
   NUM_WORKERS: String(NUM_WORKERS),
   AUTH_PORT: String(AUTH_PORT),
-  AUTH_ISSUER: externalUrl ? `${externalUrl}/idp` : `http://localhost:${AUTH_PORT}`,
+  AUTH_ISSUER: externalUrl
+    ? `${externalUrl}/idp`
+    : `http://localhost:${AUTH_PORT}`,
   PUBLIC_URL: externalUrl || "http://localhost:9000",
   TURNSTILE_SITE_KEY:
     process.env.TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA",
@@ -158,8 +162,7 @@ const server = http.createServer((req, res) => {
   }
 
   const target = resolveTarget(req);
-  const proto =
-    (req.headers["x-forwarded-proto"] as string) ?? "http";
+  const proto = (req.headers["x-forwarded-proto"] as string) ?? "http";
   const remoteAddr = req.socket.remoteAddress ?? "";
   const forwardedFor = req.headers["x-forwarded-for"]
     ? `${req.headers["x-forwarded-for"]}, ${remoteAddr}`
@@ -202,7 +205,12 @@ const server = http.createServer((req, res) => {
     proxyReq.destroy(new Error("upstream_timeout"));
     if (!res.headersSent) {
       res.writeHead(504, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ error: "gateway_timeout", message: "Server busy or starting up, please try again." }));
+      res.end(
+        JSON.stringify({
+          error: "gateway_timeout",
+          message: "Server busy or starting up, please try again.",
+        }),
+      );
     }
   });
 
@@ -250,15 +258,23 @@ server.listen(PORT, "0.0.0.0", () => {
     ""
   ).replace(/\/$/, "");
 
-  console.log("==================================================================");
+  console.log(
+    "==================================================================",
+  );
   console.log(`[gateway] UNIFIED 24/7 SERVER ONLINE!`);
   if (externalUrl.startsWith("http")) {
     console.log(`[gateway] PUBLIC GAME URL: ${externalUrl}`);
   } else {
-    console.log(`[gateway] Listening on port ${PORT} (traffic proxied by Render)`);
+    console.log(
+      `[gateway] Listening on port ${PORT} (traffic proxied by Render)`,
+    );
   }
-  console.log(`[gateway] Internal processes: Master :${MASTER_PORT}, Workers :3001..${3000 + NUM_WORKERS}, Auth :${AUTH_PORT}`);
-  console.log("==================================================================");
+  console.log(
+    `[gateway] Internal processes: Master :${MASTER_PORT}, Workers :3001..${3000 + NUM_WORKERS}, Auth :${AUTH_PORT}`,
+  );
+  console.log(
+    "==================================================================",
+  );
 
   // Optional 24/7 Keep-Alive self-ping when running on Render (prevents 15-min idle sleep)
   if (externalUrl.startsWith("http")) {
@@ -267,7 +283,9 @@ server.listen(PORT, "0.0.0.0", () => {
       `[gateway] 24/7 Keep-Alive active: pinging ${externalUrl}/healthz every 10m`,
     );
     setInterval(() => {
-      fetch(`${externalUrl}/healthz`, { signal: AbortSignal.timeout(5000) }).catch(() => {
+      fetch(`${externalUrl}/healthz`, {
+        signal: AbortSignal.timeout(5000),
+      }).catch(() => {
         // Ignore transient network errors
       });
     }, intervalMs).unref();

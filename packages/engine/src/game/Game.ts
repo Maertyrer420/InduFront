@@ -131,7 +131,10 @@ export interface UnitParamsMap {
   [UnitType.Battleship]: { patrolTile?: TileRef };
   [UnitType.Fighter]: { patrolTile?: TileRef };
   [UnitType.Bomber]: { targetTile?: TileRef };
-  [UnitType.CruiseMissile]: { targetTile?: TileRef; trajectory?: TrajectoryTile[] };
+  [UnitType.CruiseMissile]: {
+    targetTile?: TileRef;
+    trajectory?: TrajectoryTile[];
+  };
   [UnitType.ICBM]: { targetTile?: TileRef; trajectory?: TrajectoryTile[] };
 }
 

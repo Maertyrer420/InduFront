@@ -540,7 +540,9 @@ export class ClanManageView extends LitElement {
     const isMe = member.publicId === this.myPublicId;
     const myRoleNorm = (this.myRole ?? "").toLowerCase();
     const isOwnerOrAdmin =
-      myRoleNorm === "owner" || myRoleNorm === "leader" || myRoleNorm === "admin";
+      myRoleNorm === "owner" ||
+      myRoleNorm === "leader" ||
+      myRoleNorm === "admin";
     const isSupporter = myRoleNorm === "supporter" || myRoleNorm === "officer";
 
     const canModerate =
@@ -551,10 +553,7 @@ export class ClanManageView extends LitElement {
           (member.role === "Mitglied" || member.role === "member")));
 
     const canPromote =
-      !isMe &&
-      isOwnerOrAdmin &&
-      member.role !== "Admin" &&
-      !isOwner;
+      !isMe && isOwnerOrAdmin && member.role !== "Admin" && !isOwner;
 
     const canDemote =
       !isMe &&

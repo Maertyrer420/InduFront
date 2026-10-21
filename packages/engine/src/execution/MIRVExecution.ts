@@ -4,6 +4,7 @@ import {
   TerraNullius,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
+import { getUnitResourceCost } from "@openfront/engine-lib/game/EconomyConfig";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   zInt,
@@ -35,7 +36,6 @@ import type {
   SnapshotWriter,
 } from "../snapshot/SnapshotContext";
 import { DistanceBasedBezierCurve } from "../utilities/Line";
-import { getUnitResourceCost } from "@openfront/engine-lib/game/EconomyConfig";
 import { NukeExecution } from "./NukeExecution";
 
 export class MirvExecution implements Execution {
@@ -109,7 +109,9 @@ export class MirvExecution implements Execution {
       // Master Prompt: Deduct enriched Uranium, Steel, and Fuel
       const resCost = getUnitResourceCost(UnitType.MIRV);
       if (resCost.enrichedUranium > 0) {
-        const econ = this.mg.economyExecution()?.getEconomy(this.player.smallID());
+        const econ = this.mg
+          .economyExecution()
+          ?.getEconomy(this.player.smallID());
         if (econ) {
           econ.refined.enrichedUranium = Math.max(
             0,

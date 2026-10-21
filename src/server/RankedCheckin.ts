@@ -259,7 +259,8 @@ export async function rankedCheckinPass(
     }
     const isConnRefused =
       error instanceof TypeError &&
-      (error.message.includes("fetch failed") || (error as any).cause?.code === "ECONNREFUSED");
+      (error.message.includes("fetch failed") ||
+        (error as any).cause?.code === "ECONNREFUSED");
     if (!isConnRefused) {
       log.error(`Error polling ${mode} lobby:`, error);
     }

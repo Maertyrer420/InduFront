@@ -124,13 +124,17 @@ export class ConfirmDialog extends LitElement {
               ></textarea>`
             : ""}
           ${this.checkboxLabel
-            ? html`<label class="flex items-center gap-2.5 mb-5 text-xs text-slate-300 hover:text-white cursor-pointer select-none">
+            ? html`<label
+                class="flex items-center gap-2.5 mb-5 text-xs text-slate-300 hover:text-white cursor-pointer select-none"
+              >
                 <input
                   type="checkbox"
                   class="rounded bg-white/10 border border-white/30 text-red-500 focus:ring-0 cursor-pointer w-4 h-4"
                   .checked=${this.checkboxChecked}
                   @change=${(e: Event) =>
-                    (this.checkboxChecked = (e.target as HTMLInputElement).checked)}
+                    (this.checkboxChecked = (
+                      e.target as HTMLInputElement
+                    ).checked)}
                 />
                 <span>${this.checkboxLabel}</span>
               </label>`

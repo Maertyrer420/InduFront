@@ -1,4 +1,7 @@
-import type { EmojiMessage, PlayerEconomyState } from "@openfront/engine-api/game/GameTypes";
+import type {
+  EmojiMessage,
+  PlayerEconomyState,
+} from "@openfront/engine-api/game/GameTypes";
 import {
   ATTACK_DELTA_INCOMING,
   ATTACK_DELTA_OUTGOING,

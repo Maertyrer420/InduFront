@@ -15,10 +15,10 @@ import { modalHeader } from "./components/ui/ModalHeader";
 import { translateText } from "./Utils";
 
 const TAB_KEYS = [
-  "qp",
   "players",
   "players2v2",
   "playersFfa",
+  "qp",
   "clans",
   "tribes",
 ] as const;
@@ -46,15 +46,11 @@ export class LeaderboardModal extends BaseModal {
   private tribeTable?: LeaderboardTribeTable;
 
   private loadToken = 0;
-  private lastRankedType: PlayerLadder = "qp";
+  private lastRankedType: PlayerLadder = RankedType.OneVOne;
 
   protected modalConfig() {
     return {
       tabs: [
-        {
-          key: "qp",
-          label: "🏆 QP Punkte",
-        },
         {
           key: "players",
           label: "1v1 Ranked",
@@ -66,6 +62,10 @@ export class LeaderboardModal extends BaseModal {
         {
           key: "playersFfa",
           label: "FFA Ranked",
+        },
+        {
+          key: "qp",
+          label: "🏆 QP Punkte",
         },
         { key: "clans", label: translateText("leaderboard_modal.clans_tab") },
         { key: "tribes", label: "Best Bot Nation (Tribes)" },

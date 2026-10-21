@@ -390,9 +390,8 @@ describe("PublicAssetManifest", () => {
     const index = buildRootFilesIndex(getPublicDir(path.resolve("resources")));
     expect(index["privacy-policy.html"]).toBe("text/html; charset=utf-8");
     expect(index["terms-of-service.html"]).toBe("text/html; charset=utf-8");
-    expect(
-      index[".well-known/apple-developer-merchantid-domain-association"],
-    ).toBe("text/plain; charset=utf-8");
-    expect(index["press/"]).toBe("text/html; charset=utf-8");
+    expect(index["privacy.html"]).toBe("text/html; charset=utf-8");
+    expect(index["terms.html"]).toBe("text/html; charset=utf-8");
+    expect(index["robots.txt"]).toBe("text/plain; charset=utf-8");
   });
 });

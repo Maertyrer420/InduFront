@@ -2,14 +2,12 @@ import {
   ResourceCluster,
   ResourceDeposit,
   ResourceType,
-} from '@openfront/engine-api/game/GameTypes';
-import { pow as detPow } from '../DetMath';
+} from "@openfront/engine-api/game/GameTypes";
 import {
   DEPLETION_EPSILON,
   MINE_BASE_YIELDS,
-  NOISE_PARAMS,
   RESOURCE_DENSITIES,
-} from './EconomyConfig';
+} from "./EconomyConfig";
 
 class Mulberry32PRNG {
   private state: number;
@@ -34,9 +32,18 @@ const F2 = 0.5 * (Math.sqrt(3.0) - 1.0);
 const G2 = (3.0 - Math.sqrt(3.0)) / 6.0;
 
 const GRAD2 = [
-  [1, 1], [-1, 1], [1, -1], [-1, -1],
-  [1, 0], [-1, 0], [1, 0], [-1, 0],
-  [0, 1], [0, -1], [0, 1], [0, -1],
+  [1, 1],
+  [-1, 1],
+  [1, -1],
+  [-1, -1],
+  [1, 0],
+  [-1, 0],
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+  [0, 1],
+  [0, -1],
 ];
 
 export class SimplexNoise2D {
@@ -75,15 +82,8 @@ export class SimplexNoise2D {
     const x0 = xin - X0;
     const y0 = yin - Y0;
 
-    let i1 = 0;
-    let j1 = 0;
-    if (x0 > y0) {
-      i1 = 1;
-      j1 = 0;
-    } else {
-      i1 = 0;
-      j1 = 1;
-    }
+    const i1 = x0 > y0 ? 1 : 0;
+    const j1 = x0 > y0 ? 0 : 1;
 
     const x1 = x0 - i1 + G2;
     const y1 = y0 - j1 + G2;
@@ -134,17 +134,28 @@ export class ProceduralHeatmapGenerator {
     height: number,
     _spawnPositions: Array<{ x: number; y: number; id: string }>,
     seed: number = 2026,
-    isLand?: (tile: number) => boolean
+    isLand?: (tile: number) => boolean,
   ): GeneratedResourceMap {
     const clusters = new Map<string, ResourceCluster>();
-    const tileDeposits = new Map<number, Partial<Record<ResourceType, ResourceDeposit>>>();
+    const tileDeposits = new Map<
+      number,
+      Partial<Record<ResourceType, ResourceDeposit>>
+    >();
 
-    const resKeys: ResourceType[] = ['ironOre', 'coal', 'crudeOil', 'uraniumOre'];
+    const resKeys: ResourceType[] = [
+      "ironOre",
+      "coal",
+      "crudeOil",
+      "uraniumOre",
+    ];
     const rng = new Mulberry32PRNG(seed);
     let clusterCounter = 0;
 
     // 1. Initialize multi-frequency Simplex noise generators per resource
-    const noises: Record<ResourceType, { macro: SimplexNoise2D; meso: SimplexNoise2D }> = {
+    const noises: Record<
+      ResourceType,
+      { macro: SimplexNoise2D; meso: SimplexNoise2D }
+    > = {
       ironOre: {
         macro: new SimplexNoise2D(seed + 101),
         meso: new SimplexNoise2D(seed + 102),
@@ -177,25 +188,33 @@ export class ProceduralHeatmapGenerator {
         const feMacro = noises.ironOre.macro.normalized(x / 140, y / 140);
         const feMeso = noises.ironOre.meso.normalized(x / 50, y / 50);
         const feVal = 0.22 + (feMacro * 0.7 + feMeso * 0.3) * 0.36;
-        dep.ironOre = { resource: 'ironOre', intensity: feVal, clusterId: '' };
+        dep.ironOre = { resource: "ironOre", intensity: feVal, clusterId: "" };
 
         // Coal: extensive sedimentary layers (0.20 - 0.54 base)
         const cMacro = noises.coal.macro.normalized(x / 125, y / 125);
         const cMeso = noises.coal.meso.normalized(x / 45, y / 45);
-        const cVal = 0.20 + (cMacro * 0.7 + cMeso * 0.3) * 0.34;
-        dep.coal = { resource: 'coal', intensity: cVal, clusterId: '' };
+        const cVal = 0.2 + (cMacro * 0.7 + cMeso * 0.3) * 0.34;
+        dep.coal = { resource: "coal", intensity: cVal, clusterId: "" };
 
         // Crude Oil: natural organic sedimentary basins (0.16 - 0.56 base)
         const oilMacro = noises.crudeOil.macro.normalized(x / 160, y / 160);
         const oilMeso = noises.crudeOil.meso.normalized(x / 60, y / 60);
-        const oilVal = 0.16 + (oilMacro * 0.75 + oilMeso * 0.25) * 0.40;
-        dep.crudeOil = { resource: 'crudeOil', intensity: oilVal, clusterId: '' };
+        const oilVal = 0.16 + (oilMacro * 0.75 + oilMeso * 0.25) * 0.4;
+        dep.crudeOil = {
+          resource: "crudeOil",
+          intensity: oilVal,
+          clusterId: "",
+        };
 
         // Uranium Ore: subtle deep geological veins (0.10 - 0.42 base)
         const uMacro = noises.uraniumOre.macro.normalized(x / 190, y / 190);
         const uMeso = noises.uraniumOre.meso.normalized(x / 70, y / 70);
-        const uVal = 0.10 + (uMacro * 0.8 + uMeso * 0.2) * 0.32;
-        dep.uraniumOre = { resource: 'uraniumOre', intensity: uVal, clusterId: '' };
+        const uVal = 0.1 + (uMacro * 0.8 + uMeso * 0.2) * 0.32;
+        dep.uraniumOre = {
+          resource: "uraniumOre",
+          intensity: uVal,
+          clusterId: "",
+        };
 
         tileDeposits.set(idx, dep);
       }
@@ -204,7 +223,7 @@ export class ProceduralHeatmapGenerator {
     // 3. Superimpose broad, organic geological provinces / rich mineral lodes with zero hard edges.
     // Uses smooth quintic/hermite falloff: (1 - (d/R)^2)^2 which reaches 0 at edge with 0 derivative.
     for (const res of resKeys) {
-      const clusterCount = res === 'uraniumOre' ? 20 : 32;
+      const clusterCount = res === "uraniumOre" ? 20 : 32;
       const density = RESOURCE_DENSITIES[res];
 
       for (let c = 0; c < clusterCount; c++) {
@@ -272,15 +291,13 @@ export class ProceduralHeatmapGenerator {
     // 4. Ensure every tile deposit has a valid regional cluster reference for reserve depletion
     const firstClusterByRes: Partial<Record<ResourceType, string>> = {};
     for (const [id, cl] of clusters.entries()) {
-      if (!firstClusterByRes[cl.resource]) {
-        firstClusterByRes[cl.resource] = id;
-      }
+      firstClusterByRes[cl.resource] ??= id;
     }
     for (const dep of tileDeposits.values()) {
       for (const res of resKeys) {
         const item = dep[res];
         if (item && !item.clusterId) {
-          item.clusterId = firstClusterByRes[res] ?? '';
+          item.clusterId = firstClusterByRes[res] ?? "";
         }
       }
     }
@@ -294,7 +311,7 @@ export class ProceduralHeatmapGenerator {
   public static calculateMineOutput(
     resource: ResourceType,
     intensity: number,
-    cluster?: ResourceCluster
+    cluster?: ResourceCluster,
   ): number {
     const baseYield = MINE_BASE_YIELDS[resource];
     let ratio = 1.0;
@@ -311,7 +328,7 @@ export class ProceduralHeatmapGenerator {
    * Supports specific resource type or 'all' to show the highest concentration.
    */
   public static generateDensityTexture(
-    resource: ResourceType | 'all',
+    resource: ResourceType | "all",
     width: number,
     height: number,
     tileDeposits: Map<number, Partial<Record<ResourceType, ResourceDeposit>>>,
@@ -326,18 +343,18 @@ export class ProceduralHeatmapGenerator {
       }
       const dep = tileDeposits.get(idx);
       if (dep) {
-        if (resource === 'all') {
+        if (resource === "all") {
           out[idx] = Math.max(
             dep.ironOre?.intensity ?? 0.22,
-            dep.coal?.intensity ?? 0.20,
+            dep.coal?.intensity ?? 0.2,
             dep.crudeOil?.intensity ?? 0.18,
             dep.uraniumOre?.intensity ?? 0.12,
           );
         } else {
-          out[idx] = dep[resource]?.intensity ?? 0.20;
+          out[idx] = dep[resource]?.intensity ?? 0.2;
         }
       } else {
-        out[idx] = 0.20;
+        out[idx] = 0.2;
       }
     }
     return out;

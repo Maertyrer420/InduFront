@@ -115,7 +115,9 @@ class SAMTargetingSystem {
     const curIdx = unit.trajectoryIndex();
     const waitTicks = unit.nukeState().waitTicks ?? 0;
     const expTicks = trajectory.length - 1 - curIdx + waitTicks;
-    const range = this.mg.config().dynamicSamRange(this.sam, ticks + expTicks, this.hasRadar());
+    const range = this.mg
+      .config()
+      .dynamicSamRange(this.sam, ticks + expTicks, this.hasRadar());
     if (this.mg.euclideanDistSquared(samTile, finalTile.tile) > range * range) {
       return undefined;
     }
