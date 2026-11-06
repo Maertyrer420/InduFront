@@ -34,7 +34,6 @@ export class FluentSlider extends LitElement {
   private handleSliderInput(e: Event) {
     const target = e.target as HTMLInputElement;
     this.value = Number(target.value);
-    this.dispatchValueChange();
   }
 
   private handleSliderChange(e: Event) {
