@@ -175,20 +175,15 @@
     <div id="hex-grid" class="fixed inset-0 -z-50 pointer-events-none">
       <div
         id="background-layer"
-        class="absolute inset-x-0 top-0 -bottom-[4cm] bg-cover opacity-55 [filter:brightness(1.0)]"
+        class="absolute inset-x-0 top-0 -bottom-[4cm] bg-cover opacity-35 [filter:brightness(0.85)]"
         style="
           background-image: var(--background-image-url);
           background-position: center top;
         "
       ></div>
-      <div
-        class="absolute inset-0 bg-center bg-no-repeat bg-contain hidden lg:block"
-        style="background-image: var(--desktop-logo-image-url); opacity: 0.5"
-      ></div>
-      <div
-        class="absolute inset-0 bg-center bg-no-repeat bg-contain lg:hidden"
-        style="background-image: var(--mobile-logo-image-url); opacity: 0.5"
-      ></div>
+      <indufront-battlefield-bg
+        class="in-[.in-game]:hidden absolute inset-0"
+      ></indufront-battlefield-bg>
     </div>
 
     <!-- LEFT SIDEBAR MENU -->

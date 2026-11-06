@@ -767,6 +767,7 @@ export class GameModeSelector extends LitElement {
           </section>
         </div>
 
+        ${this.renderReconnectBanner()} ${this.renderPublicHostedLobbiesPanel()}
         ${this.showTrustRequired
           ? trustRequiredDialog(
               this.viewerSignedIn,
@@ -927,6 +928,194 @@ export class GameModeSelector extends LitElement {
 
   private hostedLobbyCount(): number {
     return this.lobbies?.games?.hosted?.length ?? 0;
+  }
+
+  private getActiveReconnectGameId(): string | null {
+    try {
+      const raw = sessionStorage.getItem("indufront_active_game");
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { gameID?: string; ts?: number };
+      if (!parsed.gameID || !parsed.ts) return null;
+      // Valid for up to 45 minutes
+      if (Date.now() - parsed.ts > 45 * 60_000) {
+        sessionStorage.removeItem("indufront_active_game");
+        return null;
+      }
+      return parsed.gameID;
+    } catch {
+      return null;
+    }
+  }
+
+  private dismissReconnectBanner = () => {
+    try {
+      sessionStorage.removeItem("indufront_active_game");
+    } catch {
+      /* ignore */
+    }
+    this.requestUpdate();
+  };
+
+  private rejoinActiveGame = (gameID: string) => {
+    if (this.blockedFromLobbyJoin()) return;
+    if (!this.validateUsername()) return;
+    this.dispatchEvent(
+      new CustomEvent("join-lobby", {
+        detail: {
+          gameID,
+          source: "private",
+        } as JoinLobbyEvent,
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  };
+
+  private renderReconnectBanner() {
+    const activeId = this.getActiveReconnectGameId();
+    if (!activeId) return nothing;
+    return html`
+      <div
+        class="sm:col-span-2 flex items-center justify-between gap-3 p-3 rounded-xl bg-amber-500/15 border border-amber-400/40 backdrop-blur-md shadow-lg"
+      >
+        <div class="flex items-center gap-2.5 min-w-0">
+          <span class="text-xl shrink-0">🔄</span>
+          <div class="min-w-0">
+            <div
+              class="text-xs font-bold uppercase tracking-wider text-amber-300"
+            >
+              Laufendes Spiel erkannt (#${activeId})
+            </div>
+            <div class="text-[11px] text-white/70 truncate">
+              Verbindung unterbrochen oder Seite neu geladen – direkt wieder
+              beitreten!
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <div
+            role="button"
+            tabindex="0"
+            @click=${() => this.rejoinActiveGame(activeId)}
+            class="px-3.5 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-black font-bold text-xs uppercase tracking-wider cursor-pointer transition-all"
+          >
+            Wieder beitreten
+          </div>
+          <div
+            role="button"
+            tabindex="0"
+            @click=${this.dismissReconnectBanner}
+            class="px-2 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/60 text-xs font-bold cursor-pointer transition-all"
+            title="Verwerfen"
+          >
+            ✕
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderPublicHostedLobbiesPanel() {
+    const hosted = this.lobbies?.games?.hosted ?? [];
+    return html`
+      <div
+        class="sm:col-span-2 flex flex-col gap-2.5 p-3.5 rounded-xl bg-surface/80 border border-white/10 backdrop-blur-md shadow-lg"
+      >
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span
+              class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"
+            ></span>
+            <span
+              class="text-xs font-bold uppercase tracking-widest text-white/90"
+            >
+              🌐 Offene Public-Lobbys (${hosted.length})
+            </span>
+          </div>
+          <span class="text-[11px] text-white/50">
+            Auto-Start mit Bots nach Countdown
+          </span>
+        </div>
+
+        ${hosted.length === 0
+          ? html`
+              <div
+                class="flex items-center justify-between gap-3 py-3 px-3.5 rounded-lg bg-white/[0.03] border border-white/5 text-xs text-white/60"
+              >
+                <span>
+                  Aktuell wartet keine offene Public-Lobby. Erstelle ein Spiel
+                  und klicke auf „Öffentlich listen“!
+                </span>
+                <div
+                  role="button"
+                  tabindex="0"
+                  @click=${this.openHostLobby}
+                  class="shrink-0 px-3 py-1.5 rounded-lg bg-malibu-blue/25 hover:bg-malibu-blue/40 border border-malibu-blue/40 text-malibu-blue font-bold text-xs uppercase tracking-wider cursor-pointer transition-all"
+                >
+                  + Lobby erstellen
+                </div>
+              </div>
+            `
+          : html`
+              <div
+                class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1"
+              >
+                ${hosted.map((lobby) => {
+                  const mapName = String(lobby.gameConfig?.gameMap ?? "World");
+                  const modeLabel = lobby.gameConfig
+                    ? getGameModeLabel(lobby.gameConfig)
+                    : "FFA";
+                  const maxP = lobby.gameConfig?.maxPlayers ?? 16;
+                  const curP = lobby.numClients ?? 1;
+                  const deadline = lobby.autoStartAt ?? lobby.startsAt;
+                  const secsLeft = deadline
+                    ? getSecondsUntilServerTimestamp(
+                        deadline,
+                        this.serverTimeOffset,
+                      )
+                    : undefined;
+                  const timerText =
+                    secsLeft !== undefined && secsLeft > 0
+                      ? renderDuration(secsLeft)
+                      : "Startet...";
+                  return html`
+                    <div
+                      role="button"
+                      tabindex="0"
+                      @click=${() => this.validateAndJoin(lobby)}
+                      class="flex items-center justify-between gap-2 p-2.5 rounded-lg bg-white/5 hover:bg-malibu-blue/15 border border-white/10 hover:border-malibu-blue/50 transition-all cursor-pointer"
+                    >
+                      <div class="min-w-0">
+                        <div class="flex items-center gap-1.5">
+                          <span class="text-xs font-bold text-white truncate">
+                            ${mapName}
+                          </span>
+                          <span
+                            class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-malibu-blue/20 text-malibu-blue"
+                          >
+                            ${modeLabel}
+                          </span>
+                        </div>
+                        <div
+                          class="text-[11px] text-white/50 font-mono flex items-center gap-2 mt-0.5"
+                        >
+                          <span>👥 ${curP}/${maxP}</span>
+                          <span>⏱️ ${timerText}</span>
+                          <span>#${lobby.gameID}</span>
+                        </div>
+                      </div>
+                      <span
+                        class="shrink-0 px-2.5 py-1 rounded bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider"
+                      >
+                        Beitreten
+                      </span>
+                    </div>
+                  `;
+                })}
+              </div>
+            `}
+      </div>
+    `;
   }
 
   private renderSmallActionCard(

@@ -1434,17 +1434,45 @@ async function main() {
 
   app.get("/presence/summary", authed, (req, res) => {
     const u = (req as Request & { user: UserRecord }).user;
-    socialStore.recordPing(u.publicId);
-    const onlineFriends = socialStore.getOnlineFriends(u.friends ?? []);
+    const lobbyIdParam =
+      typeof req.query.lobbyId === "string" ? req.query.lobbyId : undefined;
+    socialStore.recordPing(u.publicId, lobbyIdParam);
+    const friendIds = u.friends ?? [];
+    const onlineFriends = socialStore.getOnlineFriends(friendIds);
+    const friendLobbies = socialStore.getFriendLobbies(friendIds);
+    const recentDirectMessages = socialStore.getRecentIncomingDirectMessages(
+      u.publicId,
+      10,
+    );
+    const incomingRequests = (u.incomingRequests ?? []).map((r) => {
+      const other = store.byPublicId(r.publicId);
+      return {
+        publicId: other?.publicId ?? r.publicId,
+        username:
+          other?.username ??
+          r.username ??
+          u.friendNames?.[r.publicId] ??
+          r.publicId,
+      };
+    });
     res.json({
       onlineCount: socialStore.getOnlineCount(),
       onlineFriends,
+      friendLobbies,
+      recentDirectMessages,
+      incomingRequests,
     });
   });
 
   app.post("/presence/ping", authed, (req, res) => {
     const u = (req as Request & { user: UserRecord }).user;
-    socialStore.recordPing(u.publicId);
+    const lobbyId =
+      req.body && typeof req.body.lobbyId === "string"
+        ? req.body.lobbyId
+        : req.body?.lobbyId === null
+          ? null
+          : undefined;
+    socialStore.recordPing(u.publicId, lobbyId);
     res.json({ ok: true, onlineCount: socialStore.getOnlineCount() });
   });
 

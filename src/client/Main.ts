@@ -57,6 +57,7 @@ import {
   type DesktopUpdateState,
 } from "./DesktopShell";
 import "./FeaturedStream";
+import "./components/BattlefieldBackground";
 import { loadGameClient, prefetchGameClient } from "./GameClientLoader";
 import "./GameModeSelector";
 import {
@@ -1918,6 +1919,16 @@ class Client {
               : `${ClientEnv.gamePath(lobby.gameID)}?live`,
           ),
         );
+        if (!isSingleplayer && !lobby.gameRecord && !lobby.spectator) {
+          try {
+            sessionStorage.setItem(
+              "indufront_active_game",
+              JSON.stringify({ gameID: lobby.gameID, ts: Date.now() }),
+            );
+          } catch {
+            /* ignore storage errors */
+          }
+        }
       }
 
       // Store current URL for popstate confirmation
@@ -1929,6 +1940,9 @@ class Client {
   // "spectating" outranks. Emitting is idempotent -- the shell diffs -- so
   // callers never have to know whether anything actually changed.
   private emitPresence() {
+    (
+      window as unknown as { __indufrontActiveLobbyId?: string }
+    ).__indufrontActiveLobbyId = this.presenceDetail.lobbyId;
     desktopPresence.set(
       withGroupToken(
         {
@@ -1951,6 +1965,9 @@ class Client {
     this.presenceSpectating = false;
     this.presenceInGame = false;
     this.presenceGroup.clear();
+    (
+      window as unknown as { __indufrontActiveLobbyId?: string }
+    ).__indufrontActiveLobbyId = undefined;
     desktopPresence.set({ state: "menu" });
   }
 
@@ -2063,6 +2080,11 @@ class Client {
     // clock Event.timeStamp comes from, so this is always newer than any join
     // already under way and older than any dispatched after it.
     this.mostRecentJoinEvent = performance.now();
+    try {
+      sessionStorage.removeItem("indufront_active_game");
+    } catch {
+      /* ignore */
+    }
 
     if (this.lobbyHandle === null) {
       return;

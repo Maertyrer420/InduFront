@@ -1582,12 +1582,14 @@ export class InputHandler {
             break;
         }
       } else {
-        // Buildings tab extra structures (Bunker & Radar)
+        // Buildings tab extra structures (Bunker, Radar & Residential)
         switch (digit) {
           case 7:
             return UnitType.Bunker;
           case 8:
             return UnitType.Radar;
+          case 9:
+            return UnitType.Residential;
           default:
             break;
         }

@@ -25,12 +25,53 @@ export interface DirectChatMessage {
   timestamp: string;
 }
 
+const INVITE_TAG_REGEX = /^\[INVITE:([a-zA-Z0-9_-]+)\](?:\s*(.*))?$/;
+
+function playNotificationChime() {
+  try {
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext })
+        .webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc1.type = "sine";
+    osc2.type = "triangle";
+    osc1.frequency.setValueAtTime(587.33, now); // D5
+    osc1.frequency.setValueAtTime(880, now + 0.11); // A5
+    osc2.frequency.setValueAtTime(293.66, now); // D4
+    osc2.frequency.setValueAtTime(440, now + 0.11); // A4
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+    osc1.connect(gain);
+    osc2.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + 0.36);
+    osc2.stop(now + 0.36);
+  } catch {
+    /* ignore audio errors if user hasn't interacted yet */
+  }
+}
+
 @customElement("friends-modal")
 export class FriendsModal extends BaseModal {
   protected routerName = "friends";
 
   @state() private friends: any[] = [];
   @state() private onlineFriendsSet = new Set<string>();
+  @state() private friendLobbies: Record<string, string> = {};
   @state() private incoming: any[] = [];
   @state() private outgoing: any[] = [];
   @state() private loading = false;
@@ -46,6 +87,30 @@ export class FriendsModal extends BaseModal {
   @state() private adding = false;
 
   private pollInterval: any = null;
+  private bgWatcherInterval: any = null;
+  private seenMessageIds = new Set<string>();
+  private seenRequestIds = new Set<string>();
+  private watcherSeeded = false;
+
+  connectedCallback() {
+    super.connectedCallback();
+    if (!this.bgWatcherInterval) {
+      this.bgWatcherInterval = setInterval(() => {
+        if (!this.isModalOpen) {
+          void this.refreshPresence(true);
+        }
+      }, 8000);
+      setTimeout(() => void this.refreshPresence(true), 2500);
+    }
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    if (this.bgWatcherInterval) {
+      clearInterval(this.bgWatcherInterval);
+      this.bgWatcherInterval = null;
+    }
+  }
 
   protected modalConfig() {
     return {
@@ -67,9 +132,9 @@ export class FriendsModal extends BaseModal {
     this.loadData();
     if (this.pollInterval) clearInterval(this.pollInterval);
     this.pollInterval = setInterval(() => {
-      this.refreshPresence();
+      void this.refreshPresence(false);
       if (this.activeFriendChat) {
-        this.fetchDirectChat(this.activeFriendChat.publicId, false);
+        void this.fetchDirectChat(this.activeFriendChat.publicId, false);
       }
     }, 3000);
   }
@@ -92,7 +157,7 @@ export class FriendsModal extends BaseModal {
         this.incoming = reqRes.incoming;
         this.outgoing = reqRes.outgoing;
       }
-      await this.refreshPresence();
+      await this.refreshPresence(false);
     } finally {
       this.loading = false;
     }
@@ -116,9 +181,24 @@ export class FriendsModal extends BaseModal {
     if (v && typeof saveLocalVaultToken === "function") saveLocalVaultToken(v);
   }
 
-  private async refreshPresence() {
+  private getCurrentActiveLobbyId(): string | null {
+    const wLobby = (window as unknown as { __indufrontActiveLobbyId?: string })
+      .__indufrontActiveLobbyId;
+    if (wLobby) return wLobby;
+    const m = window.location.pathname.match(/\/game\/([a-zA-Z0-9_-]+)/);
+    return m ? m[1] : null;
+  }
+
+  private async refreshPresence(isBackgroundCheck = false) {
     try {
-      const res = await fetch(`${getApiBase()}/presence/summary`, {
+      const authHeader = await getAuthHeader();
+      const vault =
+        typeof getLocalVaultToken === "function" ? getLocalVaultToken() : null;
+      if (!authHeader && !vault) return;
+
+      const currentLobby = this.getCurrentActiveLobbyId() ?? "";
+      const url = `${getApiBase()}/presence/summary?lobbyId=${encodeURIComponent(currentLobby)}`;
+      const res = await fetch(url, {
         headers: await this.authHeaders({ Accept: "application/json" }),
       });
       this.captureVault(res);
@@ -128,9 +208,124 @@ export class FriendsModal extends BaseModal {
         this.onlineFriendsSet = new Set(
           onlineList.map((x: string) => x.toLowerCase()),
         );
+        const rawLobbies = data.friendLobbies ?? {};
+        const normalizedLobbies: Record<string, string> = {};
+        for (const [k, v] of Object.entries(rawLobbies)) {
+          if (typeof v === "string" && v) {
+            normalizedLobbies[k.toLowerCase()] = v;
+          }
+        }
+        this.friendLobbies = normalizedLobbies;
+
+        const recentMsgs: DirectChatMessage[] = data.recentDirectMessages ?? [];
+        const incomingReqs: Array<{ publicId: string; username: string }> =
+          data.incomingRequests ?? [];
+
+        if (!this.watcherSeeded) {
+          for (const m of recentMsgs) this.seenMessageIds.add(m.id);
+          for (const r of incomingReqs) this.seenRequestIds.add(r.publicId);
+          this.watcherSeeded = true;
+        } else {
+          for (const m of recentMsgs) {
+            if (!this.seenMessageIds.has(m.id)) {
+              this.seenMessageIds.add(m.id);
+              const isChattingWithSender =
+                this.isModalOpen &&
+                this.activeFriendChat?.publicId.toLowerCase() ===
+                  m.fromId.toLowerCase();
+              if (!isChattingWithSender) {
+                playNotificationChime();
+                const inv = INVITE_TAG_REGEX.exec(m.text);
+                if (inv) {
+                  showToast(
+                    `🎮 ${m.fromName} hat dich in Lobby #${inv[1]} eingeladen!`,
+                    "green",
+                    5000,
+                  );
+                } else {
+                  const preview =
+                    m.text.length > 42 ? `${m.text.slice(0, 42)}...` : m.text;
+                  showToast(`💬 ${m.fromName}: ${preview}`, "green", 4500);
+                }
+              }
+            }
+          }
+          for (const r of incomingReqs) {
+            if (!this.seenRequestIds.has(r.publicId)) {
+              this.seenRequestIds.add(r.publicId);
+              playNotificationChime();
+              showToast(
+                `📬 Neue Freundschaftsanfrage von ${r.username}!`,
+                "green",
+                4500,
+              );
+              if (!isBackgroundCheck) {
+                void this.loadData();
+              }
+            }
+          }
+        }
       }
     } catch {
       /* ignore fetch errors */
+    }
+  }
+
+  private joinFriendLobby(gameID: string) {
+    if (!gameID) return;
+    this.close();
+    document.dispatchEvent(
+      new CustomEvent("join-lobby", {
+        detail: {
+          gameID,
+          source: "private",
+        },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    showToast(`Trete Lobby #${gameID} bei...`, "green");
+  }
+
+  private async inviteFriendToLobby(friend: {
+    publicId: string;
+    username: string;
+  }) {
+    const lobbyId = this.getCurrentActiveLobbyId();
+    if (!lobbyId) {
+      showToast(
+        "Erstelle oder betrete zuerst eine Lobby, um Freunde einzuladen!",
+        "red",
+      );
+      return;
+    }
+    try {
+      const res = await fetch(
+        `${getApiBase()}/friends/chat/${encodeURIComponent(friend.publicId)}`,
+        {
+          method: "POST",
+          headers: await this.authHeaders({
+            "Content-Type": "application/json",
+          }),
+          body: JSON.stringify({
+            text: `[INVITE:${lobbyId}] Komm in meine Lobby #${lobbyId}!`,
+          }),
+        },
+      );
+      this.captureVault(res);
+      if (res.ok) {
+        showToast(
+          `📩 Lobby-Einladung an ${friend.username} gesendet!`,
+          "green",
+        );
+        if (this.activeFriendChat?.publicId === friend.publicId) {
+          await this.fetchDirectChat(friend.publicId, false);
+        }
+      } else {
+        showToast("Einladung konnte nicht gesendet werden", "red");
+      }
+    } catch {
+      showToast("Netzwerkfehler beim Einladen", "red");
     }
   }
 
@@ -152,7 +347,9 @@ export class FriendsModal extends BaseModal {
       this.captureVault(res);
       if (res.ok) {
         const data = await res.json();
-        this.chatMessages = data.messages ?? [];
+        const msgs: DirectChatMessage[] = data.messages ?? [];
+        for (const m of msgs) this.seenMessageIds.add(m.id);
+        this.chatMessages = msgs;
         setTimeout(() => {
           const c = this.querySelector(".direct-chat-scroll");
           if (c) c.scrollTop = c.scrollHeight;
@@ -254,27 +451,56 @@ export class FriendsModal extends BaseModal {
       const isOnline = this.onlineFriendsSet.has(
         this.activeFriendChat.publicId.toLowerCase(),
       );
+      const friendLobby =
+        this.friendLobbies[this.activeFriendChat.publicId.toLowerCase()];
+      const myLobby = this.getCurrentActiveLobbyId();
       return modalHeader({
         titleContent: html`
-          <div class="flex items-center gap-3">
-            <button
-              @click=${() => (this.activeFriendChat = null)}
-              class="px-2.5 py-1 text-xs font-bold bg-white/10 hover:bg-white/20 rounded-lg text-white transition-all flex items-center gap-1 cursor-pointer"
-            >
-              ⬅️ Zurück
-            </button>
+          <div class="flex items-center justify-between w-full gap-3 flex-wrap">
+            <div class="flex items-center gap-3">
+              <button
+                @click=${() => (this.activeFriendChat = null)}
+                class="px-2.5 py-1 text-xs font-bold bg-white/10 hover:bg-white/20 rounded-lg text-white transition-all flex items-center gap-1 cursor-pointer"
+              >
+                ⬅️ Zurück
+              </button>
+              <div class="flex items-center gap-2">
+                <span
+                  class="w-2.5 h-2.5 rounded-full ${isOnline
+                    ? "bg-green-400"
+                    : "bg-white/30"}"
+                ></span>
+                <span class="font-bold text-white text-lg"
+                  >${this.activeFriendChat.username}</span
+                >
+                <span class="text-xs text-white/40 font-mono"
+                  >(${isOnline ? "Online" : "Offline"})</span
+                >
+              </div>
+            </div>
             <div class="flex items-center gap-2">
-              <span
-                class="w-2.5 h-2.5 rounded-full ${isOnline
-                  ? "bg-green-400"
-                  : "bg-white/30"}"
-              ></span>
-              <span class="font-bold text-white text-lg"
-                >${this.activeFriendChat.username}</span
-              >
-              <span class="text-xs text-white/40 font-mono"
-                >(${isOnline ? "Online" : "Offline"})</span
-              >
+              ${friendLobby
+                ? html`
+                    <button
+                      @click=${() => this.joinFriendLobby(friendLobby)}
+                      class="px-3 py-1 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-lg transition-all cursor-pointer"
+                    >
+                      🎮 Lobby #${friendLobby} beitreten
+                    </button>
+                  `
+                : null}
+              ${myLobby && this.activeFriendChat
+                ? html`
+                    <button
+                      @click=${() =>
+                        this.activeFriendChat &&
+                        this.inviteFriendToLobby(this.activeFriendChat)}
+                      class="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs rounded-lg transition-all cursor-pointer"
+                    >
+                      📩 Einladen
+                    </button>
+                  `
+                : null}
             </div>
           </div>
         `,
@@ -332,15 +558,17 @@ export class FriendsModal extends BaseModal {
       `;
     }
 
+    const myLobby = this.getCurrentActiveLobbyId();
+
     return html`
       <div class="space-y-3">
         ${this.friends.map((friend) => {
-          const isOnline = this.onlineFriendsSet.has(
-            friend.publicId.toLowerCase(),
-          );
+          const pidLower = friend.publicId.toLowerCase();
+          const isOnline = this.onlineFriendsSet.has(pidLower);
+          const friendLobby = this.friendLobbies[pidLower];
           return html`
             <div
-              class="flex items-center justify-between p-3.5 bg-white/5 hover:bg-white/[0.08] rounded-xl border border-white/10 transition-all gap-3"
+              class="flex items-center justify-between p-3.5 bg-white/5 hover:bg-white/[0.08] rounded-xl border border-white/10 transition-all gap-3 flex-wrap"
             >
               <div class="flex items-center gap-3 min-w-0">
                 <div class="relative shrink-0">
@@ -358,7 +586,7 @@ export class FriendsModal extends BaseModal {
                 </div>
                 <div class="min-w-0">
                   <div
-                    class="font-bold text-white text-sm truncate flex items-center gap-2"
+                    class="font-bold text-white text-sm truncate flex items-center gap-2 flex-wrap"
                   >
                     <span>${friend.username ?? friend.publicId}</span>
                     <span
@@ -368,6 +596,15 @@ export class FriendsModal extends BaseModal {
                     >
                       ${isOnline ? "Online" : "Offline"}
                     </span>
+                    ${friendLobby
+                      ? html`
+                          <span
+                            class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                          >
+                            In Lobby #${friendLobby}
+                          </span>
+                        `
+                      : null}
                   </div>
                   <div class="text-[11px] text-white/40 font-mono">
                     ID: ${friend.publicId}
@@ -376,7 +613,31 @@ export class FriendsModal extends BaseModal {
               </div>
 
               <!-- Actions -->
-              <div class="flex items-center gap-2 shrink-0">
+              <div class="flex items-center gap-2 shrink-0 flex-wrap">
+                ${friendLobby
+                  ? html`
+                      <button
+                        @click=${() => this.joinFriendLobby(friendLobby)}
+                        class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-lg transition-all flex items-center gap-1 cursor-pointer shadow-sm"
+                        title="Lobby des Freundes direkt beitreten"
+                      >
+                        <span>🎮</span>
+                        <span>Beitreten</span>
+                      </button>
+                    `
+                  : null}
+                ${myLobby
+                  ? html`
+                      <button
+                        @click=${() => this.inviteFriendToLobby(friend)}
+                        class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs rounded-lg transition-all flex items-center gap-1 cursor-pointer shadow-sm"
+                        title="Freund in deine aktuelle Lobby einladen"
+                      >
+                        <span>📩</span>
+                        <span>Einladen</span>
+                      </button>
+                    `
+                  : null}
                 <button
                   @click=${() => this.openChatWithFriend(friend)}
                   class="px-3.5 py-1.5 bg-malibu-blue hover:bg-aquarius text-black font-bold text-xs rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
@@ -444,6 +705,7 @@ export class FriendsModal extends BaseModal {
                     hour: "2-digit",
                     minute: "2-digit",
                   });
+                  const invMatch = INVITE_TAG_REGEX.exec(m.text);
                   return html`
                     <div
                       class="flex flex-col ${isMe
@@ -455,7 +717,24 @@ export class FriendsModal extends BaseModal {
                           ? "bg-malibu-blue text-black rounded-br-xs font-medium"
                           : "bg-white/10 text-white rounded-bl-xs"} shadow-md"
                       >
-                        <div class="text-xs break-words">${m.text}</div>
+                        ${invMatch
+                          ? html`
+                              <div class="space-y-2">
+                                <div class="text-xs font-bold">
+                                  🎮 Lobby-Einladung (#${invMatch[1]})
+                                </div>
+                                <button
+                                  @click=${() =>
+                                    this.joinFriendLobby(invMatch[1])}
+                                  class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-lg transition-all cursor-pointer"
+                                >
+                                  Lobby #${invMatch[1]} beitreten
+                                </button>
+                              </div>
+                            `
+                          : html`<div class="text-xs break-words">
+                              ${m.text}
+                            </div>`}
                         <div
                           class="text-[9px] mt-1 text-right font-mono ${isMe
                             ? "text-black/60"

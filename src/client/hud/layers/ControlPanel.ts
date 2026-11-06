@@ -4,6 +4,8 @@ import {
   GameType,
   Gold,
   ResourceType,
+  Structures,
+  UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import { ClientID } from "@openfront/engine-api/Schemas";
@@ -103,6 +105,16 @@ export class ControlPanel extends LitElement implements Controller {
   private _enrichedUranium: number = 0;
   @state()
   private _activeScouting: ResourceType | "all" | "none" = "none";
+
+  @state()
+  private _goldPerMin: bigint = 0n;
+  @state()
+  private _activeTrains: number = 0;
+  @state()
+  private _activeTradeShips: number = 0;
+  @state()
+  private _totalBuildings: number = 0;
+  private _goldHistory: Array<{ tick: number; gold: bigint }> = [];
 
   private _troopRateIsIncreasing: boolean = true;
 
@@ -210,6 +222,35 @@ export class ControlPanel extends LitElement implements Controller {
       .map((a) => a.troops)
       .reduce((a, b) => a + b, 0);
     this.troopRate = config.troopIncreaseRate(player) * 10;
+
+    // Logistics & Gold/min tracking
+    const curTick = this.game.ticks();
+    this._goldHistory.push({ tick: curTick, gold: this._gold });
+    while (
+      this._goldHistory.length > 1 &&
+      curTick - this._goldHistory[0].tick > 100
+    ) {
+      this._goldHistory.shift();
+    }
+    const oldest = this._goldHistory[0];
+    const tickSpan = Math.max(10, curTick - oldest.tick);
+    const deltaGold = this._gold > oldest.gold ? this._gold - oldest.gold : 0n;
+    const rollingPerMin = (deltaGold * 600n) / BigInt(tickSpan);
+    const cityTaxFloor = BigInt(
+      player.totalUnitLevels(UnitType.City) * 120 +
+        player.totalUnitLevels(UnitType.Port) * 90 +
+        player.totalUnitLevels(UnitType.Factory) * 90,
+    );
+    this._goldPerMin =
+      rollingPerMin > cityTaxFloor ? rollingPerMin : cityTaxFloor;
+
+    this._activeTrains = player.units(UnitType.Train).length;
+    this._activeTradeShips = player.units(UnitType.TradeShip).length;
+    let bCount = 0;
+    for (const st of Structures.types) {
+      bCount += player.totalUnitLevels(st);
+    }
+    this._totalBuildings = bCount;
 
     const helpEnabled = new UserSettings().helpMessages();
 
@@ -826,6 +867,30 @@ export class ControlPanel extends LitElement implements Controller {
             <span class="tabular-nums"
               >${renderNumber(this._enrichedUranium)}</span
             >
+          </span>
+        </div>
+
+        <div class="h-3 w-px bg-gray-700"></div>
+
+        <!-- Compact Logistics & Income Summary -->
+        <div
+          class="flex items-center gap-2 text-[11px] font-mono"
+          title="Gold-Einkommen pro Minute, aktive Züge & Handelsschiffe, Gebäude gesamt"
+        >
+          <span class="text-yellow-300 font-bold tabular-nums">
+            +${renderNumber(this._goldPerMin)}/m
+          </span>
+          <span
+            class="text-slate-300 tabular-nums"
+            title="Aktive Züge / Handelsschiffe"
+          >
+            🚂${this._activeTrains} 🚢${this._activeTradeShips}
+          </span>
+          <span
+            class="text-emerald-300 tabular-nums"
+            title="Aktive Gebäude gesamt"
+          >
+            🏗️${this._totalBuildings}
           </span>
         </div>
 

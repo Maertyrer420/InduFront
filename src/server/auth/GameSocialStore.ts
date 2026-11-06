@@ -185,6 +185,11 @@ export class GameSocialStore {
 
   // In-memory heartbeat tracker: publicId -> timestamp
   private presence = new Map<string, number>();
+  // Active lobby tracker: publicId (lowercase) -> { lobbyId, updatedAt }
+  private activeLobbies = new Map<
+    string,
+    { lobbyId: string; updatedAt: number }
+  >();
   private backupPath: string;
   private initPromise: Promise<void>;
 
@@ -298,9 +303,41 @@ export class GameSocialStore {
   }
 
   // ---- PRESENCE TRACKING ----
-  public recordPing(publicId: string): void {
+  public recordPing(publicId: string, lobbyId?: string | null): void {
     if (!publicId) return;
-    this.presence.set(publicId.toLowerCase(), Date.now());
+    const key = publicId.toLowerCase();
+    const now = Date.now();
+    this.presence.set(key, now);
+    if (lobbyId !== undefined) {
+      const trimmed = typeof lobbyId === "string" ? lobbyId.trim() : "";
+      if (trimmed) {
+        this.activeLobbies.set(key, { lobbyId: trimmed, updatedAt: now });
+      } else {
+        this.activeLobbies.delete(key);
+      }
+    }
+  }
+
+  public getFriendLobbies(friendPublicIds: string[]): Record<string, string> {
+    const now = Date.now();
+    const result: Record<string, string> = {};
+    for (const fid of friendPublicIds) {
+      const entry = this.activeLobbies.get(fid.toLowerCase());
+      if (entry && now - entry.updatedAt < 120_000) {
+        result[fid] = entry.lobbyId;
+      }
+    }
+    return result;
+  }
+
+  public getRecentIncomingDirectMessages(
+    userPublicId: string,
+    limit = 10,
+  ): DirectChatMessage[] {
+    const u = userPublicId.toLowerCase();
+    return this.data.directChat
+      .filter((m) => m.toId.toLowerCase() === u)
+      .slice(-limit);
   }
 
   public getOnlineCount(): number {

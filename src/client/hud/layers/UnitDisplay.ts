@@ -43,6 +43,7 @@ import {
   radarIcon,
   refineryIcon,
   repairShipIcon,
+  residentialIcon,
   samLauncherIcon,
   steelMillIcon,
   uraniumMineIcon,
@@ -77,6 +78,7 @@ export class UnitDisplay extends LitElement implements Controller {
 
   // Building counts
   private _cities = 0;
+  private _residentials = 0;
   private _ironMines = 0;
   private _coalMines = 0;
   private _oilRigs = 0;
@@ -273,6 +275,7 @@ export class UnitDisplay extends LitElement implements Controller {
     });
 
     this._cities = player.totalUnitLevels(UnitType.City);
+    this._residentials = player.totalUnitLevels(UnitType.Residential);
     this._ironMines = player.totalUnitLevels(UnitType.IronMine);
     this._coalMines = player.totalUnitLevels(UnitType.CoalMine);
     this._oilRigs = player.totalUnitLevels(UnitType.OilRig);
@@ -365,6 +368,16 @@ export class UnitDisplay extends LitElement implements Controller {
         yieldInfo: "SAM 12 ➔ 18 Kacheln",
         defaultHotkey: "8",
         structureKey: "radar",
+      },
+      {
+        type: UnitType.Residential,
+        icon: residentialIcon,
+        name: "Wohnviertel",
+        description:
+          "Erhöht das maximale Bevölkerungslimit und die Arbeitskraft für Minen & Industrie.",
+        yieldInfo: "+Bevölkerungskapazität",
+        defaultHotkey: "9",
+        structureKey: "residential",
       },
     ];
   }
@@ -516,6 +529,8 @@ export class UnitDisplay extends LitElement implements Controller {
     switch (type) {
       case UnitType.City:
         return this._cities;
+      case UnitType.Residential:
+        return this._residentials;
       case UnitType.IronMine:
         return this._ironMines;
       case UnitType.CoalMine:
@@ -573,6 +588,7 @@ export class UnitDisplay extends LitElement implements Controller {
 
     const buildingTotal =
       this._cities +
+      this._residentials +
       this._ironMines +
       this._coalMines +
       this._oilRigs +
