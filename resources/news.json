@@ -1,5 +1,40 @@
 [
   {
+    "id": "indufront-v064",
+    "title": "InduFront v0.6.4 - Animierter Match-Endscreen & Belohnungen",
+    "description": "Feierlicher Endscreen mit Sieges-Header, flüssiger Stahl-Zähler-Animation, Soundeffekten, Elo-Fortschrittsbalken, Aufstiegs-Fanfare und Match-Statistiken!",
+    "url": null,
+    "type": "announcement"
+  },
+  {
+    "id": "indufront-v063",
+    "title": "InduFront v0.6.3 - Ranked-Modus & Elo-System",
+    "description": "Neuer Ranked-Modus mit WebSocket-Matchmaking für 1v1, 2v2 und FFA. Steige durch 7 Rangstufen und Divisionen von Bronze bis Großmeister auf!",
+    "url": null,
+    "type": "announcement"
+  },
+  {
+    "id": "indufront-v062",
+    "title": "InduFront v0.6.2 - KI-Wirtschaft, Allianzen & Stahl-Währung",
+    "description": "Bots mit Rohstoffwirtschaft, Mehr-Nationen-Allianzen mit Top-10-Schutz, bombensichere Stahlbunker, gebuffte Verteidigungsposten, Stahl-Matchbelohnungen & Kosmetik-Shop!",
+    "url": null,
+    "type": "announcement"
+  },
+  {
+    "id": "indufront-v061",
+    "title": "InduFront v0.6.1 - Animiertes Hauptmenü & Lobbysystem",
+    "description": "Dynamischer Schlachtfeld-Hintergrund, Freundes-Lobby-Einladungen per Ein-Klick-Toast, verbesserte Lobbyliste und Zifferntasten 1-9 im HUD!",
+    "url": null,
+    "type": "announcement"
+  },
+  {
+    "id": "indufront-v060",
+    "title": "InduFront v0.6.0 - Account-Persistenz, Clans & Globaler Chat",
+    "description": "PostgreSQL-Speicherung mit Double-Safe Wiederherstellung, eindeutige InduFront-Spieler-IDs, Clan-Hierarchie und weltweiter Chat!",
+    "url": null,
+    "type": "announcement"
+  },
+  {
     "id": "indufront-v059",
     "title": "InduFront v0.5.9 - Echtes Login-System",
     "description": "Eigener Login-Server mit Registrierung, sicheren Sitzungen und Token-Prüfung durch den Game-Server - Freunde können jetzt per Link beitreten!",

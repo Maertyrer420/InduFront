@@ -4,6 +4,116 @@ Willkommen bei **InduFront** - der industriellen und taktischen Evolution von Op
 
 ---
 
+## InduFront v0.6.4 - Animierter Match-Endscreen & Belohnungs-Zeremonie
+
+**Datum:** 7. November 2026
+
+### Feierlicher Match-Endscreen & Sieges-Header
+
+- **Glorreicher Sieg:** Bei einem Match-Gewinn erstrahlt ein goldener Glow-Header mit Krone (`👑 GLORREICHER SIEG`) und pulsierender Sieges-Fanfare.
+- **Transparente Platzierungsübersicht:** Übersichtliche Platzierungsanzeige (`Platz #X von Y`) für alle Spielausgänge.
+- **Zuschauer-Zwischenbanner:** Bei vorzeitigem Ausscheiden sichert ein diskretes Banner den bisher verdienten Stahl (`+X ⚙️ gesichert`), während du den verbleibenden Spielern im Zuschauermodus weitersiehst. Bei Rundenende oder Verlassen erscheint der volle Endscreen.
+
+### Stahl-Belohnungen & Shop-Integration
+
+- **Flüssiger Zähler mit Sound:** Der verdiente Stahl zählt flüssig von 0 auf den Zielwert hoch (Cubic-Ease-Out-Kurve), gekrönt von einem metallischen **`ka-ching`**-Soundeffekt (Mute-/Sound-Einstellungen werden respektiert).
+- **Schnellzugriff zum Shop:** Direkter Button **„Zum Stahl-Shop 🛍️“** öffnet nahtlos das Kosmetikmenü.
+
+### Ranked-Progression & Match-Statistiken
+
+- **Animierter Elo-Fortschrittsbalken:** Visualisiert die gewonnene oder verlorene Elo mit exaktem Delta (`+28 Elo`) und dem aktuellen Rangabzeichen (Bronze bis Großmeister).
+- **Aufstiegs-Fanfare:** Bei einem Aufstieg in eine neue Division oder Rangstufe erscheint ein auffälliges Banner (`🎉 AUFSTIEG ZU GOLD I!`) mit Siegesfanfare.
+- **Detaillierte Highlights:** Zeigt die Anzahl eliminierter Gegner (Kills), maximal gleichzeitig kontrolliertes Territorium (Peak Tiles) und die genaue Rundenzeit.
+
+---
+
+## InduFront v0.6.3 - Ranked-Modus mit dynamischem Elo-System & WebSocket-Matchmaking
+
+**Datum:** 7. November 2026
+
+### WebSocket-Matchmaking-Server
+
+- **Eigenständiger Matchmaking-Dienst:** Integrierter WebSocket-Server (`MatchmakingServer.ts`) mit Queue-Verwaltung, Auto-Fill-Logik und sofortiger Spielzuteilung für 1v1-, 2v2- und FFA-Ranglistenspiele.
+- **Verbindungsüberwachung & Reconnect:** Robuste Statusprüfung, automatische Entleerung verlassener Sockets und Bereinigung offener Anfragen.
+
+### Ausgeklügeltes mathematisches Elo-System
+
+- **Dynamische K-Faktoren:** Neuere Spieler (unter 30 Matches) steigen schneller auf ($K=40$); erfahrene Spieler über 2000 Elo haben präzise Einstufungen ($K=16$).
+- **Multi-Modi-Rating:**
+  - **1v1 Duell:** Reines Zero-Sum Elo-Modell.
+  - **2v2 Team:** Team-Rating-Aggregation mit individueller Anpassung.
+  - **FFA (Free For All):** Paarweises Round-Robin-Elo-Modell über alle Teilnehmer hinweg mit Performance-Boni für Kills und Platzierungen.
+- **7 Rangstufen & Divisionen:** Bronze (I-III), Silber (I-III), Gold (I-III), Platin (I-III), Diamant (I-III), Meister und Großmeister inklusive grafischer Badges.
+
+---
+
+## InduFront v0.6.2 - KI-Wirtschafts-Overhaul, Allianzen-System, Bombensichere Stahlbunker & Stahl-Währung
+
+**Datum:** 7. November 2026
+
+### Intelligente Bot-Wirtschaft
+
+- **Aktive Ressourcenwirtschaft:** Bots bauen nun Minen, Raffinerien und Stahlwerke eigenständig auf und managen ihre Industrie.
+- **Schwierigkeitsgrad-Skalierung:** Bau- und Investitionsentscheidungen passen sich dem gewählten Modus (Leicht, Normal, Schwer, Unmöglich) organisch an – auf höheren Stufen bauen Bots effiziente Stahl- und Treibstoffkreisläufe auf.
+
+### Wohnviertel-Map-Icon
+
+- **Scharfes Vektor-Symbol:** Wohnviertel besitzen nun ein gestochen scharfes, weißes SVG-Gebäude-Icon direkt auf der Weltkarte zur schnellen Identifikation von Bevölkerungszentren.
+
+### Mehr-Nationen-Allianzen ("Kleine Länder Bündnis")
+
+- **Gemeinsame Verteidigungsbündnisse:** Mehrere kleinere Staaten können sich zusammenschließen, um gemeinsame Kriege zu führen und Ressourcen auszutauschen.
+- **Eigenes Allianzen-Menü:** Komfortable UI für Bündnisgründungen, Beitrittseinladungen und Mitgliederverwaltung.
+- **Anti-Großmächte-Schutz (Top-10-Ausschluss):** Spieler in den globalen Top 10 können Allianzen weder beitreten noch gründen; erreicht ein Allianzmitglied die Top 10, verlässt es das Bündnis automatisch. Dies schützt schwächere Nationen vor der Dominanz von Supermächten.
+
+### Verteidigungsposten & Stahlbunker Overhaul
+
+- **Gebuffte Verteidigungsposten:** Der Lanchester-Verteidigungsmultiplikator wurde auf **5.0x** angehoben; feindliche Vorstöße werden im Wirkungsbereich um das **3.0-Fache verlangsamt**.
+- **Bombensichere Stahlbunker:** Zu extrem widerstandsfähigen Schutzresidenzen aufgewertet. Weder Atombomben, Wasserstoffbomben noch MIRV-Schläge können den Bunker oder seine Kachel zerstören (**100% Nuke-Immunität**). Baukosten: 500 Gold + progressiv ansteigende Stahlkosten ($100 \cdot 1.6^n$ Stahl).
+
+### Währungsreform: Stahl (⚙️) & Kosmetik-Shop
+
+- **Echtes In-Game-Belohnungssystem:** Entfernung sämtlicher Echtgeld-Mockups.
+- **Stahl als Match-Belohnung:** Verdienst nach jedem Spiel:
+  - 🥇 1. Platz (Sieg): **1.000 Stahl**
+  - 🥈 2. Platz: **750 Stahl**
+  - 🥉 3. Platz: **500 Stahl**
+  - Platz 4+: gestaffelte Trost-Belohnungen
+- **Kosmetik-Shop:** Vollständiger In-Game-Shop zum Freischalten von Titeln, Badges, Einheiten-Skins und Sounds.
+- **Fix für Spieler-Statistiken:** Vollständige Reparatur der Profil-Statistiken und der Match-Historie (letzte 10 Partien).
+
+---
+
+## InduFront v0.6.1 - Animiertes Hauptmenü, Freundes-Lobby-System & HUD-Logistik
+
+**Datum:** 5. November 2026
+
+### Hauptmenü & Freunde-System
+
+- **Animierter Schlachtfeld-Hintergrund:** Dynamischer, atmosphärischer Hintergrund im Hauptmenü für immersives Militär-Feeling.
+- **Freundes-Lobby-Einladungen:** Lade Freunde direkt per Ein-Klick-Toast in deine Lobby ein.
+- **Öffentliche Lobbyliste & Reconnect:** Transparente Spielsuche mit automatischem Reconnect-Banner bei kurzzeitigen Verbindungsverlusten.
+- **HUD-Schnellwahltasten 1-9:** Schnellerer Zugriff auf Bau- und Veredelungsanlagen über konfigurierte Zifferntasten.
+
+---
+
+## InduFront v0.6.0 - Account-Persistenz, PostgreSQL, Clan-Hierarchie & Globaler Chat
+
+**Datum:** 2. November 2026
+
+### Datenbank & Kontosicherheit
+
+- **PostgreSQL-Persistenz:** Robuste Speicherung aller Accounts, Statistiken und Inventare über `DbStorage.ts`.
+- **Double-Safe Kontowiederherstellung:** Automatische Selbstheilung von Sitzungen und sichere Wiederherstellungsschlüssel.
+- **Eindeutige Spieler-IDs:** Format `IF-XXXX` für unkomplizierten Spieleraustausch.
+
+### Soziale Features
+
+- **Clan-Hierarchie & Ranglisten:** Gründe deinen Clan, verwalte Ränge und führe deinen Clan an die Spitze der globalen Leaderboards.
+- **Globaler Chat & Direktnachrichten:** Taktischer Chat in der Lobby sowie private Unterhaltungen mit befreundeten Spielern.
+
+---
+
 ## InduFront v0.5.9 - Echtes Login-System
 
 **Datum:** 20. Oktober 2026

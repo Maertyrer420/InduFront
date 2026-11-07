@@ -5,11 +5,13 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { modalHeader } from "./components/ui/ModalHeader";
 import {
+  allianceIcon,
   atomBombIcon,
   bunkerIcon,
   centrifugeIcon,
   coalMineIcon,
   cruiseMissileIcon,
+  defensePostIcon,
   destroyerIcon,
   eraserIcon,
   hydrogenBombIcon,
@@ -19,6 +21,7 @@ import {
   radarIcon,
   refineryIcon,
   repairShipIcon,
+  residentialIcon,
   samLauncherIcon,
   steelMillIcon,
   uraniumMineIcon,
@@ -32,9 +35,11 @@ type HelpTab =
   | "tutorial"
   | "economy"
   | "refinery"
+  | "defense"
+  | "alliances"
   | "military"
   | "nukes"
-  | "defense"
+  | "ranked"
   | "stats"
   | "controls"
   | "support"
@@ -101,12 +106,14 @@ export class HelpModal extends BaseModal {
 
   private renderTabBar(): TemplateResult {
     const tabs: Array<{ id: HelpTab; label: string; icon: string }> = [
-      { id: "tutorial", label: "Spielanleitung", icon: "📖" },
+      { id: "tutorial", label: "Spielanleitung & Guides", icon: "📖" },
       { id: "economy", label: "Rohstoffe & Minen", icon: "⛏️" },
       { id: "refinery", label: "Industrie & Veredelung", icon: "🏭" },
+      { id: "defense", label: "Verteidigung & Stahlbunker", icon: "🛡️" },
+      { id: "alliances", label: "Allianzen & Diplomatie", icon: "🤝" },
       { id: "military", label: "Marine & Flotte", icon: "⚓" },
       { id: "nukes", label: "Marschflugkörper & Nuklear", icon: "🚀" },
-      { id: "defense", label: "Verteidigung & Radar", icon: "🛡️" },
+      { id: "ranked", label: "Ranked & Belohnungen", icon: "🏆" },
       { id: "stats", label: "Stats & Baukosten", icon: "📊" },
       { id: "controls", label: "Steuerung & Werkzeuge", icon: "🛠️" },
       { id: "support", label: "Diagnose & Support", icon: "🔧" },
@@ -152,13 +159,12 @@ export class HelpModal extends BaseModal {
                 Offizieller InduFront Leitfaden
               </span>
               <h2 class="text-2xl md:text-3xl font-extrabold text-white mb-2">
-                Wie man InduFront spielt - Taktik & Formeln
+                Wie man InduFront spielt - Taktik, Industrie & Allianzen
               </h2>
               <p class="text-sm text-gray-300 max-w-2xl leading-relaxed">
-                InduFront kombiniert taktische Gebietskontrolle mit einem
-                tiefgehenden Industrie-, Logistik- und Veredelungssystem. Hier
-                findest du alle exakten Formeln, Zahlen und Mechanismen im
-                Detail.
+                InduFront verbindet strategische Gebietskontrolle mit einem
+                tiefgehenden Ressourcenkreislauf, Allianzen gegen Hegemonen,
+                bombensicheren Stahlbunkern und dynamischem Ranked-Matchmaking.
               </p>
             </div>
             <button
@@ -182,8 +188,9 @@ export class HelpModal extends BaseModal {
           </div>
         </div>
 
-        <!-- 5 Steps with Exact Mechanics -->
+        <!-- 8 Detailed Steps with Complete Mechanics -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+          <!-- Step 1: Spawn & Geology -->
           <div
             class="bg-black/25 rounded-xl border border-white/10 p-5 hover:border-[#5d9651]/50 transition-all"
           >
@@ -207,10 +214,11 @@ export class HelpModal extends BaseModal {
               class="text-[11px] font-mono text-emerald-400 bg-emerald-950/30 p-2 rounded border border-emerald-800/30"
             >
               Tipp: Ein früher Eisenerz- und Kohle-Hotspot sichert deine
-              Panzerstahl-Produktion.
+              Panzerstahl-Produktion für Schiffe und Bunker.
             </div>
           </div>
 
+          <!-- Step 2: Attack Ratio -->
           <div
             class="bg-black/25 rounded-xl border border-white/10 p-5 hover:border-[#5d9651]/50 transition-all"
           >
@@ -220,7 +228,7 @@ export class HelpModal extends BaseModal {
                 >2</span
               >
               <h3 class="text-base font-bold text-white m-0">
-                Angriffs-Ratio (Exakte Prozentsätze)
+                Angriffs-Ratio & Hotkeys
               </h3>
             </div>
             <p class="text-xs text-gray-300 leading-relaxed mb-2 m-0">
@@ -244,6 +252,7 @@ export class HelpModal extends BaseModal {
             </ul>
           </div>
 
+          <!-- Step 3: Gold, Population & Residential -->
           <div
             class="bg-black/25 rounded-xl border border-white/10 p-5 hover:border-[#5d9651]/50 transition-all"
           >
@@ -253,12 +262,14 @@ export class HelpModal extends BaseModal {
                 >3</span
               >
               <h3 class="text-base font-bold text-white m-0">
-                Gold- & Demografie-Formeln
+                Gold, Demografie & Wohnviertel
               </h3>
             </div>
             <p class="text-xs text-gray-300 leading-relaxed mb-2 m-0">
-              Dein Einkommen und Truppenwachstum berechnen sich nach exakten
-              mathematischen Formeln pro Tick (10 Ticks = 1 Sekunde):
+              Dein Einkommen und Truppenwachstum berechnen sich nach
+              mathematischen Formeln pro Tick (10 Ticks = 1 Sekunde).
+              <strong>Wohnviertel</strong>
+              (weißes Haus-Icon auf der Karte) steigern dein Bevölkerungslimit:
             </p>
             <div
               class="text-[11px] font-mono text-cyan-300 bg-cyan-950/30 p-2 rounded border border-cyan-800/30 space-y-1"
@@ -267,11 +278,12 @@ export class HelpModal extends BaseModal {
                 Gold-Einkommen: G = ⌊ 0.02 × Territorium + 0.10 × Bevölkerung ⌋
                 / Tick
               </div>
-              <div>Demografie-Cap: K_P = 1.000 + 500 × Wohngebiete</div>
+              <div>Demografie-Cap: K_P = 1.000 + 500 × Wohnviertel</div>
               <div>Wachstum: r = 0.05 (5.0% Basiswachstumsrate pro Zyklus)</div>
             </div>
           </div>
 
+          <!-- Step 4: Cities & Factories -->
           <div
             class="bg-black/25 rounded-xl border border-white/10 p-5 hover:border-[#5d9651]/50 transition-all"
           >
@@ -281,11 +293,12 @@ export class HelpModal extends BaseModal {
                 >4</span
               >
               <h3 class="text-base font-bold text-white m-0">
-                Städte & Fabriken (Exakter Nutzen)
+                Städte & Fabriken (Logistikknoten)
               </h3>
             </div>
             <p class="text-xs text-gray-300 leading-relaxed mb-2 m-0">
-              Zivile Infrastruktur bildet dein Fundament:
+              Zivile Infrastruktur bildet das logistische Rückgrat deines
+              Reiches:
             </p>
             <ul class="text-xs text-gray-300 space-y-1 ps-4 m-0">
               <li>
@@ -297,9 +310,149 @@ export class HelpModal extends BaseModal {
                 <strong class="text-white">Fabrik (Factory - 250 Gold):</strong>
                 Verdoppelt die lokale Truppenproduktionsrate (<strong
                   >2.0x Boost</strong
-                >) und ermöglicht beschleunigte Mobilmachung.
+                >) und verbindet Schienennetze für Handelseinnahmen.
               </li>
             </ul>
+          </div>
+
+          <!-- Step 5: Resources & Industry -->
+          <div
+            class="bg-black/25 rounded-xl border border-white/10 p-5 hover:border-[#5d9651]/50 transition-all"
+          >
+            <div class="flex items-center gap-3 mb-2">
+              <span
+                class="w-7 h-7 rounded-full bg-[#5d9651]/20 border border-[#5d9651] text-[#8ebf7e] flex items-center justify-center font-bold text-sm"
+                >5</span
+              >
+              <h3 class="text-base font-bold text-white m-0">
+                Rohstoffe & Industrielle Veredelung
+              </h3>
+            </div>
+            <p class="text-xs text-gray-300 leading-relaxed mb-2 m-0">
+              Moderne Truppen benötigen veredelte Güter statt nur Gold:
+            </p>
+            <ul class="text-xs text-gray-300 space-y-1 ps-4 m-0">
+              <li>
+                <strong class="text-cyan-300">Stahlwerk (400 Gold):</strong>
+                Schmilzt 3 Fe + 2 C → 1 Stahl (10 Stahl/s). Benötigt für
+                Kriegsschiffe, Zerstörer und Stahlbunker.
+              </li>
+              <li>
+                <strong class="text-orange-300">Raffinerie (500 Gold):</strong>
+                Destilliert 3 Rohöl → 1 Fuel (10 Fuel/s). Treibstoff für Schiffe
+                und Flugabwehr.
+              </li>
+              <li>
+                <strong class="text-lime-300">Zentrifuge (1.200 Gold):</strong>
+                Reichert 5 U + 3 C → 1 U_ref an. Essentiell für nukleare
+                Sprengköpfe.
+              </li>
+            </ul>
+            <div
+              class="text-[11px] font-mono text-amber-300 bg-amber-950/30 p-2 rounded border border-amber-800/30 mt-2"
+            >
+              80% Plünderung: Bei der Kapitulation eines Gegners erbeutest du
+              80% aller gelagerten Rohstoffe!
+            </div>
+          </div>
+
+          <!-- Step 6: Defense Post & Nuke-Proof Steel Bunker -->
+          <div
+            class="bg-black/25 rounded-xl border border-white/10 p-5 hover:border-[#5d9651]/50 transition-all"
+          >
+            <div class="flex items-center gap-3 mb-2">
+              <span
+                class="w-7 h-7 rounded-full bg-[#5d9651]/20 border border-[#5d9651] text-[#8ebf7e] flex items-center justify-center font-bold text-sm"
+                >6</span
+              >
+              <h3 class="text-base font-bold text-white m-0">
+                Befestigung: Verteidigungsposten & Stahlbunker
+              </h3>
+            </div>
+            <p class="text-xs text-gray-300 leading-relaxed mb-2 m-0">
+              Sichere Grenzen gegen Masseninvasionen und Nuklearschläge:
+            </p>
+            <ul class="text-xs text-gray-300 space-y-1 ps-4 m-0">
+              <li>
+                <strong class="text-yellow-300"
+                  >Verteidigungsposten (100 Gold):</strong
+                >
+                Verleiht einen gewaltigen
+                <strong>5.0x Lanchester-Verteidigungsmultiplikator</strong> und
+                verlangsamt feindliche Angriffe um das
+                <strong>3.0-Fache</strong>.
+              </li>
+              <li>
+                <strong class="text-cyan-300"
+                  >Stahlbunker (500 Gold + 100·1.6^n Stahl):</strong
+                >
+                Extrem teure, unverwüstliche Festung.
+                <strong>100% Nuke- & Bombensicher</strong> – kann von keiner
+                Atombombe, H-Bombe oder MIRV zerstört werden!
+              </li>
+            </ul>
+          </div>
+
+          <!-- Step 7: Alliances & Anti-Giant Rule -->
+          <div
+            class="bg-black/25 rounded-xl border border-white/10 p-5 hover:border-[#5d9651]/50 transition-all"
+          >
+            <div class="flex items-center gap-3 mb-2">
+              <span
+                class="w-7 h-7 rounded-full bg-[#5d9651]/20 border border-[#5d9651] text-[#8ebf7e] flex items-center justify-center font-bold text-sm"
+                >7</span
+              >
+              <h3 class="text-base font-bold text-white m-0">
+                Allianzen ("Kleine Länder Bündnis")
+              </h3>
+            </div>
+            <p class="text-xs text-gray-300 leading-relaxed mb-2 m-0">
+              Mehrere kleinere Nationen können sich zu schlagkräftigen Allianzen
+              zusammenschließen, um gemeinsame Kriege zu koordinieren und
+              Rohstoffe per P2P-Hilfslieferung zu teilen:
+            </p>
+            <div
+              class="text-[11px] font-mono text-purple-300 bg-purple-950/30 p-2 rounded border border-purple-800/30"
+            >
+              Anti-Großmächte-Regel: Spieler in den Top 10 können keiner Allianz
+              beitreten und verlassen sie automatisch beim Erreichen der Top 10!
+            </div>
+          </div>
+
+          <!-- Step 8: Ranked, Elo & Steel Rewards -->
+          <div
+            class="bg-black/25 rounded-xl border border-white/10 p-5 hover:border-[#5d9651]/50 transition-all"
+          >
+            <div class="flex items-center gap-3 mb-2">
+              <span
+                class="w-7 h-7 rounded-full bg-[#5d9651]/20 border border-[#5d9651] text-[#8ebf7e] flex items-center justify-center font-bold text-sm"
+                >8</span
+              >
+              <h3 class="text-base font-bold text-white m-0">
+                Ranked-Modus, Elo & Stahl-Belohnungen
+              </h3>
+            </div>
+            <p class="text-xs text-gray-300 leading-relaxed mb-2 m-0">
+              Kämpfe in 1v1, 2v2 oder FFA um Elo von Bronze bis Großmeister.
+              Nach jedem Match erhältst du <strong>Stahl (⚙️)</strong> für den
+              Kosmetik-Shop:
+            </p>
+            <ul class="text-xs text-gray-300 space-y-1 ps-4 m-0">
+              <li>
+                <strong class="text-amber-300">🥇 Sieg (Platz 1):</strong> 1.000
+                Stahl
+              </li>
+              <li>
+                <strong class="text-slate-300">🥈 Platz 2:</strong> 750 Stahl
+              </li>
+              <li>
+                <strong class="text-amber-600">🥉 Platz 3:</strong> 500 Stahl
+              </li>
+            </ul>
+            <div class="text-[11px] text-gray-400 mt-2">
+              Kaufe im Shop exklusive Spielertitel, Badges, Skins und Sounds
+              ohne Echtgeld!
+            </div>
           </div>
         </div>
 
@@ -334,6 +487,21 @@ export class HelpModal extends BaseModal {
               <strong>10 HP alle 10 Ticks (1s)</strong>, können dadurch jedoch
               <strong>niemals unter 1 HP</strong> fallen (Schiffe sinken nicht
               durch Kraftstoffmangel alleine).
+            </li>
+            <li>
+              <strong>Verteidigungsposten an Grenzen:</strong> 5.0x
+              Verteidigungsbonus und 3.0x Angriffsbremse wehren feindliche
+              Übermächte mit minimalem Truppeneinsatz ab.
+            </li>
+            <li>
+              <strong>Nuke-Resilienz mit Stahlbunkern:</strong> Platziere
+              Stahlbunker an kritischen Schlüsselpositionen – sie widerstehen
+              selbst schwersten nuklearen MIRV-Angriffen!
+            </li>
+            <li>
+              <strong>Bündnisse gegen Hegemonen:</strong> Schließe dich mit
+              Nachbarn zusammen, um expansive Großmächte einzudämmen, bevor sie
+              uneinholbar wachsen.
             </li>
           </ul>
         </div>
@@ -1145,48 +1313,95 @@ export class HelpModal extends BaseModal {
         <div class="flex items-center gap-3 mb-4">
           <img src=${radarIcon} class="w-6 h-6" />
           <h2 class="text-xl font-bold text-white m-0">
-            Verteidigung, Sensoren & Flugabwehr
+            Verteidigung, Stahlbunker & Flugabwehr
           </h2>
         </div>
         <p class="text-sm text-gray-300 mb-6 leading-relaxed">
-          Exakte Verteidigungsboni, Sensorradien und Flugabwehr-Spezifikationen
-          zur Absicherung deines Territoriums.
+          Exakte Verteidigungsboni, bombensichere Festungen, Sensorradien und
+          Flugabwehr-Spezifikationen zur lückenlosen Absicherung deines
+          Territoriums.
         </p>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <!-- Bunker -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Defense Post -->
           <div
-            class="bg-black/30 rounded-xl border border-white/10 p-5 flex flex-col justify-between"
+            class="bg-black/30 rounded-xl border border-yellow-500/30 p-5 flex flex-col justify-between"
+          >
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <img src=${defensePostIcon} class="w-7 h-7" />
+                  <h3 class="text-base font-bold text-yellow-300 m-0">
+                    Verteidigungsposten
+                  </h3>
+                </div>
+                <span class="text-xs font-mono text-amber-300">100 Gold</span>
+              </div>
+              <div
+                class="text-[11px] font-mono text-yellow-300 bg-black/40 p-2 rounded mb-2 space-y-0.5"
+              >
+                <div>
+                  Verteidigung:
+                  <span class="text-white font-bold">5.0x Multiplikator</span>
+                </div>
+                <div>
+                  Angriffs-Bremse:
+                  <span class="text-white font-bold">3.0x Verlangsamung</span>
+                </div>
+                <div>Wirkung: Umkreis-Radius an Grenzen</div>
+              </div>
+              <p class="text-xs text-gray-300 leading-relaxed mb-3">
+                Das effektivste Bollwerk gegen Übermacht- und
+                Zermürbungsangriffe. Erhöht die Standhaftigkeit eigener Truppen
+                drastisch und bremst anrückende Feinde massiv aus.
+              </p>
+            </div>
+            <span
+              class="text-[11px] text-yellow-300 font-bold border-t border-white/10 pt-2 font-mono"
+            >
+              5.0x Def + 3.0x Angriffsbremse
+            </span>
+          </div>
+
+          <!-- Stahlbunker -->
+          <div
+            class="bg-black/30 rounded-xl border border-cyan-500/30 p-5 flex flex-col justify-between"
           >
             <div>
               <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center gap-2">
                   <img src=${bunkerIcon} class="w-7 h-7" />
-                  <h3 class="text-base font-bold text-white m-0">Bunker</h3>
+                  <h3 class="text-base font-bold text-cyan-200 m-0">
+                    Stahlbunker
+                  </h3>
                 </div>
-                <span class="text-xs font-mono text-amber-300">250 Gold</span>
+                <span class="text-xs font-mono text-amber-300">500 Gold</span>
               </div>
               <div
-                class="text-[11px] font-mono text-amber-400 bg-black/40 p-2 rounded mb-2 space-y-0.5"
+                class="text-[11px] font-mono text-cyan-300 bg-black/40 p-2 rounded mb-2 space-y-0.5"
               >
-                <div>Kosten: 35 Stahl</div>
+                <div>Kosten: 100 × 1.6^n Stahl (steigend)</div>
                 <div>
-                  Verteidigung:
-                  <span class="text-white font-bold"
-                    >+80.0% (1.8x Multiplikator)</span
+                  Nuke-Status:
+                  <span class="text-emerald-400 font-bold"
+                    >100% UNZERSTÖRBAR</span
                   >
                 </div>
-                <div>Vergleich: Gebirge +20% (1.2x), Ebene 1.0x</div>
+                <div>
+                  Lanchester-Def:
+                  <span class="text-white font-bold">+80.0% (1.8x)</span>
+                </div>
               </div>
               <p class="text-xs text-gray-300 leading-relaxed mb-3">
-                Schwerer Festungsbau. Schützt Grenzkacheln und Engpässe vor
-                feindlichen Bodenoffensiven.
+                Extrem robuste Schutzresidenz. Weder Atombomben,
+                Wasserstoffbomben noch MIRV-Schläge können den Stahlbunker oder
+                seine Kachel vernichten!
               </p>
             </div>
             <span
-              class="text-[11px] text-amber-300 font-bold border-t border-white/10 pt-2 font-mono"
+              class="text-[11px] text-cyan-300 font-bold border-t border-white/10 pt-2 font-mono"
             >
-              Def-Multiplikator: 1.8x
+              Nuklear-Immun + 1.8x Def
             </span>
           </div>
 
@@ -1270,6 +1485,251 @@ export class HelpModal extends BaseModal {
             >
               Autonomes Raketen-Abwehrsystem
             </span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderAlliancesSection(): TemplateResult {
+    return html`
+      <div class="mb-10">
+        <div class="flex items-center gap-3 mb-4">
+          <img src=${allianceIcon} class="w-6 h-6" />
+          <h2 class="text-xl font-bold text-white m-0">
+            Mehr-Nationen-Allianzen ("Kleine Länder Bündnis")
+          </h2>
+        </div>
+        <p class="text-sm text-gray-300 mb-6 leading-relaxed">
+          Das Allianzen-System von InduFront ermöglicht es mehreren kleineren
+          und mittleren Staaten, sich zu schlagkräftigen Bündnissen
+          zusammenzuschließen, um sich gemeinsam gegen expandierende Großmächte
+          zu behaupten.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <!-- Bündnis-Gründung & Menü -->
+          <div class="bg-black/30 rounded-xl border border-purple-500/30 p-5">
+            <h3
+              class="text-base font-bold text-purple-300 mb-2 m-0 flex items-center gap-2"
+            >
+              <span>🤝</span> Bündnisgründung & Menü
+            </h3>
+            <p class="text-xs text-gray-300 leading-relaxed mb-2">
+              Über das Allianzen-Menü im HUD kannst du Einladungen an
+              befreundete Nationen verschicken oder offenen Bündnissen
+              beitreten.
+            </p>
+            <ul class="text-xs text-gray-300 space-y-1 ps-4 m-0">
+              <li>Kein Friendly Fire zwischen Bündnismitgliedern</li>
+              <li>Freie Truppendurchquerung durch verbündetes Gebiet</li>
+              <li>Gemeinsame Kriegskoordination an Frontlinien</li>
+            </ul>
+          </div>
+
+          <!-- Anti-Großmächte-Schutz -->
+          <div class="bg-black/30 rounded-xl border border-red-500/30 p-5">
+            <h3
+              class="text-base font-bold text-red-300 mb-2 m-0 flex items-center gap-2"
+            >
+              <span>🛡️</span> Anti-Großmächte-Schutz
+            </h3>
+            <p class="text-xs text-gray-300 leading-relaxed mb-2">
+              Um zu verhindern, dass die mächtigsten Spieler den Server
+              monopolisieren, greift die
+              <strong>Top-10-Ausschlussregel</strong>:
+            </p>
+            <ul class="text-xs text-gray-300 space-y-1 ps-4 m-0">
+              <li>
+                <strong>Top 10 Ausschluss:</strong> Spieler in den globalen Top
+                10 können Allianzen weder gründen noch beitreten.
+              </li>
+              <li>
+                <strong>Automatischer Austritt:</strong> Wächst ein
+                Bündnismitglied in die Top 10 hinein, verlässt es die Allianz
+                automatisch!
+              </li>
+              <li>Garantierter Schutz für aufstrebende Staaten.</li>
+            </ul>
+          </div>
+
+          <!-- P2P Handel & Bot-Hilfe -->
+          <div class="bg-black/30 rounded-xl border border-emerald-500/30 p-5">
+            <h3
+              class="text-base font-bold text-emerald-300 mb-2 m-0 flex items-center gap-2"
+            >
+              <span>📦</span> P2P-Hilfe & Bot-Logistik
+            </h3>
+            <p class="text-xs text-gray-300 leading-relaxed mb-2">
+              Bündnispartner können sich im Ernstfall mit kriegswichtigen Gütern
+              versorgen:
+            </p>
+            <ul class="text-xs text-gray-300 space-y-1 ps-4 m-0">
+              <li>
+                <strong>P2P-Rohstoffspenden:</strong> Sende Panzerstahl,
+                Treibstoff oder Gold direkt an bedrängte Verbündete.
+              </li>
+              <li>
+                <strong>Intelligente Bot-Lieferungen:</strong> Verbündete Bots
+                erkennen Treibstoff- und Stahlengpässe und senden eigenständig
+                Hilfskonvois!
+              </li>
+              <li>
+                <strong>Verräter-Schutz:</strong> Das Brechen einer Allianz
+                bestraft den Verräter mit 30 Sekunden Verteidigungsdebuff.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderRankedSection(): TemplateResult {
+    return html`
+      <div class="mb-10">
+        <div class="flex items-center gap-3 mb-4">
+          <span class="text-2xl">🏆</span>
+          <h2 class="text-xl font-bold text-white m-0">
+            Ranked-Modus, Elo-System & Stahl-Belohnungen
+          </h2>
+        </div>
+        <p class="text-sm text-gray-300 mb-6 leading-relaxed">
+          Stelle dein Können im wettkampforientierten Ranked-Modus unter Beweis,
+          steige durch 7 dynamische Elo-Divisionen auf und verdiene Stahl für
+          den Kosmetik-Shop.
+        </p>
+
+        <!-- Ranked Highlights Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <!-- Elo Engine -->
+          <div class="bg-black/30 rounded-xl border border-amber-500/30 p-5">
+            <h3
+              class="text-base font-bold text-amber-300 mb-2 m-0 flex items-center gap-2"
+            >
+              <span>⚡</span> WebSocket-Matchmaking & Elo-Engine
+            </h3>
+            <p class="text-xs text-gray-300 leading-relaxed mb-2">
+              Schnelles, laggfreies Ranglisten-Matchmaking über dedizierte
+              Server mit mathematisch fundiertem Elo-System:
+            </p>
+            <ul class="text-xs text-gray-300 space-y-1 ps-4 m-0">
+              <li>
+                <strong>1v1 Duelle:</strong> Reines Nullsummen-Kräftemessen auf
+                Augenhöhe.
+              </li>
+              <li>
+                <strong>2v2 Teams:</strong> Taktische Kooperation mit
+                aggregiertem Team-Rating.
+              </li>
+              <li>
+                <strong>FFA Rangliste:</strong> Pairwise Round-Robin-Auswertung
+                aller Platzierungen.
+              </li>
+              <li>
+                <strong>Dynamische K-Faktoren:</strong> K=40 für Einsteiger,
+                K=16 für Spitzen-Veteranen (>2000 Elo).
+              </li>
+            </ul>
+          </div>
+
+          <!-- Steel Shop Rewards -->
+          <div class="bg-black/30 rounded-xl border border-cyan-500/30 p-5">
+            <h3
+              class="text-base font-bold text-cyan-300 mb-2 m-0 flex items-center gap-2"
+            >
+              <span>⚙️</span> Stahl-Währung & Kosmetik-Shop
+            </h3>
+            <p class="text-xs text-gray-300 leading-relaxed mb-2">
+              Jedes abgeschlossene Spiel belohnt deine taktische Leistung mit
+              permanenter <strong>Stahl-Währung (⚙️)</strong>:
+            </p>
+            <div
+              class="grid grid-cols-3 gap-2 text-center text-xs font-mono mb-3"
+            >
+              <div
+                class="bg-amber-500/10 border border-amber-500/30 p-2 rounded"
+              >
+                <div class="text-amber-300 font-bold">🥇 1. Platz</div>
+                <div class="text-white font-extrabold text-sm">1.000 ⚙️</div>
+              </div>
+              <div
+                class="bg-slate-400/10 border border-slate-400/30 p-2 rounded"
+              >
+                <div class="text-slate-300 font-bold">🥈 2. Platz</div>
+                <div class="text-white font-extrabold text-sm">750 ⚙️</div>
+              </div>
+              <div
+                class="bg-amber-700/10 border border-amber-700/30 p-2 rounded"
+              >
+                <div class="text-amber-500 font-bold">🥉 3. Platz</div>
+                <div class="text-white font-extrabold text-sm">500 ⚙️</div>
+              </div>
+            </div>
+            <p class="text-[11px] text-gray-400 m-0">
+              Im Stahl-Shop schaltest du exklusive Spielertitel, Profil-Badges,
+              Einheiten-Skins und Soundeffekte frei – 100% ohne Echtgeld-Zwang!
+            </p>
+          </div>
+        </div>
+
+        <!-- 7 Tiers Table -->
+        <div
+          class="overflow-x-auto rounded-xl border border-white/10 bg-black/40 p-4"
+        >
+          <h4
+            class="text-xs font-bold text-gray-300 uppercase tracking-wider mb-3 m-0"
+          >
+            Die 7 Rangstufen & Divisionen
+          </h4>
+          <div
+            class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2 text-center text-xs"
+          >
+            <div
+              class="p-2.5 rounded bg-amber-950/30 border border-amber-800/40"
+            >
+              <div class="font-bold text-amber-500">Bronze</div>
+              <div class="text-[10px] text-gray-400">0 - 799</div>
+              <div class="text-[10px] text-amber-300/80 mt-1">Div. I - III</div>
+            </div>
+            <div
+              class="p-2.5 rounded bg-slate-800/40 border border-slate-600/40"
+            >
+              <div class="font-bold text-slate-300">Silber</div>
+              <div class="text-[10px] text-gray-400">800 - 1.199</div>
+              <div class="text-[10px] text-slate-300/80 mt-1">Div. I - III</div>
+            </div>
+            <div
+              class="p-2.5 rounded bg-yellow-950/30 border border-yellow-600/40"
+            >
+              <div class="font-bold text-yellow-400">Gold</div>
+              <div class="text-[10px] text-gray-400">1.200 - 1.599</div>
+              <div class="text-[10px] text-yellow-300/80 mt-1">
+                Div. I - III
+              </div>
+            </div>
+            <div class="p-2.5 rounded bg-cyan-950/30 border border-cyan-600/40">
+              <div class="font-bold text-cyan-300">Platin</div>
+              <div class="text-[10px] text-gray-400">1.600 - 1.999</div>
+              <div class="text-[10px] text-cyan-200/80 mt-1">Div. I - III</div>
+            </div>
+            <div class="p-2.5 rounded bg-blue-950/30 border border-blue-500/40">
+              <div class="font-bold text-blue-300">Diamant</div>
+              <div class="text-[10px] text-gray-400">2.000 - 2.399</div>
+              <div class="text-[10px] text-blue-200/80 mt-1">Div. I - III</div>
+            </div>
+            <div
+              class="p-2.5 rounded bg-purple-950/30 border border-purple-500/40"
+            >
+              <div class="font-bold text-purple-300">Meister</div>
+              <div class="text-[10px] text-gray-400">2.400 - 2.799</div>
+              <div class="text-[10px] text-purple-200/80 mt-1">Elite</div>
+            </div>
+            <div class="p-2.5 rounded bg-rose-950/30 border border-rose-500/40">
+              <div class="font-bold text-rose-300">Großmeister</div>
+              <div class="text-[10px] text-gray-400">2.800+</div>
+              <div class="text-[10px] text-rose-200/80 mt-1">Legende</div>
+            </div>
           </div>
         </div>
       </div>
@@ -1538,20 +1998,57 @@ export class HelpModal extends BaseModal {
                 </td>
               </tr>
 
+              <!-- Infrastructure & Housing -->
+              <tr class="hover:bg-white/5">
+                <td
+                  class="p-3 ps-4 flex items-center gap-2 font-bold text-white"
+                >
+                  <img src=${residentialIcon} class="w-5 h-5" /> Wohnviertel
+                </td>
+                <td class="p-3 text-cyan-300">Infrastruktur</td>
+                <td class="p-3 font-mono text-amber-300">300</td>
+                <td class="p-3 font-mono">-</td>
+                <td class="p-3 font-mono">-</td>
+                <td class="p-3 font-mono">-</td>
+                <td class="p-3 pe-4">
+                  Demografie-Cap: <strong>+500 Bevölkerung</strong> |
+                  Arbeitskraft für Minen & Veredelung | Weißes Karten-Icon
+                </td>
+              </tr>
+
               <!-- Defense & Sensors -->
               <tr class="hover:bg-white/5">
                 <td
                   class="p-3 ps-4 flex items-center gap-2 font-bold text-white"
                 >
-                  <img src=${bunkerIcon} class="w-5 h-5" /> Bunker
+                  <img src=${defensePostIcon} class="w-5 h-5" />
+                  Verteidigungsposten
                 </td>
-                <td class="p-3 text-yellow-400">Befestigung</td>
-                <td class="p-3 font-mono text-amber-300">250</td>
-                <td class="p-3 font-mono text-cyan-300">35</td>
+                <td class="p-3 text-yellow-400">Verteidigung</td>
+                <td class="p-3 font-mono text-amber-300">100</td>
+                <td class="p-3 font-mono">-</td>
                 <td class="p-3 font-mono">-</td>
                 <td class="p-3 font-mono">-</td>
                 <td class="p-3 pe-4">
-                  Verteidigungs-Multiplikator: <strong>1.8x (+80.0%)</strong>
+                  Lanchester-Def: <strong>5.0x Multiplikator</strong> |
+                  Angriffs-Bremse: <strong>3.0x Verlangsamung</strong> (Umkreis)
+                </td>
+              </tr>
+              <tr class="hover:bg-white/5">
+                <td
+                  class="p-3 ps-4 flex items-center gap-2 font-bold text-white"
+                >
+                  <img src=${bunkerIcon} class="w-5 h-5" /> Stahlbunker
+                </td>
+                <td class="p-3 text-yellow-400">Schutzbau & Residenz</td>
+                <td class="p-3 font-mono text-amber-300">500</td>
+                <td class="p-3 font-mono text-cyan-300">100 · 1.6^n</td>
+                <td class="p-3 font-mono">-</td>
+                <td class="p-3 font-mono">-</td>
+                <td class="p-3 pe-4">
+                  <strong>100% Nuke- & Bombensicher</strong> (unzerstörbar durch
+                  Atombomben, H-Bomben, MIRV) | Lanchester-Def:
+                  <strong>+80.0% (1.8x)</strong>
                 </td>
               </tr>
               <tr class="hover:bg-white/5">
@@ -1817,11 +2314,15 @@ export class HelpModal extends BaseModal {
         ${tab === "refinery" || tab === "all"
           ? this.renderRefinerySection()
           : ""}
+        ${tab === "defense" || tab === "all" ? this.renderDefenseSection() : ""}
+        ${tab === "alliances" || tab === "all"
+          ? this.renderAlliancesSection()
+          : ""}
         ${tab === "military" || tab === "all"
           ? this.renderMilitarySection()
           : ""}
         ${tab === "nukes" || tab === "all" ? this.renderNukesSection() : ""}
-        ${tab === "defense" || tab === "all" ? this.renderDefenseSection() : ""}
+        ${tab === "ranked" || tab === "all" ? this.renderRankedSection() : ""}
         ${tab === "stats" || tab === "all" ? this.renderStatsSection() : ""}
         ${tab === "controls" || tab === "all"
           ? this.renderControlsSection()
