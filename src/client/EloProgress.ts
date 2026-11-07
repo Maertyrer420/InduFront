@@ -73,3 +73,51 @@ export function getClientEloTierDetails(elo: number): ClientEloTierDetails {
     label: "Eisen IV",
   };
 }
+
+/**
+ * Estimates match Elo delta for responsive instant client feedback.
+ */
+export function estimateRankedMatchEloDelta(
+  mode: string,
+  placement: number,
+  totalPlayers: number,
+  isWinner: boolean,
+): number {
+  if (isWinner || placement === 1) {
+    if (mode === "1v1") return 20;
+    if (mode === "2v2") return 18;
+    return 26; // FFA
+  }
+
+  if (mode === "1v1") return -16;
+  if (mode === "2v2") return -14;
+
+  // FFA
+  const safeTotal = Math.max(2, totalPlayers);
+  if (placement === 2 && safeTotal >= 3) return 14;
+  if (placement === 3 && safeTotal >= 5) return 4;
+  if (placement <= Math.floor(safeTotal / 2)) return -4;
+  if (placement === safeTotal) return -18;
+  return -12;
+}
+
+/**
+ * Checks whether an Elo rating increase resulted in a tier or division promotion.
+ */
+export function checkPromotion(
+  oldElo: number,
+  newElo: number,
+): {
+  isPromotion: boolean;
+  oldDetails: ClientEloTierDetails;
+  newDetails: ClientEloTierDetails;
+} {
+  const oldDetails = getClientEloTierDetails(oldElo);
+  const newDetails = getClientEloTierDetails(newElo);
+  const isPromotion =
+    newElo > oldElo &&
+    (oldDetails.tier !== newDetails.tier ||
+      oldDetails.division !== newDetails.division);
+
+  return { isPromotion, oldDetails, newDetails };
+}

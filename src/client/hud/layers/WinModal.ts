@@ -29,6 +29,11 @@ import {
   resolveCosmetics,
 } from "../../Cosmetics";
 import { isDesktopShell } from "../../DesktopShell";
+import {
+  checkPromotion,
+  estimateRankedMatchEloDelta,
+  getClientEloTierDetails,
+} from "../../EloProgress";
 import { gamePortal } from "../../GamePortal";
 import {
   gameShareMoment,
@@ -97,7 +102,37 @@ export class WinModal extends LitElement implements Controller {
   private awardedSteel = 0;
 
   @state()
+  private animatedSteel = 0;
+
+  @state()
   private placement = 0;
+
+  @state()
+  private currentElo = 1000;
+
+  @state()
+  private eloDelta = 0;
+
+  @state()
+  private animatedElo = 1000;
+
+  @state()
+  private isPromotion = false;
+
+  @state()
+  private matchKills = 0;
+
+  @state()
+  private matchPeakTiles = 0;
+
+  @state()
+  private matchDuration = "0:00";
+
+  @state()
+  private isSpectatingAfterDeath = false;
+
+  private steelAnimFrame: number | null = null;
+  private eloAnimFrame: number | null = null;
 
   private hasAwardedSteel = false;
 
@@ -146,52 +181,261 @@ export class WinModal extends LitElement implements Controller {
   }
 
   render() {
+    const tierDetails = this.isRankedGame
+      ? getClientEloTierDetails(this.animatedElo)
+      : null;
+
     return html`
       <div
         class="${this.isVisible
-          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-800/70 p-4 md:p-6 shrink-0 rounded-lg z-[10010] shadow-2xl backdrop-blur-xs text-white w-[min(90vw,700px)] max-w-[90%] max-h-[90dvh] overflow-hidden flex flex-col"
+          ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-900/90 border border-slate-700/60 p-4 md:p-6 shrink-0 rounded-2xl z-[10010] shadow-[0_0_50px_rgba(0,0,0,0.8)] backdrop-blur-md text-white w-[min(92vw,720px)] max-w-[92%] max-h-[92dvh] overflow-hidden flex flex-col"
           : "hidden"}"
       >
-        <h2 class="m-0 mb-4 text-[26px] text-center text-white shrink-0">
-          ${this._title || ""}
-        </h2>
-        ${this.awardedSteel > 0
+        <!-- Header with Winner/Status Celebration -->
+        <div class="relative text-center mb-3 shrink-0">
+          ${this.isWin
+            ? html`
+                <div
+                  class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-300 font-black tracking-widest text-xs uppercase animate-pulse mb-1.5 shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                >
+                  <span>👑</span>
+                  <span>Glorreicher Sieg</span>
+                </div>
+                <h2
+                  class="m-0 text-2xl sm:text-3xl font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 drop-shadow-[0_2px_10px_rgba(234,179,8,0.4)]"
+                >
+                  ${this._title || "SIEG!"}
+                </h2>
+              `
+            : html`
+                <h2
+                  class="m-0 text-xl sm:text-2xl font-bold uppercase tracking-wider text-slate-200"
+                >
+                  ${this._title || "RUNDE BEENDET"}
+                </h2>
+              `}
+        </div>
+
+        <!-- Spectating banner if player died before round end -->
+        ${this.isSpectatingAfterDeath && !this.isWin
           ? html`
               <div
-                class="mb-3 p-3.5 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-950/70 via-slate-900/90 to-amber-950/70 shadow-lg text-center shrink-0"
+                class="mb-3 px-3 py-2 rounded-xl bg-slate-800/80 border border-cyan-500/30 flex items-center justify-between text-xs text-slate-300 shrink-0"
               >
-                <div
-                  class="flex items-center justify-center gap-2 text-amber-400 font-extrabold text-lg"
-                >
-                  <span class="text-xl">⚙️</span>
-                  <span>Runden-Belohnung: +${this.awardedSteel} Stahl!</span>
-                  <span
-                    class="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                  >
-                    Platz #${this.placement}
+                <div class="flex items-center gap-2">
+                  <span class="text-base">👁️</span>
+                  <span>
+                    Ausgeschieden (Platz #${this.placement}). Zuschauermodus
+                    aktiv.
                   </span>
                 </div>
-                <p class="text-xs text-slate-300 mt-1">
-                  Aktuelles Guthaben:
-                  <strong class="text-white font-bold"
-                    >${SteelStoreService.getBalance()} ⚙️</strong
+                <span
+                  class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30"
+                >
+                  +${this.awardedSteel} ⚙️ gesichert
+                </span>
+              </div>
+            `
+          : null}
+
+        <!-- Rewards & Ranked Progression Grid -->
+        ${this.awardedSteel > 0 || this.placement > 0
+          ? html`
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3 shrink-0">
+                <!-- Steel Rewards Card -->
+                <div
+                  class="p-3.5 rounded-xl border border-amber-500/40 bg-gradient-to-br from-amber-950/60 via-slate-900/90 to-amber-950/50 shadow-lg flex flex-col justify-between"
+                >
+                  <div>
+                    <div class="flex items-center justify-between">
+                      <span
+                        class="text-xs uppercase font-bold text-amber-400 tracking-wider flex items-center gap-1.5"
+                      >
+                        <span>⚙️</span> Runden-Belohnung
+                      </span>
+                      <span
+                        class="text-xs font-black px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                      >
+                        Platz #${this.placement}
+                      </span>
+                    </div>
+                    <div
+                      class="mt-2 text-2xl font-black text-amber-300 font-mono tracking-tight flex items-center gap-2"
+                    >
+                      <span>+${this.animatedSteel}</span>
+                      <span
+                        class="text-xs font-semibold text-amber-400/80 uppercase"
+                        >Stahl</span
+                      >
+                    </div>
+                    <p class="text-[11px] text-slate-400 mt-1">
+                      Aktuelles Guthaben:
+                      <strong class="text-white"
+                        >${SteelStoreService.getBalance()} ⚙️</strong
+                      >
+                    </p>
+                  </div>
+                  <div class="mt-2.5 flex">
+                    <button
+                      type="button"
+                      class="w-full px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold text-[11px] tracking-wider uppercase transition shadow-md hover:shadow-amber-500/30 flex items-center justify-center gap-1.5 cursor-pointer"
+                      @click=${() => this.openSteelShop()}
+                    >
+                      <span>🛒</span>
+                      <span>Zum Stahl-Shop</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Ranked / Elo Card OR Match Highlights -->
+                ${this.isRankedGame && tierDetails
+                  ? html`
+                      <div
+                        class="p-3.5 rounded-xl border border-slate-700/80 bg-gradient-to-br from-slate-900/90 via-slate-800/60 to-slate-900/90 shadow-lg flex flex-col justify-between"
+                      >
+                        <div>
+                          <div class="flex items-center justify-between">
+                            <span
+                              class="text-xs uppercase font-bold text-cyan-400 tracking-wider flex items-center gap-1.5"
+                            >
+                              <span>🏆</span> Ranglisten-Wertung
+                            </span>
+                            <span
+                              class="px-2 py-0.5 text-[10px] font-black uppercase rounded border tracking-wider bg-black/40"
+                              style="color: ${tierDetails.color}; border-color: ${tierDetails.color}66"
+                            >
+                              ${tierDetails.label}
+                            </span>
+                          </div>
+                          <div class="mt-2 flex items-baseline gap-2">
+                            <span
+                              class="text-2xl font-black text-white font-mono tracking-tight"
+                            >
+                              ${this.animatedElo}
+                            </span>
+                            <span
+                              class="text-xs font-bold font-mono ${this
+                                .eloDelta >= 0
+                                ? "text-green-400"
+                                : "text-rose-400"}"
+                            >
+                              ${this.eloDelta >= 0 ? "+" : ""}${this.eloDelta}
+                              Elo
+                            </span>
+                          </div>
+                          <div
+                            class="w-full bg-black/40 rounded-full h-2 overflow-hidden mt-2"
+                            title="${tierDetails.progressPercent}%"
+                          >
+                            <div
+                              class="h-full rounded-full transition-all duration-300"
+                              style="width: ${tierDetails.progressPercent}%; background-color: ${tierDetails.color}"
+                            ></div>
+                          </div>
+                        </div>
+                        ${this.isPromotion
+                          ? html`
+                              <div
+                                class="mt-2 px-2 py-1 rounded bg-green-500/20 border border-green-500/40 text-green-300 font-extrabold text-[11px] text-center uppercase tracking-wider animate-pulse"
+                              >
+                                🎉 Aufstieg zu ${tierDetails.label}!
+                              </div>
+                            `
+                          : html`
+                              <p
+                                class="text-[10px] text-slate-400 mt-2 text-right"
+                              >
+                                ${tierDetails.progressPercent}% zur nächsten
+                                Stufe
+                              </p>
+                            `}
+                      </div>
+                    `
+                  : html`
+                      <div
+                        class="p-3.5 rounded-xl border border-slate-700/80 bg-slate-900/80 flex flex-col justify-between"
+                      >
+                        <span
+                          class="text-xs uppercase font-bold text-slate-400 tracking-wider"
+                        >
+                          📊 Match-Highlights
+                        </span>
+                        <div class="grid grid-cols-3 gap-2 mt-2 text-center">
+                          <div class="bg-black/30 p-2 rounded-lg">
+                            <span class="text-[10px] text-slate-400 block"
+                              >Kills</span
+                            >
+                            <span
+                              class="text-base font-black text-white font-mono"
+                              >${this.matchKills}</span
+                            >
+                          </div>
+                          <div class="bg-black/30 p-2 rounded-lg">
+                            <span class="text-[10px] text-slate-400 block"
+                              >Kacheln</span
+                            >
+                            <span
+                              class="text-base font-black text-white font-mono"
+                              >${this.matchPeakTiles}</span
+                            >
+                          </div>
+                          <div class="bg-black/30 p-2 rounded-lg">
+                            <span class="text-[10px] text-slate-400 block"
+                              >Dauer</span
+                            >
+                            <span
+                              class="text-base font-black text-white font-mono"
+                              >${this.matchDuration}</span
+                            >
+                          </div>
+                        </div>
+                      </div>
+                    `}
+              </div>
+            `
+          : null}
+
+        <!-- Stats Chips if Ranked Game -->
+        ${this.isRankedGame && (this.awardedSteel > 0 || this.placement > 0)
+          ? html`
+              <div class="grid grid-cols-3 gap-2 mb-3 shrink-0">
+                <div
+                  class="bg-black/30 border border-slate-800 p-1.5 rounded-xl text-center"
+                >
+                  <span
+                    class="text-[10px] uppercase font-bold text-slate-400 block"
+                    >⚔️ Kills</span
                   >
-                  Stahl. Sammle Stahl und schalte Titel, Badges, Skins & Sounds
-                  frei!
-                </p>
-                <div class="mt-2.5 flex justify-center">
-                  <button
-                    type="button"
-                    class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold text-xs tracking-wider uppercase transition shadow-md hover:shadow-amber-500/30 flex items-center gap-1.5 cursor-pointer"
-                    @click=${() => this.openSteelShop()}
+                  <span class="text-sm font-black text-white font-mono"
+                    >${this.matchKills}</span
                   >
-                    <span>🛒</span>
-                    <span>Zum Stahl-Shop</span>
-                  </button>
+                </div>
+                <div
+                  class="bg-black/30 border border-slate-800 p-1.5 rounded-xl text-center"
+                >
+                  <span
+                    class="text-[10px] uppercase font-bold text-slate-400 block"
+                    >🗺️ Territorium</span
+                  >
+                  <span class="text-sm font-black text-white font-mono"
+                    >${this.matchPeakTiles}</span
+                  >
+                </div>
+                <div
+                  class="bg-black/30 border border-slate-800 p-1.5 rounded-xl text-center"
+                >
+                  <span
+                    class="text-[10px] uppercase font-bold text-slate-400 block"
+                    >⏱️ Dauer</span
+                  >
+                  <span class="text-sm font-black text-white font-mono"
+                    >${this.matchDuration}</span
+                  >
                 </div>
               </div>
             `
           : null}
+
         <div class="min-h-0 flex-1 overflow-y-auto pr-0.5">
           <game-xp-panel
             .view=${this.xpView}
@@ -203,9 +447,7 @@ export class WinModal extends LitElement implements Controller {
           ></game-xp-panel>
           ${this.innerHtml()}
         </div>
-        <!-- Leaving is the quieter action, on the left; staying in the game
-             is the main one, on the right. Sharing a milestone sits between
-             them, or on its own row above where three don't fit. -->
+
         <div class="mt-4 flex flex-wrap justify-between gap-2.5 shrink-0">
           ${this.actionButton(
             "quiet",
@@ -615,6 +857,12 @@ export class WinModal extends LitElement implements Controller {
       }
     }
 
+    this.extractMatchStats();
+    this.startSteelAnimation(this.awardedSteel);
+    if (this.isRankedGame) {
+      this.initRankedEloAnimation();
+    }
+
     this.requestUpdate();
     try {
       await this.loadPatternContent();
@@ -623,6 +871,143 @@ export class WinModal extends LitElement implements Controller {
       return;
     }
     this.requestUpdate();
+  }
+
+  private extractMatchStats(): void {
+    try {
+      const myPlayer = this.game?.myPlayer?.();
+      const elapsed = this.game?.elapsedGameSeconds?.() ?? 0;
+      const mins = Math.floor(elapsed / 60);
+      const secs = Math.floor(elapsed % 60);
+      this.matchDuration = `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+
+      const myTiles =
+        typeof myPlayer?.numTilesOwned === "function"
+          ? myPlayer.numTilesOwned()
+          : 0;
+      this.matchPeakTiles = myTiles;
+
+      const myClient = this.game?.myClientID?.();
+      const myId = myPlayer?.id?.();
+      let kills = 0;
+      if (typeof this.game?.playerViews === "function") {
+        for (const p of this.game.playerViews()) {
+          const killer = p.killedBy?.();
+          if (
+            killer &&
+            ((myClient && killer === myClient) || (myId && killer === myId))
+          ) {
+            kills++;
+          }
+        }
+      }
+      this.matchKills = kills;
+    } catch {
+      // Safe fallback in test stubs
+    }
+  }
+
+  private startSteelAnimation(target: number): void {
+    if (this.steelAnimFrame) {
+      cancelAnimationFrame(this.steelAnimFrame);
+      this.steelAnimFrame = null;
+    }
+    if (target <= 0) {
+      this.animatedSteel = 0;
+      return;
+    }
+    this.animatedSteel = 0;
+    const startTime = performance.now();
+    const duration = 1200;
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - startTime) / duration);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      this.animatedSteel = Math.round(target * ease);
+      this.requestUpdate();
+      if (progress < 1) {
+        this.steelAnimFrame = requestAnimationFrame(tick);
+      } else {
+        this.animatedSteel = target;
+        try {
+          this.eventBus?.emit(new PlaySoundEffectEvent("ka-ching"));
+        } catch {
+          // Best effort audio playback
+        }
+      }
+    };
+    this.steelAnimFrame = requestAnimationFrame(tick);
+  }
+
+  private initRankedEloAnimation(): void {
+    const rankedType = this.game?.config?.()?.gameConfig?.()?.rankedType;
+    if (!rankedType) return;
+
+    void getUserMe()
+      .then((userMe) => {
+        if (userMe && userMe.player?.leaderboard) {
+          const board = userMe.player.leaderboard;
+          const rawElo =
+            rankedType === "1v1"
+              ? board.oneVone?.elo
+              : rankedType === "2v2"
+                ? board.twoVtwo?.elo
+                : board.ffa?.elo;
+          const current = rawElo ?? 1000;
+          this.currentElo = current;
+          this.animatedElo = current;
+
+          const totalPlayers =
+            typeof this.game?.playerViews === "function"
+              ? [...this.game.playerViews()].length
+              : 8;
+
+          this.eloDelta = estimateRankedMatchEloDelta(
+            rankedType,
+            this.placement,
+            totalPlayers,
+            this.isWin,
+          );
+
+          const promo = checkPromotion(
+            this.currentElo,
+            this.currentElo + this.eloDelta,
+          );
+          this.isPromotion = promo.isPromotion;
+          this.startEloAnimation(
+            this.currentElo,
+            this.currentElo + this.eloDelta,
+          );
+        }
+      })
+      .catch(() => {});
+  }
+
+  private startEloAnimation(from: number, to: number): void {
+    if (this.eloAnimFrame) {
+      cancelAnimationFrame(this.eloAnimFrame);
+      this.eloAnimFrame = null;
+    }
+    const startTime = performance.now();
+    const duration = 1400;
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - startTime) / duration);
+      const ease = 1 - Math.pow(1 - progress, 3);
+      this.animatedElo = Math.round(from + (to - from) * ease);
+      this.requestUpdate();
+      if (progress < 1) {
+        this.eloAnimFrame = requestAnimationFrame(tick);
+      } else {
+        this.animatedElo = to;
+        if (this.isPromotion) {
+          try {
+            this.eventBus?.emit(new PlaySoundEffectEvent("conquered"));
+          } catch {
+            // Best effort audio playback
+          }
+        }
+      }
+    };
+    this.eloAnimFrame = requestAnimationFrame(tick);
   }
 
   private openSteelShop(): void {
@@ -636,6 +1021,14 @@ export class WinModal extends LitElement implements Controller {
 
   hide() {
     this.isVisible = false;
+    if (this.steelAnimFrame) {
+      cancelAnimationFrame(this.steelAnimFrame);
+      this.steelAnimFrame = null;
+    }
+    if (this.eloAnimFrame) {
+      cancelAnimationFrame(this.eloAnimFrame);
+      this.eloAnimFrame = null;
+    }
     this.requestUpdate();
   }
 
@@ -648,6 +1041,14 @@ export class WinModal extends LitElement implements Controller {
   }
 
   disconnectedCallback(): void {
+    if (this.steelAnimFrame) {
+      cancelAnimationFrame(this.steelAnimFrame);
+      this.steelAnimFrame = null;
+    }
+    if (this.eloAnimFrame) {
+      cancelAnimationFrame(this.eloAnimFrame);
+      this.eloAnimFrame = null;
+    }
     this.xpAbort?.abort();
     super.disconnectedCallback();
   }
@@ -897,6 +1298,7 @@ export class WinModal extends LitElement implements Controller {
       myPlayer.hasSpawned()
     ) {
       this.hasShownDeathModal = true;
+      this.isSpectatingAfterDeath = true;
       this._title = translateText("win_modal.died");
       this.eventBus.emit(new PlaySoundEffectEvent("defeat"));
       void this.updateXp(false);
@@ -904,7 +1306,10 @@ export class WinModal extends LitElement implements Controller {
     }
     const updates = this.game.updatesSinceLastTick();
     const winUpdates = updates?.[GameUpdateType.Win] ?? [];
-    if (winUpdates.length > 0) void this.updateXp(true);
+    if (winUpdates.length > 0) {
+      this.isSpectatingAfterDeath = false;
+      void this.updateXp(true);
+    }
     winUpdates.forEach((wu) => {
       if (wu.winner === undefined) {
         // Match cancelled (e.g. a ranked 2v2 that didn't fill or fully
