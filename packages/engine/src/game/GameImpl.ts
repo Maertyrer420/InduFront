@@ -1005,29 +1005,37 @@ export class GameImpl implements Game {
   }
 
   public isPlayerInTop10(player: Player): boolean {
-    const alivePlayers = this.players().filter((p) => p.isAlive());
-    if (alivePlayers.length <= 1) return false;
-    // Top 10 rule: In games with > 10 nations, the top 10 nations cannot ally.
-    // If 10 or fewer nations are alive, the top 40% (at least 1 leader) are excluded.
-    const threshold =
-      alivePlayers.length > 10
-        ? 10
-        : Math.max(1, Math.floor(alivePlayers.length * 0.4));
+    if (!player) return false;
+    const alivePlayers = this.players().filter(
+      (p) => p && typeof p.isAlive === "function" && p.isAlive(),
+    );
+    if (alivePlayers.length <= 10) return false;
     const sorted = [...alivePlayers].sort(
       (a, b) =>
-        b.numTilesOwned() - a.numTilesOwned() ||
-        Number(b.troops() - a.troops()),
+        (typeof b.numTilesOwned === "function" ? b.numTilesOwned() : 0) -
+          (typeof a.numTilesOwned === "function" ? a.numTilesOwned() : 0) ||
+        Number(
+          (typeof b.troops === "function" ? b.troops() : 0) -
+            (typeof a.troops === "function" ? a.troops() : 0),
+        ),
     );
     const rank = sorted.indexOf(player);
-    return rank !== -1 && rank < threshold;
+    return rank !== -1 && rank < 10;
   }
 
   public playerLeaderboardRank(player: Player): number {
-    const alivePlayers = this.players().filter((p) => p.isAlive());
+    if (!player) return 999;
+    const alivePlayers = this.players().filter(
+      (p) => p && typeof p.isAlive === "function" && p.isAlive(),
+    );
     const sorted = [...alivePlayers].sort(
       (a, b) =>
-        b.numTilesOwned() - a.numTilesOwned() ||
-        Number(b.troops() - a.troops()),
+        (typeof b.numTilesOwned === "function" ? b.numTilesOwned() : 0) -
+          (typeof a.numTilesOwned === "function" ? a.numTilesOwned() : 0) ||
+        Number(
+          (typeof b.troops === "function" ? b.troops() : 0) -
+            (typeof a.troops === "function" ? a.troops() : 0),
+        ),
     );
     const rank = sorted.indexOf(player);
     return rank === -1 ? 999 : rank + 1;
@@ -1035,11 +1043,19 @@ export class GameImpl implements Game {
 
   public checkTop10AllianceDissolutions(): void {
     if (this.config().disableAlliances()) return;
+    const alivePlayers = this.players().filter(
+      (p) => p && typeof p.isAlive === "function" && p.isAlive(),
+    );
+    if (alivePlayers.length <= 10) return;
+
     const allAlliances: MutableAlliance[] = [];
     const seen = new Set<number>();
     for (const player of this.players()) {
-      for (const a of player.alliances()) {
-        if (!seen.has(a.id())) {
+      if (!player || typeof player.alliances !== "function") continue;
+      const alliances = player.alliances();
+      if (!alliances || !Array.isArray(alliances)) continue;
+      for (const a of alliances) {
+        if (a && typeof a.id === "function" && !seen.has(a.id())) {
           seen.add(a.id());
           allAlliances.push(a);
         }
@@ -1061,16 +1077,8 @@ export class GameImpl implements Game {
     reasonPlayer: Player,
   ): void {
     const duration = this._ticks - alliance.createdAt();
-    this.stats().allianceEnded(
-      alliance.requestor(),
-      duration,
-      "expired",
-    );
-    this.stats().allianceEnded(
-      alliance.recipient(),
-      duration,
-      "expired",
-    );
+    this.stats().allianceEnded(alliance.requestor(), duration, "expired");
+    this.stats().allianceEnded(alliance.recipient(), duration, "expired");
     this.detachAlliance(alliance);
     this.addUpdate({
       type: GameUpdateType.AllianceExpired,

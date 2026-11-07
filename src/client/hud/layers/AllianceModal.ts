@@ -61,7 +61,8 @@ export class AllianceModal extends LitElement implements Controller {
       max-height: 85vh;
       background: #11141c;
       border: 1px solid rgba(99, 102, 241, 0.35);
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8),
+      box-shadow:
+        0 25px 60px rgba(0, 0, 0, 0.8),
         0 0 35px rgba(99, 102, 241, 0.15);
       border-radius: 1rem;
       color: #f3f4f6;
@@ -399,7 +400,10 @@ export class AllianceModal extends LitElement implements Controller {
                     verbünden.
                   `
                 : html`
-                    <strong>Bündnis berechtigt (Rang #${myRank} von ${totalAlive}):</strong>
+                    <strong
+                      >Bündnis berechtigt (Rang #${myRank} von
+                      ${totalAlive}):</strong
+                    >
                     Du kannst dich mit anderen kleineren Ländern verbünden, um
                     gemeinsam gegen die Top 10 Großmächte anzutreten.
                     <span class="text-indigo-300 font-semibold"
@@ -430,7 +434,10 @@ export class AllianceModal extends LitElement implements Controller {
                     ${myAlliances.map((a: any) => {
                       const other = this.game?.player(a.other);
                       if (!other) return html``;
-                      const remTicks = Math.max(0, a.expiresAt - this.game!.ticks());
+                      const remTicks = Math.max(
+                        0,
+                        a.expiresAt - this.game!.ticks(),
+                      );
                       const remSec = Math.floor(remTicks / 10);
                       return html`
                         <div class="ally-card">

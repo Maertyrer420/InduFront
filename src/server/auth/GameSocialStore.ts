@@ -1010,7 +1010,8 @@ export class GameSocialStore {
   ): { success: boolean; balance: number; error?: string } {
     const key = publicId.toLowerCase();
     const stats = this.data.playerStats[key];
-    if (!stats) return { success: false, balance: 0, error: "player_not_found" };
+    if (!stats)
+      return { success: false, balance: 0, error: "player_not_found" };
     const current = stats.steelBalance ?? 500;
     if (current < cost) {
       return { success: false, balance: current, error: "insufficient_steel" };

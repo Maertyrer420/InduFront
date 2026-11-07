@@ -1478,10 +1478,7 @@ export class PlayerImpl implements Player {
           );
         }
         if (reqFuel > 0) {
-          econ.refined.fuel = Math.max(
-            0,
-            (econ.refined.fuel ?? 0) - reqFuel,
-          );
+          econ.refined.fuel = Math.max(0, (econ.refined.fuel ?? 0) - reqFuel);
         }
       }
     }

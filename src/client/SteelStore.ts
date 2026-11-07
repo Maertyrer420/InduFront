@@ -224,7 +224,10 @@ export class SteelStoreService {
   }
 
   public static setBalance(val: number): void {
-    localStorage.setItem(LOCAL_STORAGE_KEY_BALANCE, String(Math.max(0, Math.floor(val))));
+    localStorage.setItem(
+      LOCAL_STORAGE_KEY_BALANCE,
+      String(Math.max(0, Math.floor(val))),
+    );
     this.notify();
   }
 
@@ -337,10 +340,7 @@ export class SteelStoreService {
   public static equip(category: string, id: string): void {
     const equipped = this.getEquipped();
     equipped[category] = id;
-    localStorage.setItem(
-      LOCAL_STORAGE_KEY_EQUIPPED,
-      JSON.stringify(equipped),
-    );
+    localStorage.setItem(LOCAL_STORAGE_KEY_EQUIPPED, JSON.stringify(equipped));
     this.notify();
   }
 }

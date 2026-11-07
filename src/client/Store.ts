@@ -41,9 +41,9 @@ import {
   priceStringToCents,
   reportPendingSteamAuthorizations,
 } from "./Payments";
+import { STEEL_CATALOG, SteelStoreService } from "./SteelStore";
 import { lastUserMeResponse } from "./UserMeBroadcast";
 import { translateText } from "./Utils";
-import { STEEL_CATALOG, SteelStoreService } from "./SteelStore";
 
 // Matches the API's formatting of `product.price`, so a tier priced from its
 // own cents reads the same as one priced from its Stripe listing.

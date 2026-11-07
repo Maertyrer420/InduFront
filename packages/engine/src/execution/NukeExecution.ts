@@ -403,9 +403,7 @@ export class NukeExecution implements Execution {
     const toDestroy = this.tilesToDestroy();
 
     // Retrieve all impacted players and the number of tiles
-    const bunkerTiles = new Set(
-      mg.units(UnitType.Bunker).map((b) => b.tile()),
-    );
+    const bunkerTiles = new Set(mg.units(UnitType.Bunker).map((b) => b.tile()));
     const tilesPerPlayers = new Map<Player, number>();
     for (const tile of toDestroy) {
       if (bunkerTiles.has(tile)) {
