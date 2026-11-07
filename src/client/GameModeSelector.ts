@@ -45,7 +45,6 @@ import { UsernameInput } from "./UsernameInput";
 import {
   calculateServerTimeOffset,
   getGameModeLabel,
-  getGamesPlayed,
   getSecondsUntilServerTimestamp,
   reloadForUpdate,
   renderDuration,
@@ -54,17 +53,9 @@ import {
 } from "./Utils";
 import { isReplayShellHost } from "./VersionedReplay";
 
-const PRIMARY_ACTION =
-  "bg-malibu-blue hover:bg-aquarius active:bg-malibu-blue/80 hover:scale-y-105 hover:scale-x-[1.01]";
 const SECONDARY_ACTION =
   "bg-surface hover:brightness-[1.08] active:brightness-[0.95] hover:scale-105 hover:shadow-[var(--shadow-action-card-hover)]";
 const DISABLED = "opacity-50 cursor-not-allowed pointer-events-none";
-/** Tutorial card: the panel's gold, dark text for contrast. */
-const TUTORIAL_ACTION =
-  "bg-cyber-yellow hover:bg-yellow-300 active:bg-cyber-yellow/80 !text-gray-900 hover:scale-y-105 hover:scale-x-[1.01]";
-
-/** The Tutorial card shows beside Solo until the player has played this many games. */
-const TUTORIAL_CARD_MAX_GAMES = 5;
 
 /**
  * THE REACHABILITY RULE (OPE-439). Stated once, here; every other call site
@@ -665,58 +656,135 @@ export class GameModeSelector extends LitElement {
           class="no-game-portal [&:empty]:hidden sm:col-span-2"
         ></ios-add-to-home-screen-banner>
 
-        <div class="flex gap-4 h-14 sm:col-span-2">
-          <div class="flex-[2]">
+        <!-- Top Hero Row: Solo & Ranked (2 prominent cards) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:col-span-2">
+          <div class="h-16 sm:h-18">
             ${this.renderSmallActionCard(
               translateText("main.solo"),
               this.openSinglePlayerModal,
-              PRIMARY_ACTION,
+              "bg-gradient-to-r from-emerald-950/50 to-surface/90 border border-emerald-500/30 hover:border-emerald-400 hover:shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:scale-[1.02]",
+              undefined,
+              false,
+              nothing,
+              html`<svg
+                class="w-5 h-5 shrink-0 text-emerald-400"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <path d="m4.93 4.93 4.24 4.24" />
+                <path d="m14.83 9.17 4.24-4.24" />
+                <path d="m14.83 14.83 4.24 4.24" />
+                <path d="m9.17 14.83-4.24 4.24" />
+                <circle cx="12" cy="12" r="4" />
+              </svg>`,
+              "Einzelspieler & Bot-Gefecht",
             )}
           </div>
-          ${getGamesPlayed() < TUTORIAL_CARD_MAX_GAMES
-            ? html`<div class="flex-1">
-                ${this.renderSmallActionCard(
-                  translateText("main.tutorial"),
-                  this.startTutorial,
-                  TUTORIAL_ACTION,
-                )}
-              </div>`
-            : nothing}
+          <div class="h-16 sm:h-18">
+            ${this.renderSmallActionCard(
+              translateText("mode_selector.ranked_title"),
+              this.openRankedMenu,
+              "bg-gradient-to-r from-blue-950/50 to-surface/90 border border-malibu-blue/30 hover:border-malibu-blue hover:shadow-[0_0_20px_rgba(56,189,248,0.25)] hover:scale-[1.02]",
+              undefined,
+              true,
+              this.viewerTrusted
+                ? trustLockIcon(true, {
+                    tooltipTitle: translateText(
+                      "mode_selector.ranked_trust_tooltip_title",
+                    ),
+                    position: "top-2 right-2",
+                    small: true,
+                  })
+                : nothing,
+              html`<svg
+                class="w-5 h-5 shrink-0 text-malibu-blue"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M6 9H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2" />
+                <path d="M18 9h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2" />
+                <path d="M4 3h16v6a8 8 0 0 1-16 0V3z" />
+                <path d="M12 17v4" />
+                <path d="M8 21h8" />
+              </svg>`,
+              "Gewertet: 1v1, 2v2 & FFA Elo",
+            )}
+          </div>
         </div>
-        <div class="grid grid-cols-3 gap-4 h-14 sm:col-span-2">
+
+        <!-- Secondary Row: Erstellen, Beitreten, Tutorial (3 sleek action cards) -->
+        <div class="grid grid-cols-3 gap-3.5 h-14 sm:h-15 sm:col-span-2">
           ${this.renderSmallActionCard(
             translateText("main.create"),
             this.openHostLobby,
-            SECONDARY_ACTION,
+            "bg-surface/80 border border-white/10 hover:border-white/30 hover:bg-surface hover:shadow-md hover:scale-[1.02]",
             undefined,
             true,
-          )}
-          ${this.renderSmallActionCard(
-            translateText("mode_selector.ranked_title"),
-            this.openRankedMenu,
-            SECONDARY_ACTION,
-            undefined,
-            true,
-            // Ranked admits trusted accounts only. A trusted viewer gets the
-            // green open lock; anyone else meets the red locks and the trust
-            // popup inside the ranked modal. Small, so it clears the label on
-            // narrow (mobile) buttons.
-            this.viewerTrusted
-              ? trustLockIcon(true, {
-                  tooltipTitle: translateText(
-                    "mode_selector.ranked_trust_tooltip_title",
-                  ),
-                  position: "top-1 right-1",
-                  small: true,
-                })
-              : nothing,
+            nothing,
+            html`<svg
+              class="w-4 h-4 shrink-0 text-white/70 group-hover:text-white"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M12 5v14" />
+              <path d="M5 12h14" />
+            </svg>`,
           )}
           ${this.renderSmallActionCard(
             translateText("main.join"),
             this.openJoinLobby,
-            SECONDARY_ACTION,
+            "bg-surface/80 border border-white/10 hover:border-white/30 hover:bg-surface hover:shadow-md hover:scale-[1.02]",
             this.hostedLobbyCount(),
             true,
+            nothing,
+            html`<svg
+              class="w-4 h-4 shrink-0 text-white/70 group-hover:text-white"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="m16 12-4-4-4 4" />
+              <path d="M12 16V8" />
+            </svg>`,
+          )}
+          ${this.renderSmallActionCard(
+            translateText("main.tutorial"),
+            this.startTutorial,
+            "bg-cyber-yellow/15 border border-cyber-yellow/40 text-cyber-yellow hover:bg-cyber-yellow/25 hover:border-cyber-yellow hover:shadow-md hover:scale-[1.02]",
+            undefined,
+            false,
+            nothing,
+            html`<svg
+              class="w-4 h-4 shrink-0 text-cyber-yellow"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <polygon
+                points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"
+              />
+            </svg>`,
           )}
         </div>
 
@@ -979,7 +1047,20 @@ export class GameModeSelector extends LitElement {
         class="sm:col-span-2 flex items-center justify-between gap-3 p-3 rounded-xl bg-amber-500/15 border border-amber-400/40 backdrop-blur-md shadow-lg"
       >
         <div class="flex items-center gap-2.5 min-w-0">
-          <span class="text-xl shrink-0">🔄</span>
+          <svg
+            class="w-5 h-5 shrink-0 text-amber-400 animate-spin"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            stroke-width="2"
+            aria-hidden="true"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
           <div class="min-w-0">
             <div
               class="text-xs font-bold uppercase tracking-wider text-amber-300"
@@ -1005,10 +1086,22 @@ export class GameModeSelector extends LitElement {
             role="button"
             tabindex="0"
             @click=${this.dismissReconnectBanner}
-            class="px-2 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/60 text-xs font-bold cursor-pointer transition-all"
+            class="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/60 hover:text-white text-xs font-bold cursor-pointer transition-all flex items-center justify-center"
             title="Verwerfen"
           >
-            ✕
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
           </div>
         </div>
       </div>
@@ -1026,10 +1119,22 @@ export class GameModeSelector extends LitElement {
             <span
               class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"
             ></span>
+            <svg
+              class="w-4 h-4 text-emerald-400 shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path
+                d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+              />
+            </svg>
             <span
               class="text-xs font-bold uppercase tracking-widest text-white/90"
             >
-              🌐 Offene Public-Lobbys (${hosted.length})
+              Offene Public-Lobbys (${hosted.length})
             </span>
           </div>
           <span class="text-[11px] text-white/50">
@@ -1128,6 +1233,8 @@ export class GameModeSelector extends LitElement {
     // show as disabled here.
     gated: boolean = false,
     adornment: TemplateResult | typeof nothing = nothing,
+    iconSvg: TemplateResult | typeof nothing = nothing,
+    subtitle?: string,
   ) {
     const blocked =
       gated &&
@@ -1141,17 +1248,26 @@ export class GameModeSelector extends LitElement {
         @click=${onClick}
         ?disabled=${!this.inputValid}
         aria-disabled=${blocked}
-        class="relative flex items-center justify-center w-full h-full rounded-lg ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center ${!this
+        class="relative flex items-center justify-center gap-2.5 w-full h-full rounded-xl ${bgClass} transition-all duration-200 text-sm lg:text-base font-medium text-white uppercase tracking-wider text-center cursor-pointer ${!this
           .inputValid
           ? DISABLED
           : blocked
             ? "opacity-50 cursor-not-allowed"
             : ""}"
       >
-        ${title}
+        ${iconSvg}
+        <div class="flex flex-col items-center justify-center leading-tight">
+          <span class="font-bold tracking-wider">${title}</span>
+          ${subtitle
+            ? html`<span
+                class="text-[11px] normal-case tracking-normal opacity-75 font-normal"
+                >${subtitle}</span
+              >`
+            : nothing}
+        </div>
         ${badge
           ? html`<span
-              class="absolute -top-2 -right-2 min-w-[1.375rem] h-[1.375rem] px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold tracking-normal"
+              class="absolute -top-2 -right-2 min-w-[1.375rem] h-[1.375rem] px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-xs font-bold tracking-normal shadow"
               >${badge}</span
             >`
           : nothing}

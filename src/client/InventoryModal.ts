@@ -39,6 +39,7 @@ import {
   ResolvedCosmetic,
   resolvedToPlayerPattern,
 } from "./Cosmetics";
+import { STEEL_CATALOG, SteelStoreService } from "./SteelStore";
 import {
   CROWN_KEY,
   EFFECTS_KEY,
@@ -81,6 +82,7 @@ export class InventoryModal extends BaseModal {
   private catalogLoad: Promise<Cosmetics | null> | null = null;
   private inventoryLoadId = 0;
   private ownershipLoadId = 0;
+  private steelUnsubscribe: (() => void) | null = null;
   private resolvedCache:
     | {
         cosmetics: Cosmetics | null;
@@ -126,6 +128,9 @@ export class InventoryModal extends BaseModal {
     super.connectedCallback();
     document.addEventListener("userMeResponse", this._onUserMe);
     this.addEventListener("open-cosmetic-preview", this.onOpenCosmeticPreview);
+    this.steelUnsubscribe = SteelStoreService.subscribe(() =>
+      this.requestUpdate(),
+    );
     window.addEventListener(
       `${USER_SETTINGS_CHANGED_EVENT}:${PATTERN_KEY}`,
       this._onCosmeticSelected,
@@ -149,6 +154,10 @@ export class InventoryModal extends BaseModal {
       "open-cosmetic-preview",
       this.onOpenCosmeticPreview,
     );
+    if (this.steelUnsubscribe) {
+      this.steelUnsubscribe();
+      this.steelUnsubscribe = null;
+    }
     super.disconnectedCallback();
     document.removeEventListener("userMeResponse", this._onUserMe);
     window.removeEventListener(
@@ -744,7 +753,7 @@ export class InventoryModal extends BaseModal {
             )}
           </div>`
         : nothing}
-      ${this.renderLoadoutMenu()}
+      ${this.renderSteelEquipmentPanel()} ${this.renderLoadoutMenu()}
       <inventory-loadout-bar
         .entries=${this.loadoutEntries()}
         .activeCategory=${category}
@@ -752,6 +761,99 @@ export class InventoryModal extends BaseModal {
           this.setActiveTab(selected)}
       ></inventory-loadout-bar>
       <div class="px-3 pb-3">${grid}</div>
+    `;
+  }
+
+  private renderSteelEquipmentPanel(): TemplateResult {
+    const balance = SteelStoreService.getBalance();
+    const equipped = SteelStoreService.getEquipped();
+    const activeTitle = STEEL_CATALOG.find((i) => i.id === equipped.titel);
+    const activeBadge = STEEL_CATALOG.find((i) => i.id === equipped.badges);
+    const activeSound = STEEL_CATALOG.find((i) => i.id === equipped.sounds);
+
+    return html`
+      <div class="px-3 pt-2 pb-1">
+        <div
+          class="p-3 sm:p-4 rounded-xl bg-gradient-to-r from-slate-900/90 via-[#182234]/80 to-slate-900/90 border border-cyan-500/30 flex flex-col md:flex-row items-center justify-between gap-3 text-white shadow-md"
+        >
+          <div class="flex items-center gap-3 w-full md:w-auto">
+            <div
+              class="w-10 h-10 rounded-lg bg-cyan-500/15 border border-cyan-400/30 flex items-center justify-center shrink-0 text-cyan-400"
+            >
+              <svg
+                class="w-5 h-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+                />
+              </svg>
+            </div>
+            <div class="min-w-0">
+              <div
+                class="text-xs font-black uppercase tracking-wider text-cyan-300"
+              >
+                Stahl-Ausrüstung
+              </div>
+              <div
+                class="text-xs text-white/70 flex flex-wrap gap-x-3 gap-y-1 mt-0.5"
+              >
+                <span
+                  >Titel:
+                  <strong class="text-white"
+                    >${activeTitle?.name ?? "Keiner"}</strong
+                  ></span
+                >
+                <span
+                  >Badge:
+                  <strong class="text-white"
+                    >${activeBadge?.name ?? "Keines"}</strong
+                  ></span
+                >
+                <span
+                  >Sound:
+                  <strong class="text-white"
+                    >${activeSound?.name ?? "Standard"}</strong
+                  ></span
+                >
+              </div>
+            </div>
+          </div>
+          <div
+            class="flex items-center gap-2 w-full md:w-auto justify-end shrink-0"
+          >
+            <div
+              class="px-3 py-1 rounded bg-black/40 border border-white/10 text-xs font-bold text-cyan-300"
+            >
+              ${balance} Stahl
+            </div>
+            <button
+              @click=${() => {
+                this.close();
+                window.showPage?.("page-item-store");
+              }}
+              class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow"
+            >
+              <svg
+                class="w-3.5 h-3.5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                <path d="M3 6h18" />
+                <path d="M16 10a4 4 0 0 1-8 0" />
+              </svg>
+              <span>Zum Stahl-Shop</span>
+            </button>
+          </div>
+        </div>
+      </div>
     `;
   }
 

@@ -111,22 +111,52 @@ export class StoreModal extends BaseModal {
   /** The bundle whose contents dialog is open, if any. */
   private openedPack: ResolvedCosmetic | null = null;
   private readonly pages = new ProgressiveList(this);
+  private requestedLegacyTab?: string;
+
+  public override open(args?: Record<string, unknown>): void {
+    if (typeof args?.tab === "string") {
+      this.requestedLegacyTab = args.tab;
+    }
+    super.open(args);
+  }
+
+  public override setActiveTab(key: string): void {
+    this.requestedLegacyTab = key;
+    super.setActiveTab(key);
+  }
 
   protected modalConfig() {
     if (this.affiliateCode) {
       // Affiliate mode: hide tabs, show only items associated with the code.
       return {};
     }
+    const userTabs = [
+      { key: "steel_shop", label: "Stahl-Shop" },
+      { key: "tribes", label: translateText("store.tribes") },
+    ];
+    const legacyCandidates = [
+      "packs",
+      "subscriptions",
+      "bundles",
+      "cosmetics",
+      "effects",
+    ];
+    const activeLegacy = legacyCandidates.filter(
+      (k) => this.activeTab === k || this.requestedLegacyTab === k,
+    );
+    if (activeLegacy.length > 0) {
+      return {
+        tabs: [
+          ...userTabs,
+          ...activeLegacy.map((key) => ({
+            key,
+            label: translateText(`store.${key}`) || key,
+          })),
+        ],
+      };
+    }
     return {
-      tabs: [
-        { key: "steel_shop", label: "⚙️ Stahl-Shop (Steel)" },
-        { key: "packs", label: translateText("store.packs") },
-        { key: "subscriptions", label: translateText("store.subscriptions") },
-        { key: "bundles", label: translateText("store.bundles") },
-        { key: "cosmetics", label: translateText("store.cosmetics") },
-        { key: "effects", label: translateText("store.effects") },
-        { key: "tribes", label: translateText("store.tribes") },
-      ],
+      tabs: userTabs,
     };
   }
 
@@ -729,9 +759,22 @@ export class StoreModal extends BaseModal {
         >
           <div class="flex items-center gap-3.5">
             <div
-              class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center text-2xl"
+              class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center text-cyan-400"
             >
-              ⚙️
+              <svg
+                class="w-6 h-6"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"
+                />
+              </svg>
             </div>
             <div>
               <div class="text-base sm:text-lg font-black tracking-tight">

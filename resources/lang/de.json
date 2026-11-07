@@ -1438,10 +1438,12 @@
   },
   "main": {
     "account": "Account",
+    "chat": "Chat",
     "clans": "Clans",
     "copyright": "© InduFront & Mitwirkende",
     "create": "Lobby erstellen",
     "discord_avatar_alt": "Discord Profilbild",
+    "friends": "Freunde",
     "github": "GitHub",
     "go_to_troubleshooting": "Gehe zu unserer Seite zur Fehlerbehebung",
     "help": "Hilfe",

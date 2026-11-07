@@ -1483,10 +1483,12 @@
   },
   "main": {
     "account": "Account",
+    "chat": "Chat",
     "clans": "Clans",
     "copyright": "© InduFront & Contributors",
     "create": "Create Lobby",
     "discord_avatar_alt": "Discord profile avatar",
+    "friends": "Friends",
     "github": "GitHub",
     "go_to_troubleshooting": "Go to our troubleshooting page",
     "help": "Help",
