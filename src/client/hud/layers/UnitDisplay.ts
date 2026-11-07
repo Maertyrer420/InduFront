@@ -150,6 +150,14 @@ export class UnitDisplay extends LitElement implements Controller {
       Record<TutorialHighlight, PlayerBuildableUnitType>
     > = {
       city: UnitType.City,
+      residential: UnitType.Residential,
+      iron_mine: UnitType.IronMine,
+      coal_mine: UnitType.CoalMine,
+      steel_mill: UnitType.SteelMill,
+      oil_rig: UnitType.OilRig,
+      refinery: UnitType.Refinery,
+      uranium_mine: UnitType.UraniumMine,
+      centrifuge: UnitType.Centrifuge,
       port: UnitType.Port,
       defense_post: UnitType.DefensePost,
       factory: UnitType.Factory,
@@ -162,6 +170,22 @@ export class UnitDisplay extends LitElement implements Controller {
     };
     this.eventBus.on(TutorialHighlightEvent, (e) => {
       this.tutorialHighlight = (e.target && highlightUnits[e.target]) ?? null;
+      if (this.tutorialHighlight) {
+        const isBuilding =
+          this.infrastructureUnits.some(
+            (u) => u.type === this.tutorialHighlight,
+          ) || this.economyUnits.some((u) => u.type === this.tutorialHighlight);
+        const isActive = this.activeUnits.some(
+          (u) => u.type === this.tutorialHighlight,
+        );
+        if (isBuilding && this.activeTab !== "buildings") {
+          this.activeTab = "buildings";
+          if (this.uiState) this.uiState.activeHotbarTab = "buildings";
+        } else if (isActive && this.activeTab !== "actives") {
+          this.activeTab = "actives";
+          if (this.uiState) this.uiState.activeHotbarTab = "actives";
+        }
+      }
       this.requestUpdate();
     });
     this.eventBus.on(ToggleEraserModeEvent, () => {

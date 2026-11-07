@@ -29,6 +29,14 @@ const COST_POLL_TICKS = 10;
 /** Units whose costs the panel tracks (the build steps). */
 const COST_POLL_TYPES = [
   UnitType.City,
+  UnitType.Residential,
+  UnitType.IronMine,
+  UnitType.CoalMine,
+  UnitType.SteelMill,
+  UnitType.OilRig,
+  UnitType.Refinery,
+  UnitType.UraniumMine,
+  UnitType.Centrifuge,
   UnitType.Factory,
   UnitType.Port,
   UnitType.DefensePost,
@@ -40,6 +48,14 @@ const COST_POLL_TYPES = [
 /** `unit_type.*` name key per build-step unit, for the earn-gold text. */
 const UNIT_NAME_KEYS: Partial<Record<UnitType, string>> = {
   [UnitType.City]: "city",
+  [UnitType.Residential]: "residential",
+  [UnitType.IronMine]: "iron_mine",
+  [UnitType.CoalMine]: "coal_mine",
+  [UnitType.SteelMill]: "steel_mill",
+  [UnitType.OilRig]: "oil_rig",
+  [UnitType.Refinery]: "refinery",
+  [UnitType.UraniumMine]: "uranium_mine",
+  [UnitType.Centrifuge]: "centrifuge",
   [UnitType.Factory]: "factory",
   [UnitType.Port]: "port",
   [UnitType.DefensePost]: "defense_post",
@@ -68,26 +84,42 @@ const TOUCH_TEXT_STEPS = new Set([
   "spawn",
   "attack_wilderness",
   "buy_city",
+  "buy_residential",
   "propose_alliance",
   "buy_factory",
+  "buy_iron_mine",
+  "buy_coal_mine",
+  "buy_steel_mill",
+  "buy_oil_rig",
+  "buy_refinery",
   "send_boat",
   "buy_port",
   "buy_defense_post",
   "buy_warship",
+  "buy_uranium_mine",
+  "buy_centrifuge",
   "buy_silo",
   "launch_atom",
 ]);
 
 /** Defaults shown when the player hasn't rebound the action (see UnitDisplay). */
-const HOTKEY_FALLBACKS = {
+const HOTKEY_FALLBACKS: Record<string, string> = {
   buildCity: "1",
   buildFactory: "2",
   buildPort: "3",
   buildDefensePost: "4",
-  buildWarship: "7",
+  buildWarship: "1",
   buildMissileSilo: "5",
-  buildAtomBomb: "8",
-} as const;
+  buildAtomBomb: "5",
+  buildResidential: "9",
+  buildIronMine: "Shift+1",
+  buildCoalMine: "Shift+2",
+  buildOilRig: "Shift+3",
+  buildUraniumMine: "Shift+4",
+  buildSteelMill: "Shift+5",
+  buildRefinery: "Shift+6",
+  buildCentrifuge: "Shift+7",
+};
 
 @customElement("tutorial-panel")
 export class TutorialPanel extends LitElement implements Controller {
@@ -335,6 +367,9 @@ export class TutorialPanel extends LitElement implements Controller {
     const attackRatioMoved =
       this.lastAttackRatio !== null && attackRatio !== this.lastAttackRatio;
     this.lastAttackRatio = attackRatio;
+    const eco = player.economy();
+    const res = eco?.resources;
+    const ref = eco?.refined;
     return {
       hasSpawned: player.hasSpawned(),
       inSpawnPhase: this.game.inSpawnPhase(),
@@ -355,6 +390,35 @@ export class TutorialPanel extends LitElement implements Controller {
       cityCost: this.costs.get(UnitType.City) ?? null,
       cityDisabled: this.game.config().isUnitDisabled(UnitType.City),
       cities: player.units(UnitType.City).length,
+      residentialDisabled: this.game
+        .config()
+        .isUnitDisabled(UnitType.Residential),
+      residentials: player.units(UnitType.Residential).length,
+      ironMineDisabled: this.game.config().isUnitDisabled(UnitType.IronMine),
+      ironMines: player.units(UnitType.IronMine).length,
+      ironOre: res?.ironOre ?? 0,
+      coalMineDisabled: this.game.config().isUnitDisabled(UnitType.CoalMine),
+      coalMines: player.units(UnitType.CoalMine).length,
+      coal: res?.coal ?? 0,
+      steelMillDisabled: this.game.config().isUnitDisabled(UnitType.SteelMill),
+      steelMills: player.units(UnitType.SteelMill).length,
+      steel: ref?.steel ?? 0,
+      oilRigDisabled: this.game.config().isUnitDisabled(UnitType.OilRig),
+      oilRigs: player.units(UnitType.OilRig).length,
+      crudeOil: res?.crudeOil ?? 0,
+      refineryDisabled: this.game.config().isUnitDisabled(UnitType.Refinery),
+      refineries: player.units(UnitType.Refinery).length,
+      fuel: ref?.fuel ?? 0,
+      uraniumMineDisabled: this.game
+        .config()
+        .isUnitDisabled(UnitType.UraniumMine),
+      uraniumMines: player.units(UnitType.UraniumMine).length,
+      uraniumOre: res?.uraniumOre ?? 0,
+      centrifugeDisabled: this.game
+        .config()
+        .isUnitDisabled(UnitType.Centrifuge),
+      centrifuges: player.units(UnitType.Centrifuge).length,
+      enrichedUranium: ref?.enrichedUranium ?? 0,
       portDisabled: this.game.config().isUnitDisabled(UnitType.Port),
       ports: player.units(UnitType.Port).length,
       defensePostDisabled: this.game

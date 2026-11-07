@@ -841,7 +841,9 @@ export class ControlPanel extends LitElement implements Controller {
 
         <!-- Tier 2 Refined Goods -->
         <div
-          class="flex items-center gap-2 cursor-pointer hover:brightness-125 transition-all"
+          class="flex items-center gap-2 cursor-pointer hover:brightness-125 transition-all ${this.tutorialHighlightClass(
+            "resources",
+          )}"
           @click=${this.openEconomyPanel}
           title="Klicken für Veredelung & Raffinerie-Details"
         >

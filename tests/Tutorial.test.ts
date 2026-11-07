@@ -21,6 +21,29 @@ function ctx(overrides: Partial<TutorialContext> = {}): TutorialContext {
     cityCost: null,
     cityDisabled: false,
     cities: 0,
+    residentialDisabled: false,
+    residentials: 0,
+    ironMineDisabled: false,
+    ironMines: 0,
+    ironOre: 0,
+    coalMineDisabled: false,
+    coalMines: 0,
+    coal: 0,
+    steelMillDisabled: false,
+    steelMills: 0,
+    steel: 0,
+    oilRigDisabled: false,
+    oilRigs: 0,
+    crudeOil: 0,
+    refineryDisabled: false,
+    refineries: 0,
+    fuel: 0,
+    uraniumMineDisabled: false,
+    uraniumMines: 0,
+    uraniumOre: 0,
+    centrifugeDisabled: false,
+    centrifuges: 0,
+    enrichedUranium: 0,
     portDisabled: false,
     ports: 0,
     defensePostDisabled: false,
@@ -146,6 +169,14 @@ describe("TutorialProgress", () => {
       botsExist: false,
       nationsExist: false,
       cityDisabled: true,
+      residentialDisabled: true,
+      ironMineDisabled: true,
+      coalMineDisabled: true,
+      steelMillDisabled: true,
+      oilRigDisabled: true,
+      refineryDisabled: true,
+      uraniumMineDisabled: true,
+      centrifugeDisabled: true,
       portDisabled: true,
       defensePostDisabled: true,
       factoryDisabled: true,
@@ -156,7 +187,7 @@ describe("TutorialProgress", () => {
       mirvDisabled: true,
       samDisabled: true,
     });
-    expect(p.total(c)).toBe(TUTORIAL_STEPS.length - 17);
+    expect(p.total(c)).toBe(5);
 
     settle(p, c);
     settle(p, c);
@@ -174,6 +205,21 @@ describe("TutorialProgress", () => {
     settle(p, c);
     expect(p.finished()).toBe(true);
     expect(p.current()).toBeNull();
+  });
+
+  it("teaches residential construction and demographic growth after city", () => {
+    const first = TUTORIAL_STEPS.findIndex((s) => s.id === "buy_residential");
+    const p = new TutorialProgress(TUTORIAL_STEPS.slice(first));
+    p.update(ctx());
+    expect(p.current()?.id).toBe("buy_residential");
+    expect(p.current()?.highlight).toBe("residential");
+
+    settle(p, ctx({ residentials: 1 }));
+    expect(p.current()?.id).toBe("residential_info");
+    expect(p.current()?.bullets).toHaveLength(2);
+    p.acknowledge();
+    settle(p, ctx({ residentials: 1 }));
+    expect(p.current()?.id).toBe("propose_alliance");
   });
 
   it("asks for an alliance after the city, then explains traitors", () => {
@@ -218,7 +264,7 @@ describe("TutorialProgress", () => {
     expect(p.stepDone()).toBe(true);
   });
 
-  it("runs city, factory, port, warship, silo, pausing on each info step", () => {
+  it("runs city, factory, resources, port, warship, silo, pausing on each info step", () => {
     const first = TUTORIAL_STEPS.findIndex((s) => s.id === "buy_factory");
     const p = new TutorialProgress(TUTORIAL_STEPS.slice(first));
     p.update(ctx());
@@ -230,6 +276,38 @@ describe("TutorialProgress", () => {
     expect(p.current()?.id).toBe("factory_info");
     p.acknowledge();
     settle(p, ctx({ factories: 1 }));
+
+    // Mining & Smelting
+    expect(p.current()?.id).toBe("buy_iron_mine");
+    expect(p.current()?.highlight).toBe("iron_mine");
+    settle(p, ctx({ factories: 1, ironMines: 1 }));
+
+    expect(p.current()?.id).toBe("buy_coal_mine");
+    expect(p.current()?.highlight).toBe("coal_mine");
+    settle(p, ctx({ factories: 1, ironMines: 1, coalMines: 1 }));
+
+    expect(p.current()?.id).toBe("buy_steel_mill");
+    expect(p.current()?.highlight).toBe("steel_mill");
+    settle(p, ctx({ factories: 1, ironMines: 1, coalMines: 1, steelMills: 1 }));
+
+    expect(p.current()?.id).toBe("steel_info");
+    expect(p.current()?.bullets).toHaveLength(2);
+    p.acknowledge();
+    settle(p, ctx({ factories: 1, steelMills: 1 }));
+
+    // Oil & Refining
+    expect(p.current()?.id).toBe("buy_oil_rig");
+    expect(p.current()?.highlight).toBe("oil_rig");
+    settle(p, ctx({ factories: 1, steelMills: 1, oilRigs: 1 }));
+
+    expect(p.current()?.id).toBe("buy_refinery");
+    expect(p.current()?.highlight).toBe("refinery");
+    settle(p, ctx({ factories: 1, steelMills: 1, oilRigs: 1, refineries: 1 }));
+
+    expect(p.current()?.id).toBe("fuel_info");
+    expect(p.current()?.bullets).toHaveLength(2);
+    p.acknowledge();
+    settle(p, ctx({ factories: 1, refineries: 1 }));
 
     expect(p.current()?.id).toBe("send_boat");
     settle(p, ctx({ factories: 1, boatSent: true }));
@@ -249,6 +327,29 @@ describe("TutorialProgress", () => {
     expect(p.current()?.id).toBe("buy_warship");
     expect(p.current()?.highlight).toBe("warship");
     settle(p, ctx({ factories: 1, ports: 1, warships: 1 }));
+
+    // Nuclear Industry
+    expect(p.current()?.id).toBe("buy_uranium_mine");
+    expect(p.current()?.highlight).toBe("uranium_mine");
+    settle(p, ctx({ factories: 1, ports: 1, warships: 1, uraniumMines: 1 }));
+
+    expect(p.current()?.id).toBe("buy_centrifuge");
+    expect(p.current()?.highlight).toBe("centrifuge");
+    settle(
+      p,
+      ctx({
+        factories: 1,
+        ports: 1,
+        warships: 1,
+        uraniumMines: 1,
+        centrifuges: 1,
+      }),
+    );
+
+    expect(p.current()?.id).toBe("uranium_info");
+    expect(p.current()?.bullets).toHaveLength(2);
+    p.acknowledge();
+    settle(p, ctx({ factories: 1, centrifuges: 1 }));
 
     expect(p.current()?.id).toBe("buy_silo");
     expect(p.current()?.highlight).toBe("silo");
@@ -293,7 +394,13 @@ describe("TutorialProgress.skip", () => {
     p.skip();
     p.skip();
     p.skip();
-    p.update(ctx({ botsExist: false, cityDisabled: true }));
+    p.update(
+      ctx({
+        botsExist: false,
+        cityDisabled: true,
+        residentialDisabled: true,
+      }),
+    );
     expect(p.current()?.id).toBe("propose_alliance");
   });
 

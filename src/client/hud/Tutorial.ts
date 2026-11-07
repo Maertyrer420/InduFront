@@ -9,6 +9,14 @@ export type TutorialHighlight =
   | "attack_ratio"
   | "gold"
   | "city"
+  | "residential"
+  | "iron_mine"
+  | "coal_mine"
+  | "steel_mill"
+  | "oil_rig"
+  | "refinery"
+  | "uranium_mine"
+  | "centrifuge"
   | "port"
   | "defense_post"
   | "factory"
@@ -19,7 +27,8 @@ export type TutorialHighlight =
   | "mirv"
   | "sam"
   | "tribes"
-  | "nation";
+  | "nation"
+  | "resources";
 
 /** Emitted whenever the highlighted HUD element changes (null clears it). */
 export class TutorialHighlightEvent implements GameEvent {
@@ -48,6 +57,29 @@ export interface TutorialContext {
   cityCost: bigint | null;
   cityDisabled: boolean;
   cities: number;
+  residentialDisabled: boolean;
+  residentials: number;
+  ironMineDisabled: boolean;
+  ironMines: number;
+  ironOre: number;
+  coalMineDisabled: boolean;
+  coalMines: number;
+  coal: number;
+  steelMillDisabled: boolean;
+  steelMills: number;
+  steel: number;
+  oilRigDisabled: boolean;
+  oilRigs: number;
+  crudeOil: number;
+  refineryDisabled: boolean;
+  refineries: number;
+  fuel: number;
+  uraniumMineDisabled: boolean;
+  uraniumMines: number;
+  uraniumOre: number;
+  centrifugeDisabled: boolean;
+  centrifuges: number;
+  enrichedUranium: number;
   portDisabled: boolean;
   ports: number;
   defensePostDisabled: boolean;
@@ -79,6 +111,14 @@ export interface TutorialStep {
   /** Keybind action whose key is interpolated into the step text as {key}. */
   hotkey?:
     | "buildCity"
+    | "buildResidential"
+    | "buildIronMine"
+    | "buildCoalMine"
+    | "buildSteelMill"
+    | "buildOilRig"
+    | "buildRefinery"
+    | "buildUraniumMine"
+    | "buildCentrifuge"
     | "buildPort"
     | "buildDefensePost"
     | "buildFactory"
@@ -132,6 +172,20 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     applies: (c) => !c.cityDisabled,
     isDone: (c) => c.cities > 0,
   },
+  {
+    id: "buy_residential",
+    highlight: "residential",
+    unit: UnitType.Residential,
+    hotkey: "buildResidential",
+    applies: (c) => !c.residentialDisabled,
+    isDone: (c) => c.residentials > 0,
+  },
+  {
+    id: "residential_info",
+    bullets: ["residential_info_pop", "residential_info_income"],
+    applies: (c) => !c.residentialDisabled,
+    manual: true,
+  },
   // Marks the nearest nation with the target crosshair; done once the
   // nation accepts (nations may decline — Skip is the way past that).
   {
@@ -157,6 +211,60 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
   {
     id: "factory_info",
     applies: (c) => !c.factoryDisabled,
+    manual: true,
+  },
+  {
+    id: "buy_iron_mine",
+    highlight: "iron_mine",
+    unit: UnitType.IronMine,
+    hotkey: "buildIronMine",
+    applies: (c) => !c.ironMineDisabled,
+    isDone: (c) => c.ironMines > 0 || c.ironOre >= 25,
+  },
+  {
+    id: "buy_coal_mine",
+    highlight: "coal_mine",
+    unit: UnitType.CoalMine,
+    hotkey: "buildCoalMine",
+    applies: (c) => !c.coalMineDisabled,
+    isDone: (c) => c.coalMines > 0 || c.coal >= 25,
+  },
+  {
+    id: "buy_steel_mill",
+    highlight: "steel_mill",
+    unit: UnitType.SteelMill,
+    hotkey: "buildSteelMill",
+    applies: (c) => !c.steelMillDisabled,
+    isDone: (c) => c.steelMills > 0 || c.steel >= 40,
+  },
+  {
+    id: "steel_info",
+    highlight: "resources",
+    bullets: ["steel_info_purpose", "steel_info_bunker"],
+    applies: (c) => !c.steelMillDisabled,
+    manual: true,
+  },
+  {
+    id: "buy_oil_rig",
+    highlight: "oil_rig",
+    unit: UnitType.OilRig,
+    hotkey: "buildOilRig",
+    applies: (c) => !c.oilRigDisabled,
+    isDone: (c) => c.oilRigs > 0 || c.crudeOil >= 25,
+  },
+  {
+    id: "buy_refinery",
+    highlight: "refinery",
+    unit: UnitType.Refinery,
+    hotkey: "buildRefinery",
+    applies: (c) => !c.refineryDisabled,
+    isDone: (c) => c.refineries > 0 || c.fuel >= 50,
+  },
+  {
+    id: "fuel_info",
+    highlight: "resources",
+    bullets: ["fuel_info_navy", "fuel_info_starvation"],
+    applies: (c) => !c.refineryDisabled,
     manual: true,
   },
   // Boats are free, so no earn-gold gating; done once one of ours is afloat.
@@ -187,7 +295,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     applies: (c) => !c.defensePostDisabled,
     isDone: (c) => c.defensePosts > 0,
   },
-  // Warships are built from ports, so this step needs one.
+  // Warships are built from ports and require Steel + Fuel!
   {
     id: "buy_warship",
     highlight: "warship",
@@ -195,6 +303,29 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     hotkey: "buildWarship",
     applies: (c) => !c.warshipDisabled && !c.portDisabled,
     isDone: (c) => c.warships > 0,
+  },
+  {
+    id: "buy_uranium_mine",
+    highlight: "uranium_mine",
+    unit: UnitType.UraniumMine,
+    hotkey: "buildUraniumMine",
+    applies: (c) => !c.uraniumMineDisabled,
+    isDone: (c) => c.uraniumMines > 0 || c.uraniumOre >= 10,
+  },
+  {
+    id: "buy_centrifuge",
+    highlight: "centrifuge",
+    unit: UnitType.Centrifuge,
+    hotkey: "buildCentrifuge",
+    applies: (c) => !c.centrifugeDisabled,
+    isDone: (c) => c.centrifuges > 0 || c.enrichedUranium >= 50,
+  },
+  {
+    id: "uranium_info",
+    highlight: "resources",
+    bullets: ["uranium_info_enrichment", "uranium_info_weapons"],
+    applies: (c) => !c.centrifugeDisabled,
+    manual: true,
   },
   {
     id: "buy_silo",
