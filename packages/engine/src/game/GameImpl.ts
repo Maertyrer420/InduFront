@@ -1,4 +1,4 @@
-﻿import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
+import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   Cell,
   ColoredTeams,
@@ -566,6 +566,11 @@ export class GameImpl implements Game {
 
     this.execs.push(...inited);
     this.unInitExecs = unInited;
+
+    if (this.ticks() % 10 === 0) {
+      this.checkTop10AllianceDissolutions();
+    }
+
     for (const player of this._players.values()) {
       // Sampled before toUpdate so the reading is of the tick that just ran.
       // Dead and unspawned players are skipped: an eliminated player's fall
@@ -585,7 +590,6 @@ export class GameImpl implements Game {
       if (update !== null) this.addUpdate(update);
     }
     if (this.ticks() % 10 === 0) {
-      this.checkTop10AllianceDissolutions();
       this.addUpdate({
         type: GameUpdateType.Hash,
         tick: this.ticks(),

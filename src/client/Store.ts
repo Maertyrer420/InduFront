@@ -120,9 +120,11 @@ export class StoreModal extends BaseModal {
     return {
       tabs: [
         { key: "steel_shop", label: "⚙️ Stahl-Shop (Steel)" },
+        { key: "packs", label: translateText("store.packs") },
+        { key: "subscriptions", label: translateText("store.subscriptions") },
+        { key: "bundles", label: translateText("store.bundles") },
         { key: "cosmetics", label: translateText("store.cosmetics") },
         { key: "effects", label: translateText("store.effects") },
-        { key: "bundles", label: translateText("store.bundles") },
         { key: "tribes", label: translateText("store.tribes") },
       ],
     };
@@ -692,12 +694,13 @@ export class StoreModal extends BaseModal {
         return this.renderBundleGrid();
       case "effects":
         return this.renderEffectGrid();
+      case "subscriptions":
+        return this.renderSubscriptionGrid();
       case "tribes":
         return this.renderTribeGrid();
       case "packs":
-      case "subscriptions":
       default:
-        return this.renderSteelShop();
+        return this.renderPackGrid();
     }
   }
 

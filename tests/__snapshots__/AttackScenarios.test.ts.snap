@@ -254,19 +254,19 @@ exports[`attack scenarios > plains 100-troop attack vs 1M defender 1`] = `
 
 exports[`attack scenarios > plains 400-tile turtle, 4M troops (10k/tile) under a defense post, attacked with 1M 1`] = `
 {
-  "attackerLossPerSecond": 1111000,
-  "attackerLossPerTile": 55560,
+  "attackerLossPerSecond": 2000000,
+  "attackerLossPerTile": 111100,
   "attackerTiles": 9600,
   "attackerTroopsLost": 1000000,
   "defenderEliminated": false,
-  "defenderLossPerSecond": 200000,
+  "defenderLossPerSecond": 180000,
   "defenderLossPerTile": 10000,
   "defenderTiles": 400,
-  "defenderTroopsLost": 180000,
+  "defenderTroopsLost": 90000,
   "finished": true,
-  "ticks": 9,
-  "tilesConquered": 18,
-  "tilesPerSecond": 20,
+  "ticks": 5,
+  "tilesConquered": 9,
+  "tilesPerSecond": 18,
 }
 `;
 
