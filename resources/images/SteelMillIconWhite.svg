@@ -1,6 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff">
-  <!-- Steel Mill: Blast furnace & crucible with molten steel beam -->
-  <path d="M4 21h16v2H4v-2zM5 19l2-10h10l2 10H5zm3.5-8l-1 6h9l-1-6h-7z"/>
-  <path d="M10 2h4v5h-4V2zm-2 1h1v4H8V3zm7 0h1v4h-1V3z"/>
-  <path d="M9 13h6v2H9v-2z"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#ffffff" width="24" height="24">
+  <!-- Steel Mill: Heavy blast furnace, molten steel crucible pouring, and structural steel I-beam -->
+  <!-- Blast Furnace & industrial smokestacks -->
+  <path fill="#ffffff" d="M3 2h3v5H3V2zm5 1h2.5v4H8V3zm10 4h3v8h-3V7z"/>
+  <!-- Main smelting tower with inclined skip hoist & conduits -->
+  <path fill="#ffffff" d="M4 8h7l1.5 5h-10L4 8zm1 2l.8 2h4.4l-.6-2H5z"/>
+  <path fill="#ffffff" d="M12.5 8l3 5h-2l-2-5h1z"/>
+  <!-- Foundry Crucible pouring molten metal stream -->
+  <path fill="#ffffff" d="M16 2.5l2 3.5h-4l2-3.5zm-1 4.5h2v4h-2V7z"/>
+  <!-- Heavy Structural Steel I-Beam girder -->
+  <path fill="#ffffff" d="M2 17h20v2h-8v1h8v2H2v-2h8v-1H2v-2z"/>
 </svg>

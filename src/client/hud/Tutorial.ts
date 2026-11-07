@@ -219,7 +219,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     unit: UnitType.IronMine,
     hotkey: "buildIronMine",
     applies: (c) => !c.ironMineDisabled,
-    isDone: (c) => c.ironMines > 0 || c.ironOre >= 25,
+    isDone: (c) => c.ironMines > 0,
   },
   {
     id: "buy_coal_mine",
@@ -227,7 +227,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     unit: UnitType.CoalMine,
     hotkey: "buildCoalMine",
     applies: (c) => !c.coalMineDisabled,
-    isDone: (c) => c.coalMines > 0 || c.coal >= 25,
+    isDone: (c) => c.coalMines > 0,
   },
   {
     id: "buy_steel_mill",
@@ -235,7 +235,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     unit: UnitType.SteelMill,
     hotkey: "buildSteelMill",
     applies: (c) => !c.steelMillDisabled,
-    isDone: (c) => c.steelMills > 0 || c.steel >= 40,
+    isDone: (c) => c.steelMills > 0,
   },
   {
     id: "steel_info",
@@ -250,7 +250,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     unit: UnitType.OilRig,
     hotkey: "buildOilRig",
     applies: (c) => !c.oilRigDisabled,
-    isDone: (c) => c.oilRigs > 0 || c.crudeOil >= 25,
+    isDone: (c) => c.oilRigs > 0,
   },
   {
     id: "buy_refinery",
@@ -258,7 +258,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     unit: UnitType.Refinery,
     hotkey: "buildRefinery",
     applies: (c) => !c.refineryDisabled,
-    isDone: (c) => c.refineries > 0 || c.fuel >= 50,
+    isDone: (c) => c.refineries > 0,
   },
   {
     id: "fuel_info",
@@ -305,12 +305,18 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     isDone: (c) => c.warships > 0,
   },
   {
+    id: "fleet_info",
+    bullets: ["fleet_destroyer", "fleet_submarine", "fleet_battleship"],
+    applies: (c) => !c.warshipDisabled && !c.portDisabled,
+    manual: true,
+  },
+  {
     id: "buy_uranium_mine",
     highlight: "uranium_mine",
     unit: UnitType.UraniumMine,
     hotkey: "buildUraniumMine",
     applies: (c) => !c.uraniumMineDisabled,
-    isDone: (c) => c.uraniumMines > 0 || c.uraniumOre >= 10,
+    isDone: (c) => c.uraniumMines > 0,
   },
   {
     id: "buy_centrifuge",
@@ -318,7 +324,7 @@ export const TUTORIAL_STEPS: readonly TutorialStep[] = [
     unit: UnitType.Centrifuge,
     hotkey: "buildCentrifuge",
     applies: (c) => !c.centrifugeDisabled,
-    isDone: (c) => c.centrifuges > 0 || c.enrichedUranium >= 50,
+    isDone: (c) => c.centrifuges > 0,
   },
   {
     id: "uranium_info",

@@ -1504,7 +1504,7 @@ export class PlayerImpl implements Player {
     const closest = findClosestBy(
       this.mg.nearbyUnits(
         targetTile,
-        this.mg.config().structureMinDist(),
+        this.mg.config().structureMinDist(type),
         type,
         undefined,
         true,
@@ -1611,10 +1611,17 @@ export class PlayerImpl implements Player {
     const rail = mg.railNetwork();
     const inSpawnPhase = mg.inSpawnPhase();
 
-    const validTiles =
-      tile !== null && units.some((u) => Structures.has(u))
-        ? this.validStructureSpawnTiles(tile)
-        : [];
+    const validTilesCache = new Map<number, TileRef[]>();
+    const getValidTiles = (u: UnitType): TileRef[] => {
+      if (tile === null) return [];
+      const minDist = config.structureMinDist(u);
+      let cached = validTilesCache.get(minDist);
+      if (cached === undefined) {
+        cached = this.validStructureSpawnTiles(tile, false, u);
+        validTilesCache.set(minDist, cached);
+      }
+      return cached;
+    };
 
     const len = units.length;
     const result = new Array<BuildableUnit>(len);
@@ -1636,7 +1643,7 @@ export class PlayerImpl implements Player {
             canUpgrade = existingUnit.id();
           }
         }
-        canBuild = this.canSpawnUnitType(u, tile, validTiles);
+        canBuild = this.canSpawnUnitType(u, tile, getValidTiles(u));
       }
 
       const buildNew = canBuild !== false && canUpgrade === false;
@@ -1731,7 +1738,7 @@ export class PlayerImpl implements Player {
       case UnitType.Airbase:
       case UnitType.Bunker:
       case UnitType.Radar:
-        return this.landBasedStructureSpawn(targetTile, validTiles);
+        return this.landBasedStructureSpawn(targetTile, validTiles, unitType);
       case UnitType.Tank:
         return this.landBasedUnitSpawn(targetTile);
       case UnitType.Destroyer:
@@ -1861,7 +1868,7 @@ export class PlayerImpl implements Player {
           this.mg.manhattanDist(a, tile) - this.mg.manhattanDist(b, tile),
       );
     const validTileSet = new Set(
-      validTiles ?? this.validStructureSpawnTiles(tile),
+      validTiles ?? this.validStructureSpawnTiles(tile, false, UnitType.Port),
     );
     for (const t of spawns) {
       if (validTileSet.has(t)) {
@@ -1897,8 +1904,10 @@ export class PlayerImpl implements Player {
   landBasedStructureSpawn(
     tile: TileRef,
     validTiles: TileRef[] | null = null,
+    unitType?: UnitType,
   ): TileRef | false {
-    const tiles = validTiles ?? this.validStructureSpawnTiles(tile, true);
+    const tiles =
+      validTiles ?? this.validStructureSpawnTiles(tile, true, unitType);
     if (tiles.length === 0) {
       return false;
     }
@@ -1908,6 +1917,7 @@ export class PlayerImpl implements Player {
   private validStructureSpawnTiles(
     tile: TileRef,
     onlyFirst: boolean = false,
+    unitType?: UnitType,
   ): TileRef[] {
     if (this.mg.owner(tile) !== this) {
       return [];
@@ -1923,7 +1933,7 @@ export class PlayerImpl implements Player {
       true,
     );
 
-    const minDistSquared = this.mg.config().structureMinDist() ** 2;
+    const minDistSquared = this.mg.config().structureMinDist(unitType) ** 2;
 
     // Fast path: when only the best (first) tile is needed and the target tile itself
     // is unblocked, it is at distance 0 and would always sort to index 0.

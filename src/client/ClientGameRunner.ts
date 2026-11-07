@@ -1406,7 +1406,7 @@ export class ClientGameRunner {
             const closestOfType = this.gameView
               .nearbyUnits(
                 clickedTile,
-                this.gameView.config().structureMinDist(),
+                this.gameView.config().structureMinDist(bu.type),
                 bu.type,
               )
               .filter(({ unit }) => unit.owner().id() === myPlayerID)

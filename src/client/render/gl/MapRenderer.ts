@@ -393,7 +393,7 @@ export class MapRenderer {
   }
   setGeologicalScouting(
     resource: ResourceType | "all" | "none",
-    densityData?: Float32Array,
+    densityData?: Float32Array | Uint8Array,
   ): void {
     this.renderer?.setGeologicalScouting(resource, densityData);
   }

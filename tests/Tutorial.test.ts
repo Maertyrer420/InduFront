@@ -328,6 +328,11 @@ describe("TutorialProgress", () => {
     expect(p.current()?.highlight).toBe("warship");
     settle(p, ctx({ factories: 1, ports: 1, warships: 1 }));
 
+    expect(p.current()?.id).toBe("fleet_info");
+    expect(p.current()?.bullets).toHaveLength(3);
+    p.acknowledge();
+    settle(p, ctx({ factories: 1, ports: 1, warships: 1 }));
+
     // Nuclear Industry
     expect(p.current()?.id).toBe("buy_uranium_mine");
     expect(p.current()?.highlight).toBe("uranium_mine");

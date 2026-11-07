@@ -359,4 +359,137 @@ export class ProceduralHeatmapGenerator {
     }
     return out;
   }
+
+  /**
+   * Pre-generates highly-optimized flat Uint8Array density textures directly for WebGL rendering.
+   * Avoids millions of intermediate heap objects and converts directly to byte values (0-255).
+   */
+  public static generateDensityBuffers(
+    width: number,
+    height: number,
+    seed: number = 2026,
+    isLand?: (tile: number) => boolean,
+  ): Map<string, Uint8Array> {
+    const totalTiles = width * height;
+    const ironBuf = new Uint8Array(totalTiles);
+    const coalBuf = new Uint8Array(totalTiles);
+    const oilBuf = new Uint8Array(totalTiles);
+    const uraniumBuf = new Uint8Array(totalTiles);
+    const allBuf = new Uint8Array(totalTiles);
+
+    const noises = {
+      ironOre: {
+        macro: new SimplexNoise2D(seed + 101),
+        meso: new SimplexNoise2D(seed + 102),
+      },
+      coal: {
+        macro: new SimplexNoise2D(seed + 201),
+        meso: new SimplexNoise2D(seed + 202),
+      },
+      crudeOil: {
+        macro: new SimplexNoise2D(seed + 301),
+        meso: new SimplexNoise2D(seed + 302),
+      },
+      uraniumOre: {
+        macro: new SimplexNoise2D(seed + 401),
+        meso: new SimplexNoise2D(seed + 402),
+      },
+    };
+
+    const rng = new Mulberry32PRNG(seed);
+
+    // 1. Generate continuous base field into flat byte buffers
+    for (let y = 0; y < height; y++) {
+      const yOff = y * width;
+      for (let x = 0; x < width; x++) {
+        const idx = yOff + x;
+        if (isLand && !isLand(idx)) continue;
+
+        // Iron Ore: widespread continental band (0.22 - 0.58 base)
+        const feMacro = noises.ironOre.macro.normalized(x / 140, y / 140);
+        const feMeso = noises.ironOre.meso.normalized(x / 50, y / 50);
+        const feVal = 0.22 + (feMacro * 0.7 + feMeso * 0.3) * 0.36;
+        ironBuf[idx] = (feVal * 255) | 0;
+
+        // Coal: extensive sedimentary layers (0.20 - 0.54 base)
+        const cMacro = noises.coal.macro.normalized(x / 125, y / 125);
+        const cMeso = noises.coal.meso.normalized(x / 45, y / 45);
+        const cVal = 0.2 + (cMacro * 0.7 + cMeso * 0.3) * 0.34;
+        coalBuf[idx] = (cVal * 255) | 0;
+
+        // Crude Oil: natural organic sedimentary basins (0.16 - 0.56 base)
+        const oilMacro = noises.crudeOil.macro.normalized(x / 160, y / 160);
+        const oilMeso = noises.crudeOil.meso.normalized(x / 60, y / 60);
+        const oilVal = 0.16 + (oilMacro * 0.75 + oilMeso * 0.25) * 0.4;
+        oilBuf[idx] = (oilVal * 255) | 0;
+
+        // Uranium Ore: subtle deep geological veins (0.10 - 0.42 base)
+        const uMacro = noises.uraniumOre.macro.normalized(x / 190, y / 190);
+        const uMeso = noises.uraniumOre.meso.normalized(x / 70, y / 70);
+        const uVal = 0.1 + (uMacro * 0.8 + uMeso * 0.2) * 0.32;
+        uraniumBuf[idx] = (uVal * 255) | 0;
+      }
+    }
+
+    // 2. Add resource clusters / hotspot provinces directly onto the byte buffers
+    const resList: Array<{ res: ResourceType; buf: Uint8Array }> = [
+      { res: "ironOre", buf: ironBuf },
+      { res: "coal", buf: coalBuf },
+      { res: "crudeOil", buf: oilBuf },
+      { res: "uraniumOre", buf: uraniumBuf },
+    ];
+
+    for (const { res, buf } of resList) {
+      const clusterCount = res === "uraniumOre" ? 20 : 32;
+      for (let c = 0; c < clusterCount; c++) {
+        let cx = Math.floor(rng.next() * (width - 60)) + 30;
+        let cy = Math.floor(rng.next() * (height - 60)) + 30;
+        if (isLand) {
+          for (let attempt = 0; attempt < 12; attempt++) {
+            const tileIdx = cy * width + cx;
+            if (isLand(tileIdx)) break;
+            cx = Math.floor(rng.next() * (width - 60)) + 30;
+            cy = Math.floor(rng.next() * (height - 60)) + 30;
+          }
+          if (!isLand(cy * width + cx)) continue;
+        }
+
+        const radius = 28 + Math.floor(rng.next() * 32);
+        const r2 = radius * radius;
+
+        for (let dy = -radius; dy <= radius; dy++) {
+          const y = cy + dy;
+          if (y < 0 || y >= height) continue;
+          const yOff = y * width;
+          for (let dx = -radius; dx <= radius; dx++) {
+            const x = cx + dx;
+            if (x < 0 || x >= width) continue;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < r2) {
+              const idx = yOff + x;
+              if (isLand && !isLand(idx)) continue;
+              const t = Math.sqrt(d2) / radius;
+              const falloff = (1.0 - t * t) * (1.0 - t * t);
+              const bonusByte = (falloff * 0.38 * 255) | 0;
+              const cur = buf[idx];
+              buf[idx] = Math.min(255, cur + bonusByte);
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Composite the "all" buffer
+    for (let i = 0; i < totalTiles; i++) {
+      allBuf[i] = Math.max(ironBuf[i], coalBuf[i], oilBuf[i], uraniumBuf[i]);
+    }
+
+    const map = new Map<string, Uint8Array>();
+    map.set("ironOre", ironBuf);
+    map.set("coal", coalBuf);
+    map.set("crudeOil", oilBuf);
+    map.set("uraniumOre", uraniumBuf);
+    map.set("all", allBuf);
+    return map;
+  }
 }

@@ -462,7 +462,19 @@ export class Config {
     return 150;
   }
 
-  structureMinDist(): number {
+  structureMinDist(unitType?: UnitType): number {
+    if (
+      unitType === UnitType.IronMine ||
+      unitType === UnitType.CoalMine ||
+      unitType === UnitType.OilRig ||
+      unitType === UnitType.UraniumMine ||
+      unitType === UnitType.SteelMill ||
+      unitType === UnitType.Refinery ||
+      unitType === UnitType.Centrifuge ||
+      unitType === UnitType.Residential
+    ) {
+      return 5;
+    }
     return 15;
   }
 

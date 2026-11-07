@@ -30,12 +30,13 @@ import {
   bunkerIcon,
   centrifugeIcon,
   coalMineIcon,
+  destroyerIcon,
   ironMineIcon,
   oilRigIcon,
-  radarIcon,
   refineryIcon,
   residentialIcon,
   steelMillIcon,
+  submarineIcon,
   uraniumMineIcon,
 } from "../HotbarIcons";
 const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
@@ -104,6 +105,20 @@ export const buildTable: BuildItemDisplay[][] = [
       countable: true,
     },
     {
+      unitType: UnitType.Destroyer,
+      icon: destroyerIcon,
+      description: "build_menu.desc.destroyer",
+      key: "unit_type.destroyer",
+      countable: true,
+    },
+    {
+      unitType: UnitType.Submarine,
+      icon: submarineIcon,
+      description: "build_menu.desc.submarine",
+      key: "unit_type.submarine",
+      countable: true,
+    },
+    {
       unitType: UnitType.Port,
       icon: portIcon,
       description: "build_menu.desc.port",
@@ -125,13 +140,6 @@ export const buildTable: BuildItemDisplay[][] = [
       icon: bunkerIcon,
       description: "build_menu.desc.bunker",
       key: "unit_type.bunker",
-      countable: true,
-    },
-    {
-      unitType: UnitType.Radar,
-      icon: radarIcon,
-      description: "build_menu.desc.radar",
-      key: "unit_type.radar",
       countable: true,
     },
     {

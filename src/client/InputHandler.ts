@@ -249,7 +249,7 @@ export class ToggleCoordinateGridEvent implements GameEvent {
 export class ToggleGeologicalScoutingEvent implements GameEvent {
   constructor(
     public readonly resource: ResourceType | "all" | "none",
-    public readonly densityData?: Float32Array,
+    public readonly densityData?: Float32Array | Uint8Array,
   ) {}
 }
 
@@ -1582,13 +1582,11 @@ export class InputHandler {
             break;
         }
       } else {
-        // Buildings tab extra structures (Bunker, Radar & Residential)
+        // Buildings tab extra structures (Bunker & Residential)
         switch (digit) {
           case 7:
             return UnitType.Bunker;
           case 8:
-            return UnitType.Radar;
-          case 9:
             return UnitType.Residential;
           default:
             break;

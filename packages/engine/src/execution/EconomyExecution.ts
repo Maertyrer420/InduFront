@@ -58,10 +58,6 @@ export class EconomyExecution implements Execution {
     number,
     { resource: ResourceType; amount: number }
   >();
-  private latencyCache = new Map<
-    number,
-    { latency: number; cachedAtTick: number }
-  >();
 
   constructor() {}
 
@@ -383,12 +379,6 @@ export class EconomyExecution implements Execution {
     res: ResourceType,
   ): number {
     if (!this.mg) return 0;
-    this.latencyCache ??= new Map();
-    const currentTick = this.mg.ticks();
-    const cached = this.latencyCache.get(mineUnit.id());
-    if (cached && currentTick - cached.cachedAtTick < 25) {
-      return cached.latency;
-    }
 
     const tile = mineUnit.tile();
     const mx = this.mg.x(tile);
@@ -441,16 +431,10 @@ export class EconomyExecution implements Execution {
       }
     }
 
-    let latency = 0;
     if (minDistance !== Infinity && minDistance > 5) {
-      // Latency tau: gentle scaling (1 tick per 10 tiles), capped at 10 ticks
-      latency = Math.min(10, Math.max(1, Math.floor(minDistance / 10)));
+      return Math.min(10, Math.max(1, Math.floor(minDistance / 10)));
     }
-    this.latencyCache.set(mineUnit.id(), {
-      latency,
-      cachedAtTick: currentTick,
-    });
-    return latency;
+    return 0;
   }
 
   /**
@@ -597,7 +581,6 @@ export class EconomyExecution implements Execution {
     this.tileDeposits = new Map(s.tileDeposits);
     this.shipments = s.shipments.map((x) => ({ ...x }));
     this.mineBuffers = new Map(s.mineBuffers);
-    this.latencyCache = new Map();
   }
 }
 

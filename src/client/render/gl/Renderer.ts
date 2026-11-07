@@ -1176,7 +1176,7 @@ export class GPURenderer {
 
   setGeologicalScouting(
     resource: ResourceType | "all" | "none",
-    densityData?: Float32Array,
+    densityData?: Float32Array | Uint8Array,
   ): void {
     if (densityData) {
       this.geologicalScoutingPass.setResourceDensityData(densityData);

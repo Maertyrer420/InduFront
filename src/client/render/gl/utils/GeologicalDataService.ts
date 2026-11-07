@@ -1,35 +1,28 @@
 import { ResourceType } from "@openfront/engine-api/game/GameTypes";
-import {
-  GeneratedResourceMap,
-  ProceduralHeatmapGenerator,
-} from "@openfront/engine-lib/game/ProceduralHeatmap";
+import { ProceduralHeatmapGenerator } from "@openfront/engine-lib/game/ProceduralHeatmap";
 import type { GameView } from "../../../view/GameView";
 
 export class GeologicalDataService {
-  private static cachedMap: GeneratedResourceMap | null = null;
   private static cachedKey: string = "";
-  private static densityBuffers = new Map<string, Float32Array>();
+  private static densityBuffers = new Map<string, Uint8Array>();
 
   /**
-   * Pre-calculates the geological cluster map at load time (takes ~50ms, zero heap bloat).
+   * Pre-calculates the geological density buffers at load time directly as flat Uint8Arrays.
+   * Completely eliminates runtime stutter and lag when players open or toggle the heatmap.
    */
   public static preload(game: GameView): void {
     const width = game.width();
     const height = game.height();
     const key = `${width}_${height}`;
 
-    if (this.cachedKey === key && this.cachedMap) {
+    if (this.cachedKey === key && this.densityBuffers.size > 0) {
       return;
     }
 
     this.cachedKey = key;
-    this.densityBuffers.clear();
-
-    // Map generation is deterministic from map bounds & land mask
-    this.cachedMap = ProceduralHeatmapGenerator.generate(
+    this.densityBuffers = ProceduralHeatmapGenerator.generateDensityBuffers(
       width,
       height,
-      [],
       2026,
       (tile: number) => game.isLand(tile as any),
     );
@@ -38,23 +31,10 @@ export class GeologicalDataService {
   public static getDensityData(
     game: GameView,
     resource: ResourceType | "all" | "none",
-  ): Float32Array | undefined {
+  ): Uint8Array | undefined {
     if (resource === "none") return undefined;
 
     this.preload(game);
-    if (!this.cachedMap) return undefined;
-
-    let buf = this.densityBuffers.get(resource);
-    if (!buf) {
-      buf = ProceduralHeatmapGenerator.generateDensityTexture(
-        resource,
-        game.width(),
-        game.height(),
-        this.cachedMap.tileDeposits,
-        (tile: number) => game.isLand(tile as any),
-      );
-      this.densityBuffers.set(resource, buf);
-    }
-    return buf;
+    return this.densityBuffers.get(resource);
   }
 }

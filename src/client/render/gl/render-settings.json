@@ -151,6 +151,38 @@
       "Missile Silo": {
         "scale": 1.55,
         "iconFill": 0.85
+      },
+      "Iron Mine": {
+        "scale": 0.8,
+        "iconFill": 0.85
+      },
+      "Coal Mine": {
+        "scale": 0.8,
+        "iconFill": 0.85
+      },
+      "Oil Rig": {
+        "scale": 0.8,
+        "iconFill": 0.85
+      },
+      "Uranium Mine": {
+        "scale": 0.8,
+        "iconFill": 0.85
+      },
+      "Steel Mill": {
+        "scale": 0.8,
+        "iconFill": 0.85
+      },
+      "Refinery": {
+        "scale": 0.8,
+        "iconFill": 0.85
+      },
+      "Centrifuge": {
+        "scale": 0.8,
+        "iconFill": 0.85
+      },
+      "Residential": {
+        "scale": 0.8,
+        "iconFill": 0.85
       }
     },
     "highlightOutlineWidth": 0.04,
