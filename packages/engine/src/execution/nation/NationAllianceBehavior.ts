@@ -68,6 +68,13 @@ export class NationAllianceBehavior {
         req.reject();
         continue;
       }
+      if (
+        this.game.isPlayerInTop10(this.player) ||
+        this.game.isPlayerInTop10(req.requestor())
+      ) {
+        req.reject();
+        continue;
+      }
       if (this.getAllianceDecision(req.requestor(), true)) {
         req.accept();
       } else {

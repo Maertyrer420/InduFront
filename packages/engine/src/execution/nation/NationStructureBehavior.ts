@@ -66,6 +66,16 @@ function getStructureRatios(
 ): Partial<Record<UnitType, StructureRatioConfig>> {
   const teamPorts =
     gameMode === GameMode.Team && difficulty !== Difficulty.Easy;
+
+  const isEasy = difficulty === Difficulty.Easy;
+  const isMed = difficulty === Difficulty.Medium;
+
+  // Multi-difficulty economic structure ratios
+  const mineRatio = isEasy ? 0.25 : isMed ? 0.45 : 0.65;
+  const refineryRatio = isEasy ? 0.2 : isMed ? 0.35 : 0.5;
+  const residentialRatio = isEasy ? 0.3 : isMed ? 0.6 : 0.9;
+  const bunkerRatio = isEasy ? 0.05 : isMed ? 0.15 : 0.25;
+
   return {
     [UnitType.Port]: {
       ratioPerCity: teamPorts ? TEAM_PORT_RATIO : 0.75,
@@ -82,6 +92,42 @@ function getStructureRatios(
     [UnitType.MissileSilo]: {
       ratioPerCity: 0.2,
       perceivedCostIncreasePerOwned: 1,
+    },
+    [UnitType.Residential]: {
+      ratioPerCity: residentialRatio,
+      perceivedCostIncreasePerOwned: 0.5,
+    },
+    [UnitType.IronMine]: {
+      ratioPerCity: mineRatio,
+      perceivedCostIncreasePerOwned: 0.8,
+    },
+    [UnitType.CoalMine]: {
+      ratioPerCity: mineRatio,
+      perceivedCostIncreasePerOwned: 0.8,
+    },
+    [UnitType.OilRig]: {
+      ratioPerCity: mineRatio * 0.8,
+      perceivedCostIncreasePerOwned: 0.8,
+    },
+    [UnitType.UraniumMine]: {
+      ratioPerCity: mineRatio * 0.5,
+      perceivedCostIncreasePerOwned: 1.0,
+    },
+    [UnitType.SteelMill]: {
+      ratioPerCity: refineryRatio,
+      perceivedCostIncreasePerOwned: 1.0,
+    },
+    [UnitType.Refinery]: {
+      ratioPerCity: refineryRatio,
+      perceivedCostIncreasePerOwned: 1.0,
+    },
+    [UnitType.Centrifuge]: {
+      ratioPerCity: refineryRatio * 0.6,
+      perceivedCostIncreasePerOwned: 1.2,
+    },
+    [UnitType.Bunker]: {
+      ratioPerCity: bunkerRatio,
+      perceivedCostIncreasePerOwned: 1.5,
     },
   };
 }
@@ -702,9 +748,18 @@ export class NationStructureBehavior {
 
     // Build order for non-city structures (priority order)
     const buildOrder: UnitType[] = [
+      UnitType.Residential,
+      UnitType.IronMine,
+      UnitType.CoalMine,
+      UnitType.OilRig,
+      UnitType.SteelMill,
+      UnitType.Refinery,
       UnitType.Port,
       UnitType.Factory,
       UnitType.SAMLauncher,
+      UnitType.UraniumMine,
+      UnitType.Centrifuge,
+      UnitType.Bunker,
       UnitType.MissileSilo,
     ];
 
@@ -1303,14 +1358,45 @@ export class NationStructureBehavior {
       case UnitType.Bunker:
       case UnitType.Radar:
       case UnitType.Residential:
-        return this.industrialValue();
+        return this.industrialValue(type);
       default:
         throw new Error(`Value function not implemented for ${type}`);
     }
   }
 
-  private industrialValue(): (tile: TileRef) => number {
-    return (_tile: TileRef) => 10.0;
+  private industrialValue(type: UnitType): (tile: TileRef) => number {
+    const econ = this.game.economyExecution() as any;
+    const tileDeposits = econ?.tileDeposits;
+
+    return (tile: TileRef) => {
+      let val = 10.0;
+      if (tileDeposits) {
+        const depMap = tileDeposits.get(tile);
+        if (depMap) {
+          if (type === UnitType.IronMine && depMap.ironOre) {
+            val += 150.0 * (depMap.ironOre.intensity ?? 1.0);
+          } else if (type === UnitType.CoalMine && depMap.coal) {
+            val += 150.0 * (depMap.coal.intensity ?? 1.0);
+          } else if (type === UnitType.OilRig && depMap.crudeOil) {
+            val += 150.0 * (depMap.crudeOil.intensity ?? 1.0);
+          } else if (type === UnitType.UraniumMine && depMap.uraniumOre) {
+            val += 200.0 * (depMap.uraniumOre.intensity ?? 1.0);
+          }
+        }
+      }
+      if (type === UnitType.Bunker) {
+        // Bunkers are best near borders to repel invasions
+        const borderTiles = this.player.borderTiles();
+        const dist = nearestTileDistCapped(this.game, borderTiles, tile, 15);
+        val += Math.max(0, 15 - dist) * 5.0;
+      } else if (type === UnitType.Residential) {
+        // Residential safe behind borders
+        const borderTiles = this.player.borderTiles();
+        const dist = nearestTileDistCapped(this.game, borderTiles, tile, 20);
+        val += dist * 2.0;
+      }
+      return val;
+    };
   }
 
   /**

@@ -22,6 +22,7 @@ import {
   oilRigIcon,
   radarIcon,
   refineryIcon,
+  residentialIcon,
   steelMillIcon,
   uraniumMineIcon,
 } from "../../../hud/HotbarIcons";
@@ -39,6 +40,7 @@ import {
   UT_PORT,
   UT_RADAR,
   UT_REFINERY,
+  UT_RESIDENTIAL,
   UT_SAM_LAUNCHER,
   UT_STEEL_MILL,
   UT_URANIUM_MINE,
@@ -82,6 +84,7 @@ const STRUCTURE_ORDER = [
   UT_CENTRIFUGE,
   UT_BUNKER,
   UT_RADAR,
+  UT_RESIDENTIAL,
 ] as const;
 
 const ATLAS_COLS = STRUCTURE_ORDER.length;
@@ -200,7 +203,7 @@ export class StructurePass {
         else if (type.includes("Radar"))
           col = STRUCTURE_ORDER.indexOf(UT_RADAR);
         else if (type.includes("Residential"))
-          col = STRUCTURE_ORDER.indexOf(UT_CITY);
+          col = STRUCTURE_ORDER.indexOf(UT_RESIDENTIAL);
         else if (type.includes("Mine") || type.includes("Mill"))
           col = STRUCTURE_ORDER.indexOf(UT_FACTORY);
         else if (type.includes("Rig") || type.includes("Shipyard"))
@@ -362,6 +365,7 @@ export class StructurePass {
       { col: 12, src: centrifugeIcon },
       { col: 13, src: bunkerIcon },
       { col: 14, src: radarIcon },
+      { col: 15, src: residentialIcon },
     ];
 
     await Promise.all(

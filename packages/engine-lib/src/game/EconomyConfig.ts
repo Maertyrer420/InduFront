@@ -48,7 +48,7 @@ export const MILITARY_UNIT_COSTS = {
   samReload: { gold: 100, steel: 10, fuel: 10, enrichedUranium: 0 },
 };
 
-export function getUnitResourceCost(type: UnitType): {
+export function getUnitResourceCost(type: UnitType, existingCount: number = 0): {
   gold: number;
   steel: number;
   fuel: number;
@@ -65,8 +65,10 @@ export function getUnitResourceCost(type: UnitType): {
       return MILITARY_UNIT_COSTS.icbm;
     case UnitType.CruiseMissile:
       return MILITARY_UNIT_COSTS.cruiseMissile;
-    case UnitType.Bunker:
-      return { gold: 250, steel: 35, fuel: 0, enrichedUranium: 0 };
+    case UnitType.Bunker: {
+      const steelCost = Math.round(100 * Math.pow(1.6, Math.min(10, existingCount)));
+      return { gold: 500, steel: steelCost, fuel: 0, enrichedUranium: 0 };
+    }
     case UnitType.Radar:
       return { gold: 1000, steel: 80, fuel: 0, enrichedUranium: 15 };
     case UnitType.SAMLauncher:

@@ -236,10 +236,13 @@ export class EconomyExecution implements Execution {
         }
       }
 
-      // Demographic cap K_P = base (1000) + residential * 500
+      // Demographic cap K_P = base (1000) + residential * 500 + bunker * 800
       const residentialCount = econ.buildingsCount[UnitType.Residential] ?? 0;
+      const bunkerCount = econ.buildingsCount[UnitType.Bunker] ?? 0;
       econ.maxPopulation =
-        BASE_POPULATION_CAP + residentialCount * RESIDENTIAL_POP_BOOST;
+        BASE_POPULATION_CAP +
+        residentialCount * RESIDENTIAL_POP_BOOST +
+        bunkerCount * 800;
 
       // Demographic Growth: P_{t+1} = P + r * P * (1 - P / K_P)
       if (econ.population < econ.maxPopulation) {

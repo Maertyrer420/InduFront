@@ -1,4 +1,4 @@
-import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
+﻿import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   Cell,
   ColoredTeams,
@@ -141,9 +141,9 @@ export class GameImpl implements Game {
 
   private updates: GameUpdates = createGameUpdatesMap();
   private tileUpdatePairs: number[] = [];
-  /** [smallID, tilesOwned, gold, troops] quads — see PlayerImpl.toUpdate. */
+  /** [smallID, tilesOwned, gold, troops] quads â€” see PlayerImpl.toUpdate. */
   private playerStatsQuads: number[] = [];
-  /** [smallID, direction, index, troops] quads — see packAttackTroopDeltas. */
+  /** [smallID, direction, index, troops] quads â€” see packAttackTroopDeltas. */
   private attackTroopsQuads: number[] = [];
   private motionPlanRecords: MotionPlanRecord[] = [];
   private planDrivenUnitIds = new Set<number>();
@@ -366,8 +366,8 @@ export class GameImpl implements Game {
       const type = first as UnitType;
       // Single-type query: every nation asks for e.g. all transport ships on
       // every tick, and walking every player's unit list each time was ~3 %
-      // of a headless game. The memo is exact — it is invalidated by any
-      // unit list change — and callers get their own copy.
+      // of a headless game. The memo is exact â€” it is invalidated by any
+      // unit list change â€” and callers get their own copy.
       const memo = this.unitsByTypeMemo.get(type);
       if (memo !== undefined && memo.version === this._unitsVersion) {
         return memo.units.slice();
@@ -585,6 +585,7 @@ export class GameImpl implements Game {
       if (update !== null) this.addUpdate(update);
     }
     if (this.ticks() % 10 === 0) {
+      this.checkTop10AllianceDissolutions();
       this.addUpdate({
         type: GameUpdateType.Hash,
         tick: this.ticks(),
@@ -986,7 +987,7 @@ export class GameImpl implements Game {
   }
 
   public removeAlliancesByPlayerSilently(player: Player): void {
-    // Snapshot — detachAlliance reassigns the player's _alliances as it goes.
+    // Snapshot â€” detachAlliance reassigns the player's _alliances as it goes.
     const removed = [...(player as PlayerImpl)._alliances];
     for (const alliance of removed) {
       // Elimination is the fourth way an alliance ends, and in practice the
@@ -994,13 +995,93 @@ export class GameImpl implements Game {
       // the null counter is here purely so both sides' longest-held maximum
       // still sees the alliance. Without this the survivor's longest held
       // would silently read 0 from an alliance that ran the whole game, and
-      // recordAlliancesAtEnd cannot pick it up either — by then it is
+      // recordAlliancesAtEnd cannot pick it up either â€” by then it is
       // already detached.
       const duration = this._ticks - alliance.createdAt();
       this.stats().allianceEnded(alliance.requestor(), duration, null);
       this.stats().allianceEnded(alliance.recipient(), duration, null);
       this.detachAlliance(alliance);
     }
+  }
+
+  public isPlayerInTop10(player: Player): boolean {
+    const alivePlayers = this.players().filter((p) => p.isAlive());
+    if (alivePlayers.length <= 1) return false;
+    // Top 10 rule: In games with > 10 nations, the top 10 nations cannot ally.
+    // If 10 or fewer nations are alive, the top 40% (at least 1 leader) are excluded.
+    const threshold =
+      alivePlayers.length > 10
+        ? 10
+        : Math.max(1, Math.floor(alivePlayers.length * 0.4));
+    const sorted = [...alivePlayers].sort(
+      (a, b) =>
+        b.numTilesOwned() - a.numTilesOwned() ||
+        Number(b.troops() - a.troops()),
+    );
+    const rank = sorted.indexOf(player);
+    return rank !== -1 && rank < threshold;
+  }
+
+  public playerLeaderboardRank(player: Player): number {
+    const alivePlayers = this.players().filter((p) => p.isAlive());
+    const sorted = [...alivePlayers].sort(
+      (a, b) =>
+        b.numTilesOwned() - a.numTilesOwned() ||
+        Number(b.troops() - a.troops()),
+    );
+    const rank = sorted.indexOf(player);
+    return rank === -1 ? 999 : rank + 1;
+  }
+
+  public checkTop10AllianceDissolutions(): void {
+    if (this.config().disableAlliances()) return;
+    const allAlliances: MutableAlliance[] = [];
+    const seen = new Set<number>();
+    for (const player of this.players()) {
+      for (const a of player.alliances()) {
+        if (!seen.has(a.id())) {
+          seen.add(a.id());
+          allAlliances.push(a);
+        }
+      }
+    }
+
+    for (const a of allAlliances) {
+      const p1Top10 = this.isPlayerInTop10(a.requestor());
+      const p2Top10 = this.isPlayerInTop10(a.recipient());
+      if (p1Top10 || p2Top10) {
+        const topPlayer = p1Top10 ? a.requestor() : a.recipient();
+        this.autoDissolveTop10Alliance(a, topPlayer);
+      }
+    }
+  }
+
+  public autoDissolveTop10Alliance(
+    alliance: MutableAlliance,
+    reasonPlayer: Player,
+  ): void {
+    const duration = this._ticks - alliance.createdAt();
+    this.stats().allianceEnded(
+      alliance.requestor(),
+      duration,
+      "expired",
+    );
+    this.stats().allianceEnded(
+      alliance.recipient(),
+      duration,
+      "expired",
+    );
+    this.detachAlliance(alliance);
+    this.addUpdate({
+      type: GameUpdateType.AllianceExpired,
+      player1ID: alliance.requestor().smallID(),
+      player2ID: alliance.recipient().smallID(),
+    });
+    this.displayMessage(
+      `Allianz aufgeloest: ${reasonPlayer.displayName()} ist in die Top 10 Grossmaechte aufgestiegen!`,
+      MessageType.ALLIANCE_REJECTED,
+      null,
+    );
   }
 
   /** Remove an alliance from both participants' per-player alliance lists. */
@@ -1218,8 +1299,8 @@ export class GameImpl implements Game {
     this._unitsVersion++;
   }
 
-  // Bumped on every change of tile ownership, fallout or land/water — i.e.
-  // anything Player.nearby() can observe — so per-player answers can be memoised
+  // Bumped on every change of tile ownership, fallout or land/water â€” i.e.
+  // anything Player.nearby() can observe â€” so per-player answers can be memoised
   // for as long as nothing on the map moved.
   private _territoryVersion = 0;
   territoryVersion(): number {

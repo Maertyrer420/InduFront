@@ -5,6 +5,7 @@ import {
   BuildableUnit,
   Cell,
   ColoredTeams,
+  Difficulty,
   EmojiMessage,
   GameMode,
   GameType,
@@ -844,6 +845,11 @@ export class PlayerImpl implements Player {
       return false;
     }
 
+    // Top 10 rule: Top 10 superpowers cannot form or join alliances
+    if (this.mg.isPlayerInTop10(this) || this.mg.isPlayerInTop10(other)) {
+      return false;
+    }
+
     const hasPending = this.outgoingAllianceRequests().some(
       (ar) => ar.recipient() === other,
     );
@@ -1438,32 +1444,43 @@ export class PlayerImpl implements Player {
     this.removeTroops(typeof troopsToRemove === "number" ? troopsToRemove : 0);
 
     // Deduct refined resource costs for advanced structures & units
-    const buildResCost = getUnitResourceCost(type);
+    const ownedBunkers =
+      type === UnitType.Bunker
+        ? Math.max(0, this.unitsOwned(UnitType.Bunker) - 1)
+        : 0;
+    const buildResCost = getUnitResourceCost(type, ownedBunkers);
     if (
       !this.mg.config().infiniteGold() &&
-      this.type() === PlayerType.Human &&
       (buildResCost.enrichedUranium > 0 ||
         buildResCost.steel > 0 ||
         buildResCost.fuel > 0)
     ) {
       const econ = this.mg.economyExecution()?.getEconomy(this.smallID());
       if (econ) {
-        if (buildResCost.enrichedUranium > 0) {
+        const difficulty = this.mg.config().gameConfig().difficulty;
+        const isBot = this.type() !== PlayerType.Human;
+        // On Easy difficulty, bots have a 50% resource requirement discount
+        const factor = isBot && difficulty === Difficulty.Easy ? 0.5 : 1.0;
+        const reqUranium = Math.floor(buildResCost.enrichedUranium * factor);
+        const reqSteel = Math.floor(buildResCost.steel * factor);
+        const reqFuel = Math.floor(buildResCost.fuel * factor);
+
+        if (reqUranium > 0) {
           econ.refined.enrichedUranium = Math.max(
             0,
-            (econ.refined.enrichedUranium ?? 0) - buildResCost.enrichedUranium,
+            (econ.refined.enrichedUranium ?? 0) - reqUranium,
           );
         }
-        if (buildResCost.steel > 0) {
+        if (reqSteel > 0) {
           econ.refined.steel = Math.max(
             0,
-            (econ.refined.steel ?? 0) - buildResCost.steel,
+            (econ.refined.steel ?? 0) - reqSteel,
           );
         }
-        if (buildResCost.fuel > 0) {
+        if (reqFuel > 0) {
           econ.refined.fuel = Math.max(
             0,
-            (econ.refined.fuel ?? 0) - buildResCost.fuel,
+            (econ.refined.fuel ?? 0) - reqFuel,
           );
         }
       }
@@ -1517,24 +1534,32 @@ export class PlayerImpl implements Player {
     }
 
     // Master Prompt: Units & structures strictly require their required refined resources
-    const resCost = getUnitResourceCost(unitType);
+    const ownedBunkers =
+      unitType === UnitType.Bunker ? this.unitsOwned(UnitType.Bunker) : 0;
+    const resCost = getUnitResourceCost(unitType, ownedBunkers);
     if (
       !this.mg.config().infiniteGold() &&
-      this.type() === PlayerType.Human &&
       (resCost.enrichedUranium > 0 || resCost.steel > 0 || resCost.fuel > 0)
     ) {
       const econ = this.mg.economyExecution()?.getEconomy(this.smallID());
       if (econ) {
+        const difficulty = this.mg.config().gameConfig().difficulty;
+        const isBot = this.type() !== PlayerType.Human;
+        const factor = isBot && difficulty === Difficulty.Easy ? 0.5 : 1.0;
+        const reqUranium = Math.floor(resCost.enrichedUranium * factor);
+        const reqSteel = Math.floor(resCost.steel * factor);
+        const reqFuel = Math.floor(resCost.fuel * factor);
+
         if (
-          resCost.enrichedUranium > 0 &&
-          (econ.refined.enrichedUranium ?? 0) < resCost.enrichedUranium
+          reqUranium > 0 &&
+          (econ.refined.enrichedUranium ?? 0) < reqUranium
         ) {
           return false;
         }
-        if (resCost.steel > 0 && (econ.refined.steel ?? 0) < resCost.steel) {
+        if (reqSteel > 0 && (econ.refined.steel ?? 0) < reqSteel) {
           return false;
         }
-        if (resCost.fuel > 0 && (econ.refined.fuel ?? 0) < resCost.fuel) {
+        if (reqFuel > 0 && (econ.refined.fuel ?? 0) < reqFuel) {
           return false;
         }
       }

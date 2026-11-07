@@ -40,6 +40,7 @@ import {
   steelMillIcon,
   uraniumMineIcon,
   centrifugeIcon,
+  allianceIcon,
 } from "../HotbarIcons";
 import { TutorialHighlight, TutorialHighlightEvent } from "../Tutorial";
 const swordIcon = assetUrl("images/SwordIcon.svg");
@@ -480,6 +481,13 @@ export class ControlPanel extends LitElement implements Controller {
     }
   };
 
+  private openAllianceModal = () => {
+    const modal = document.querySelector("alliance-modal") as any;
+    if (modal) {
+      modal.toggle();
+    }
+  };
+
   private setAttackRatioPreset(pct: number) {
     this.attackRatio = Math.max(0.01, Math.min(1.0, pct / 100));
     this.onAttackRatioChange(this.attackRatio);
@@ -904,6 +912,16 @@ export class ControlPanel extends LitElement implements Controller {
         >
           <img src=${factoryIcon} class="w-3.5 h-3.5 object-contain" />
           <span>Minen & Industrie</span>
+        </button>
+
+        <!-- Open Alliance Modal Button -->
+        <button
+          class="flex items-center gap-1.5 bg-[#3b5998] hover:bg-[#4c70ba] text-white px-2 py-0.5 rounded text-[11px] font-bold transition-colors shadow-sm border border-indigo-400/40"
+          @click=${this.openAllianceModal}
+          title="Allianzen & Koalitionen (Anti-Großmacht) öffnen"
+        >
+          <img src=${allianceIcon} class="w-3.5 h-3.5 object-contain" />
+          <span>Allianzen</span>
         </button>
       </div>
 

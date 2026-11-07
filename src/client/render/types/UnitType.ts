@@ -38,6 +38,7 @@ export const UT_REFINERY = "Refinery" as const;
 export const UT_CENTRIFUGE = "Centrifuge" as const;
 export const UT_BUNKER = "Bunker" as const;
 export const UT_RADAR = "Radar" as const;
+export const UT_RESIDENTIAL = "Residential" as const;
 export const UT_DESTROYER = "Destroyer" as const;
 export const UT_SUBMARINE = "Submarine" as const;
 export const UT_CRUISE_MISSILE = "Cruise Missile" as const;
@@ -62,6 +63,7 @@ export const STRUCTURE_TYPES: ReadonlySet<string> = new Set([
   UT_CENTRIFUGE,
   UT_BUNKER,
   UT_RADAR,
+  UT_RESIDENTIAL,
 ]);
 
 export const NUKE_TYPES: ReadonlySet<string> = new Set([

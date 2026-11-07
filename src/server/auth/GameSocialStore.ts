@@ -74,6 +74,8 @@ export interface PlayerStatsRecord {
   losses: number;
   games: number;
   level: number;
+  steelBalance: number;
+  unlockedItems?: string[];
   lastPlayedAt?: string;
 }
 
@@ -163,6 +165,24 @@ export function calculateQpPoints(placement: number): number {
       return 1;
     default:
       return 0;
+  }
+}
+
+export function calculateSteelReward(placement: number): number {
+  switch (placement) {
+    case 1:
+      return 1000;
+    case 2:
+      return 750;
+    case 3:
+      return 500;
+    case 4:
+      return 350;
+    case 5:
+      return 200;
+    default:
+      if (placement <= 10) return 100;
+      return 50;
   }
 }
 
@@ -956,10 +976,58 @@ export class GameSocialStore {
         losses: 0,
         games: 0,
         level: 1,
+        steelBalance: 500,
+        unlockedItems: [],
       };
       this.save();
     }
+    this.data.playerStats[key].steelBalance ??= 500;
+    this.data.playerStats[key].unlockedItems ??= [];
     return this.data.playerStats[key];
+  }
+
+  public getPlayerSteel(publicId: string): number {
+    const key = publicId.toLowerCase();
+    const stats = this.data.playerStats[key];
+    return stats?.steelBalance ?? 500;
+  }
+
+  public awardPlayerSteel(
+    publicId: string,
+    username: string,
+    amount: number,
+  ): number {
+    const stats = this.getOrCreatePlayerStats(publicId, username);
+    stats.steelBalance = (stats.steelBalance ?? 500) + amount;
+    this.save();
+    return stats.steelBalance;
+  }
+
+  public buyCosmeticWithSteel(
+    publicId: string,
+    itemId: string,
+    cost: number,
+  ): { success: boolean; balance: number; error?: string } {
+    const key = publicId.toLowerCase();
+    const stats = this.data.playerStats[key];
+    if (!stats) return { success: false, balance: 0, error: "player_not_found" };
+    const current = stats.steelBalance ?? 500;
+    if (current < cost) {
+      return { success: false, balance: current, error: "insufficient_steel" };
+    }
+    stats.steelBalance = current - cost;
+    stats.unlockedItems = stats.unlockedItems ?? [];
+    if (!stats.unlockedItems.includes(itemId)) {
+      stats.unlockedItems.push(itemId);
+    }
+    this.save();
+    return { success: true, balance: stats.steelBalance };
+  }
+
+  public getUnlockedCosmetics(publicId: string): string[] {
+    const key = publicId.toLowerCase();
+    const stats = this.data.playerStats[key];
+    return stats?.unlockedItems ?? [];
   }
 
   public getPlayerMatches(publicId: string): MatchRecord[] {
@@ -987,6 +1055,8 @@ export class GameSocialStore {
         stats.losses++;
       }
       stats.qp += p.qpEarned;
+      stats.steelBalance =
+        (stats.steelBalance ?? 500) + calculateSteelReward(p.placement);
       stats.lastPlayedAt = match.timestamp;
 
       // Update ranked elo according to match type

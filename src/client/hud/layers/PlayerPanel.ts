@@ -1019,7 +1019,15 @@ export class PlayerPanel extends LitElement implements Controller {
                       label: translateText("player_panel.send_alliance"),
                       type: "indigo",
                     })
-                  : ""}
+                  : !canBreakAlliance && other !== my
+                    ? html`
+                        <div
+                          class="col-span-full text-[11px] text-center text-amber-300/80 bg-amber-950/30 border border-amber-500/20 rounded py-1 px-2"
+                        >
+                          ⚠️ Keine Allianz möglich (Top 10 Großmacht-Sperre)
+                        </div>
+                      `
+                    : ""}
               </div>
             `}
         ${other === my

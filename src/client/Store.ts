@@ -43,6 +43,7 @@ import {
 } from "./Payments";
 import { lastUserMeResponse } from "./UserMeBroadcast";
 import { translateText } from "./Utils";
+import { STEEL_CATALOG, SteelStoreService } from "./SteelStore";
 
 // Matches the API's formatting of `product.price`, so a tier priced from its
 // own cents reads the same as one priced from its Stripe listing.
@@ -56,12 +57,13 @@ function formatUsdCents(cents: number): string {
 }
 
 type StoreTab =
+  | "steel_shop"
   | "cosmetics"
   | "bundles"
   | "effects"
+  | "tribes"
   | "packs"
-  | "subscriptions"
-  | "tribes";
+  | "subscriptions";
 
 const COSMETICS_SUB_TABS = ["patterns", "flags", "crowns"] as const;
 type CosmeticsSubTab = (typeof COSMETICS_SUB_TABS)[number];
@@ -98,6 +100,7 @@ export class StoreModal extends BaseModal {
   // refresh() after the catalog fetch, and a settled no-session result must
   // not wait on a slow catalog before it may say so.
   @state() private authSettled = false;
+  @state() private steelCategoryFilter: string = "all";
   private cosmeticsSubTab: CosmeticsSubTab = "patterns";
   // Item the URL asked for (`#modal=store&item=<key>`). Held until its group
   // is visible, then inspected so the store opens on that item.
@@ -116,11 +119,10 @@ export class StoreModal extends BaseModal {
     }
     return {
       tabs: [
-        { key: "packs", label: translateText("store.packs") },
-        { key: "subscriptions", label: translateText("store.subscriptions") },
-        { key: "bundles", label: translateText("store.bundles") },
+        { key: "steel_shop", label: "⚙️ Stahl-Shop (Steel)" },
         { key: "cosmetics", label: translateText("store.cosmetics") },
         { key: "effects", label: translateText("store.effects") },
+        { key: "bundles", label: translateText("store.bundles") },
         { key: "tribes", label: translateText("store.tribes") },
       ],
     };
@@ -195,7 +197,17 @@ export class StoreModal extends BaseModal {
       title: translateText("store.title"),
       onBack: () => this.close(),
       ariaLabel: translateText("common.back"),
-      rightContent: html`<div class="flex items-center gap-4">
+      rightContent: html`<div class="flex items-center gap-3">
+        <div
+          class="flex items-center gap-1.5 bg-slate-900/90 border border-cyan-400/50 px-3 py-1 rounded-full text-xs font-bold text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.2)]"
+          title="Dein gesammelter Stahl aus gespielten Runden"
+        >
+          <span>⚙️</span>
+          <span class="tabular-nums font-extrabold"
+            >${SteelStoreService.getBalance()}</span
+          >
+          <span class="text-white/70">Stahl</span>
+        </div>
         ${currency
           ? html`<currency-display
               .hard=${currency.hard}
@@ -672,20 +684,191 @@ export class StoreModal extends BaseModal {
       return this.renderAffiliateGrid();
     }
     switch (key as StoreTab) {
+      case "steel_shop":
+        return this.renderSteelShop();
       case "cosmetics":
         return this.renderCosmeticsPanel();
       case "bundles":
         return this.renderBundleGrid();
       case "effects":
         return this.renderEffectGrid();
-      case "subscriptions":
-        return this.renderSubscriptionGrid();
       case "tribes":
         return this.renderTribeGrid();
       case "packs":
+      case "subscriptions":
       default:
-        return this.renderPackGrid();
+        return this.renderSteelShop();
     }
+  }
+
+  private renderSteelShop(): TemplateResult {
+    const balance = SteelStoreService.getBalance();
+    const equipped = SteelStoreService.getEquipped();
+    const categories: { key: string; label: string }[] = [
+      { key: "all", label: "Alle" },
+      { key: "titel", label: "Titel" },
+      { key: "badges", label: "Abzeichen (Badges)" },
+      { key: "skins", label: "Skins & Tarnungen" },
+      { key: "sounds", label: "Custom Sounds" },
+    ];
+
+    const items = STEEL_CATALOG.filter(
+      (item) =>
+        this.steelCategoryFilter === "all" ||
+        item.category === this.steelCategoryFilter,
+    );
+
+    return html`
+      <div class="flex flex-col gap-4 p-4 sm:p-6 max-w-5xl mx-auto w-full">
+        <!-- Banner -->
+        <div
+          class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 sm:p-5 rounded-xl bg-gradient-to-r from-slate-900 via-indigo-950/80 to-slate-900 border border-cyan-500/30 shadow-lg text-white"
+        >
+          <div class="flex items-center gap-3.5">
+            <div
+              class="w-12 h-12 rounded-xl bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center text-2xl"
+            >
+              ⚙️
+            </div>
+            <div>
+              <div class="text-base sm:text-lg font-black tracking-tight">
+                Stahl-Belohnungssystem
+              </div>
+              <div class="text-xs text-slate-300">
+                Sammle Stahl in jeder Runde (1. Platz: 1000 · 2. Platz: 750 · 3.
+                Platz: 500) und schalte exklusive Kosmetika frei!
+              </div>
+            </div>
+          </div>
+          <div
+            class="flex items-center gap-2 bg-black/40 border border-cyan-400/50 px-4 py-2 rounded-lg font-black text-cyan-300 text-sm shrink-0"
+          >
+            <span>Verfügbar:</span>
+            <span class="text-base text-white tabular-nums">${balance}</span>
+            <span>Stahl</span>
+          </div>
+        </div>
+
+        <!-- Filter Sub-Tabs -->
+        <div
+          class="flex flex-wrap items-center gap-2 border-b border-white/10 pb-3"
+        >
+          ${categories.map(
+            (cat) => html`
+              <button
+                class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${this
+                  .steelCategoryFilter === cat.key
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                  : "bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white"}"
+                @click=${() => {
+                  this.steelCategoryFilter = cat.key;
+                  this.requestUpdate();
+                }}
+              >
+                ${cat.label}
+              </button>
+            `,
+          )}
+        </div>
+
+        <!-- Catalog Grid -->
+        <div
+          class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
+        >
+          ${items.map((item) => {
+            const isUnlocked = SteelStoreService.isUnlocked(item.id);
+            const isEquipped = equipped[item.category] === item.id;
+            const canAfford = balance >= item.cost;
+
+            return html`
+              <div
+                class="flex flex-col justify-between p-4 rounded-xl bg-[#141824] border ${isEquipped
+                  ? "border-emerald-500/60 shadow-[0_0_15px_rgba(16,185,129,0.15)]"
+                  : isUnlocked
+                    ? "border-indigo-500/40"
+                    : "border-white/10"} transition-all hover:-translate-y-1 hover:border-white/20"
+              >
+                <div>
+                  <div class="flex items-start justify-between gap-2 mb-2">
+                    <span class="text-3xl">${item.icon}</span>
+                    <span
+                      class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${isEquipped
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                        : isUnlocked
+                          ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
+                          : "bg-white/10 text-gray-400"}"
+                    >
+                      ${item.category}
+                    </span>
+                  </div>
+                  <div class="text-sm font-bold text-white mb-1">
+                    ${item.name}
+                  </div>
+                  <div class="text-xs text-gray-400 mb-3 leading-relaxed">
+                    ${item.description}
+                  </div>
+                </div>
+
+                <div class="mt-auto pt-3 border-t border-white/5">
+                  <div
+                    class="flex items-center justify-between text-xs font-bold mb-2.5"
+                  >
+                    <span class="text-gray-400">Preis:</span>
+                    <span
+                      class="flex items-center gap-1 font-black ${isUnlocked
+                        ? "text-emerald-400"
+                        : "text-cyan-300"}"
+                    >
+                      ${isUnlocked ? "Im Besitz" : `${item.cost} Stahl`}
+                    </span>
+                  </div>
+
+                  ${isEquipped
+                    ? html`
+                        <button
+                          disabled
+                          class="w-full py-1.5 rounded-lg text-xs font-bold bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 cursor-default"
+                        >
+                          ✓ Aktiviert
+                        </button>
+                      `
+                    : isUnlocked
+                      ? html`
+                          <button
+                            class="w-full py-1.5 rounded-lg text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white transition-colors cursor-pointer shadow-sm"
+                            @click=${() => {
+                              SteelStoreService.equip(item.category, item.id);
+                              this.requestUpdate();
+                            }}
+                          >
+                            Ausrüsten
+                          </button>
+                        `
+                      : html`
+                          <button
+                            ?disabled=${!canAfford}
+                            class="w-full py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm ${canAfford
+                              ? "bg-cyan-600 hover:bg-cyan-500 text-white cursor-pointer"
+                              : "bg-gray-800 text-gray-500 border border-gray-700/50 cursor-not-allowed"}"
+                            @click=${() => {
+                              const res = SteelStoreService.buyItem(item);
+                              if (res.success) {
+                                this.requestUpdate();
+                              }
+                            }}
+                          >
+                            ${canAfford
+                              ? `Für ${item.cost} Stahl kaufen`
+                              : `Fehlt ${item.cost - balance} Stahl`}
+                          </button>
+                        `}
+                </div>
+              </div>
+            `;
+          })}
+        </div>
+      </div>
+    `;
   }
 
   private renderTribeGrid(): TemplateResult {

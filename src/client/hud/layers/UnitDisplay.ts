@@ -187,7 +187,8 @@ export class UnitDisplay extends LitElement implements Controller {
       const count = this.unitCount(item);
       return BigInt(calculateBuildingCost(item, count).gold);
     }
-    const mil = getUnitResourceCost(item);
+    const count = this.unitCount(item);
+    const mil = getUnitResourceCost(item, count);
     if (mil && mil.gold > 0) {
       return BigInt(mil.gold);
     }
@@ -209,7 +210,8 @@ export class UnitDisplay extends LitElement implements Controller {
         enrichedUranium: calc.enrichedUranium,
       };
     }
-    const mil = getUnitResourceCost(item);
+    const count = this.unitCount(item);
+    const mil = getUnitResourceCost(item, count);
     return {
       steel: mil.steel,
       fuel: mil.fuel,

@@ -25,6 +25,7 @@ import {
   ClanRole,
   getEloTier,
   calculateQpPoints,
+  calculateSteelReward,
 } from "./GameSocialStore";
 
 dotenv.config();
@@ -189,31 +190,85 @@ function userMe(u: UserRecord): UserMeResponse {
   } as UserMeResponse;
 }
 
+function buildPlayerStatsTree(
+  stats: ReturnType<typeof socialStore.getOrCreatePlayerStats>,
+) {
+  const ffaWins = stats.wins;
+  const ffaLosses = stats.losses;
+  const ffaTotal = stats.games;
+
+  const ffaLeaf = {
+    wins: String(ffaWins),
+    losses: String(ffaLosses),
+    total: String(ffaTotal),
+    stats: {},
+    recent: {
+      games: Math.min(100, ffaTotal),
+      wins: Math.min(100, ffaWins),
+    },
+  };
+
+  const oneVOneLeaf = {
+    wins: String(Math.floor(ffaWins / 2)),
+    losses: String(Math.floor(ffaLosses / 2)),
+    total: String(Math.floor(ffaTotal / 2)),
+    stats: {},
+    recent: {
+      games: Math.min(100, Math.floor(ffaTotal / 2)),
+      wins: Math.min(100, Math.floor(ffaWins / 2)),
+    },
+  };
+
+  return {
+    Public: {
+      FFA: {
+        Medium: ffaLeaf,
+      },
+    },
+    Singleplayer: {
+      FFA: {
+        Medium: ffaLeaf,
+      },
+    },
+    Ranked: {
+      ffa: ffaLeaf,
+      "1v1": oneVOneLeaf,
+    },
+    recent: {
+      all: {
+        games: Math.min(100, ffaTotal),
+        wins: Math.min(100, ffaWins),
+      },
+    },
+  };
+}
+
 function playerProfile(u: UserRecord) {
   const stats = socialStore.getOrCreatePlayerStats(u.publicId, u.username);
-  const clans = socialStore.getClansForUser(u.publicId).map((c) => ({
-    tag: c.tag,
-    name: c.name,
-    role:
+  const clans = socialStore.getClansForUser(u.publicId).map((c) => {
+    const rawRole =
       c.members.find(
         (m) => m.publicId.toLowerCase() === u.publicId.toLowerCase(),
-      )?.role ?? "Mitglied",
-  }));
+      )?.role ?? "Mitglied";
+    const mappedRole: "leader" | "officer" | "member" =
+      rawRole === "Owner"
+        ? "leader"
+        : rawRole === "Admin"
+          ? "officer"
+          : "member";
+    return {
+      tag: c.tag,
+      name: c.name,
+      role: mappedRole,
+      joinedAt: new Date(u.createdAt).toISOString(),
+      memberCount: Math.max(1, c.members.length),
+    };
+  });
   return {
     createdAt: new Date(u.createdAt).toISOString(),
     username: u.username,
     publicId: u.publicId,
-    stats: {
-      games: stats.games,
-      wins: stats.wins,
-      losses: stats.losses,
-      qp: stats.qp,
-      elo1v1: stats.elo1v1,
-      elo2v2: stats.elo2v2,
-      eloFfa: stats.eloFfa,
-      tier: getEloTier(stats.eloFfa),
-      level: stats.level,
-    },
+    stats: buildPlayerStatsTree(stats),
     clans,
     displayClanTag: clans[0]?.tag ?? null,
   };
@@ -1035,8 +1090,67 @@ async function main() {
   });
 
   app.get("/public/player/:publicId/games", (req, res) => {
-    const games = socialStore.getPlayerMatches(String(req.params.publicId));
-    res.json({ results: games, nextCursor: null });
+    const pubId = String(req.params.publicId);
+    const matches = socialStore.getPlayerMatches(pubId);
+    const results = matches.map((m) => {
+      const p = m.players.find(
+        (pl) => pl.publicId.toLowerCase() === pubId.toLowerCase(),
+      );
+      const isWinner = p ? p.winner : false;
+      return {
+        gameId: m.gameId,
+        start: new Date(m.timestamp).toISOString(),
+        durationSeconds: Math.max(0, Math.round(m.durationSeconds || 120)),
+        map: "World",
+        mode: m.rankedType || "ffa",
+        type: (m.gameType || "public").toLowerCase(),
+        playerTeams: null,
+        rankedType: m.rankedType || "ffa",
+        result: isWinner ? "victory" : "defeat",
+        totalPlayers: Math.max(1, m.players.length),
+        username: p ? p.username : "Player",
+        clanTag: null,
+      };
+    });
+    res.json({ results, nextCursor: null });
+  });
+
+  // ---- Steel Currency & Cosmetics API ----
+  app.get("/api/steel/:publicId", (req, res) => {
+    const pubId = String(req.params.publicId);
+    const balance = socialStore.getPlayerSteel(pubId);
+    const unlocked = socialStore.getUnlockedCosmetics(pubId);
+    res.json({ balance, unlocked });
+  });
+
+  app.post("/api/steel/award", (req, res) => {
+    const { publicId, username, placement } = req.body ?? {};
+    if (!publicId) {
+      return void res.status(400).json({ error: "missing_public_id" });
+    }
+    const reward = calculateSteelReward(Number(placement ?? 10));
+    const newBalance = socialStore.awardPlayerSteel(
+      String(publicId),
+      String(username ?? "Player"),
+      reward,
+    );
+    res.json({ ok: true, reward, balance: newBalance });
+  });
+
+  app.post("/api/steel/buy", (req, res) => {
+    const { publicId, itemId, cost } = req.body ?? {};
+    if (!publicId || !itemId || cost === undefined) {
+      return void res.status(400).json({ error: "invalid_request" });
+    }
+    const outcome = socialStore.buyCosmeticWithSteel(
+      String(publicId),
+      String(itemId),
+      Number(cost),
+    );
+    if (!outcome.success) {
+      return void res.status(400).json(outcome);
+    }
+    res.json({ ok: true, balance: outcome.balance });
   });
 
   // ---- Match Records Ingestion & History ----

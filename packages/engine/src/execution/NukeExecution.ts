@@ -403,8 +403,15 @@ export class NukeExecution implements Execution {
     const toDestroy = this.tilesToDestroy();
 
     // Retrieve all impacted players and the number of tiles
+    const bunkerTiles = new Set(
+      mg.units(UnitType.Bunker).map((b) => b.tile()),
+    );
     const tilesPerPlayers = new Map<Player, number>();
     for (const tile of toDestroy) {
+      if (bunkerTiles.has(tile)) {
+        // Stahlbunker & underlying tile cannot be nuked / destroyed
+        continue;
+      }
       const owner = mg.owner(tile);
       if (owner.isPlayer()) {
         owner.relinquish(tile);
@@ -482,7 +489,8 @@ export class NukeExecution implements Execution {
         type === UnitType.MIRV ||
         type === UnitType.SAMMissile ||
         type === UnitType.CruiseMissile ||
-        type === UnitType.ICBM
+        type === UnitType.ICBM ||
+        type === UnitType.Bunker
       ) {
         continue;
       }

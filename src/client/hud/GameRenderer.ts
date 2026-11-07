@@ -24,6 +24,7 @@ import { GameView } from "../view";
 import { FrameProfiler } from "./FrameProfiler";
 import { ActionableEvents } from "./layers/ActionableEvents";
 import { AlertFrame } from "./layers/AlertFrame";
+import { AllianceModal } from "./layers/AllianceModal";
 import { AttacksDisplay } from "./layers/AttacksDisplay";
 import { BuildMenu } from "./layers/BuildMenu";
 import { ChatDisplay } from "./layers/ChatDisplay";
@@ -99,6 +100,14 @@ export function createRenderer(
   if (miningEconomyPanel) {
     miningEconomyPanel.game = game;
     miningEconomyPanel.eventBus = eventBus;
+  }
+
+  const allianceModal = document.querySelector(
+    "alliance-modal",
+  ) as AllianceModal;
+  if (allianceModal) {
+    allianceModal.game = game;
+    allianceModal.eventBus = eventBus;
   }
 
   const gameLeftSidebar = document.querySelector(

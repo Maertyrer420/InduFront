@@ -54,6 +54,10 @@ import {
   reconcileXp,
 } from "../../ProvisionalXpAtDeath";
 import { PlaySoundEffectEvent } from "../../sound/Sounds";
+import {
+  calculateSteelReward,
+  SteelStoreService,
+} from "../../SteelStore";
 import { SendWinnerEvent } from "../../Transport";
 import { GameView } from "../../view";
 
@@ -91,6 +95,14 @@ export class WinModal extends LitElement implements Controller {
 
   @state()
   private patternContent: TemplateResult | null = null;
+
+  @state()
+  private awardedSteel = 0;
+
+  @state()
+  private placement = 0;
+
+  private hasAwardedSteel = false;
 
   // The XP this game earned. Stays hidden unless there is something to say:
   // no progression, a spectator or a replay never see the section at all.
@@ -146,6 +158,43 @@ export class WinModal extends LitElement implements Controller {
         <h2 class="m-0 mb-4 text-[26px] text-center text-white shrink-0">
           ${this._title || ""}
         </h2>
+        ${this.awardedSteel > 0
+          ? html`
+              <div
+                class="mb-3 p-3.5 rounded-xl border border-amber-500/40 bg-gradient-to-r from-amber-950/70 via-slate-900/90 to-amber-950/70 shadow-lg text-center shrink-0"
+              >
+                <div
+                  class="flex items-center justify-center gap-2 text-amber-400 font-extrabold text-lg"
+                >
+                  <span class="text-xl">⚙️</span>
+                  <span>Runden-Belohnung: +${this.awardedSteel} Stahl!</span>
+                  <span
+                    class="text-xs font-semibold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                  >
+                    Platz #${this.placement}
+                  </span>
+                </div>
+                <p class="text-xs text-slate-300 mt-1">
+                  Aktuelles Guthaben:
+                  <strong class="text-white font-bold"
+                    >${SteelStoreService.getBalance()} ⚙️</strong
+                  >
+                  Stahl. Sammle Stahl und schalte Titel, Badges, Skins & Sounds
+                  frei!
+                </p>
+                <div class="mt-2.5 flex justify-center">
+                  <button
+                    type="button"
+                    class="px-4 py-1.5 rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold text-xs tracking-wider uppercase transition shadow-md hover:shadow-amber-500/30 flex items-center gap-1.5 cursor-pointer"
+                    @click=${() => this.openSteelShop()}
+                  >
+                    <span>🛒</span>
+                    <span>Zum Stahl-Shop</span>
+                  </button>
+                </div>
+              </div>
+            `
+          : null}
         <div class="min-h-0 flex-1 overflow-y-auto pr-0.5">
           <game-xp-panel
             .view=${this.xpView}
@@ -521,6 +570,36 @@ export class WinModal extends LitElement implements Controller {
     this.isRankedGame =
       this.game.config().gameConfig().rankedType !== undefined;
     this.isVisible = true;
+
+    // Calculate placement and award Steel once per game
+    if (!this.hasAwardedSteel && this.game.myPlayer()?.hasSpawned()) {
+      this.hasAwardedSteel = true;
+      if (this.isWin) {
+        this.placement = 1;
+      } else {
+        const myPlayer = this.game.myPlayer();
+        if (myPlayer) {
+          const allPlayers = this.game.players().filter((p) => p.hasSpawned());
+          const sorted = [...allPlayers].sort((a, b) => {
+            if (a.isAlive() !== b.isAlive()) {
+              return a.isAlive() ? -1 : 1;
+            }
+            return (
+              b.numTilesOwned() +
+              b.troops() -
+              (a.numTilesOwned() + a.troops())
+            );
+          });
+          const rank = sorted.findIndex((p) => p.id() === myPlayer.id()) + 1;
+          this.placement = Math.max(2, rank > 0 ? rank : 2);
+        } else {
+          this.placement = 2;
+        }
+      }
+      this.awardedSteel = calculateSteelReward(this.placement);
+      SteelStoreService.award(this.awardedSteel, this.placement);
+    }
+
     this.requestUpdate();
     try {
       await this.loadPatternContent();
@@ -529,6 +608,15 @@ export class WinModal extends LitElement implements Controller {
       return;
     }
     this.requestUpdate();
+  }
+
+  private openSteelShop(): void {
+    const store = document.getElementById("page-item-store") as any;
+    if (store && typeof store.open === "function") {
+      store.open();
+    } else {
+      window.dispatchEvent(new CustomEvent("open-store"));
+    }
   }
 
   hide() {

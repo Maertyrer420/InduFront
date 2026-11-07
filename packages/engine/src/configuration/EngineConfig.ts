@@ -442,7 +442,7 @@ export class EngineConfig extends Config {
         );
       case UnitType.Bunker:
         return this.costWrapper(
-          (n: number) => Math.round(150 * detPow(1.15, n)),
+          (n: number) => Math.round(500 * detPow(1.35, n)),
           UnitType.Bunker,
         );
       case UnitType.Radar:
@@ -673,9 +673,9 @@ export class EngineConfig extends Config {
       defBonus = 1.2;
     }
     if (input.defenderHasBunker) {
-      defBonus = 1.8;
+      defBonus = 3.0;
     } else if (input.defenderHasDefensePost) {
-      defBonus = Math.max(defBonus, 1.25);
+      defBonus = Math.max(defBonus, 1.85);
     }
 
     const tankMult = input.attackerHasTanks ? 5.0 : 1.0;

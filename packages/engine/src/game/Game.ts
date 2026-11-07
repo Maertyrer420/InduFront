@@ -572,6 +572,8 @@ export interface Game extends GameLike {
 
   // Alliances
   expireAlliance(alliance: Alliance): void;
+  isPlayerInTop10(player: Player): boolean;
+  playerLeaderboardRank(player: Player): number;
 
   // Immunity timer
   isSpawnImmunityActive(): boolean;
