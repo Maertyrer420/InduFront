@@ -32,9 +32,25 @@ import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 // ~700 KB base64 payload in its own chunk, fetched when a game starts,
 // instead of inside the main bundle.
 export async function createGameWorker(): Promise<Worker> {
-  const { default: GameWorker } =
-    await import("@openfront/engine/worker/Worker.worker?worker&inline");
-  return new GameWorker();
+  try {
+    const { default: GameWorker } =
+      await import("@openfront/engine/worker/Worker.worker?worker&inline");
+    return new GameWorker();
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (
+      message.includes("dynamically imported module") ||
+      message.includes("Failed to fetch dynamically imported module")
+    ) {
+      console.warn(
+        "Worker module chunk mismatch detected (new deployment). Reloading page...",
+        err,
+      );
+      window.location.reload();
+      await new Promise(() => {});
+    }
+    throw err;
+  }
 }
 
 export class WorkerClient {

@@ -601,6 +601,14 @@ class Client {
       }
     });
 
+    window.addEventListener("vite:preloadError", (event) => {
+      console.warn(
+        "Vite dynamic chunk preload failed (new deployment detected), reloading page...",
+        event,
+      );
+      window.location.reload();
+    });
+
     // The server's lobby view is the only source for a lobby's real map, size
     // and roster, and the only place the client learns that a play/spectate
     // switch was accepted (the server can refuse it). Both feed presence.
