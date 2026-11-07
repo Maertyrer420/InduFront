@@ -90,6 +90,7 @@ function resolveTarget(req: http.IncomingMessage): {
     pathname.startsWith("/leaderboard/") ||
     pathname.startsWith("/public/clans") ||
     pathname.startsWith("/game/") ||
+    pathname.startsWith("/matchmaking/") ||
     pathname.startsWith("/.well-known/") ||
     pathname === "/api/online_count"
   ) {

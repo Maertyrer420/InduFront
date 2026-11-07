@@ -11,6 +11,7 @@ import { BaseModal } from "./components/BaseModal";
 import "./components/Difficulties";
 import { GameStartAlertController } from "./components/GameStartAlertController";
 import { DEFAULT_TITLE_CLASS, modalHeader } from "./components/ui/ModalHeader";
+import { getClientEloTierDetails } from "./EloProgress";
 import { gamePortal } from "./GamePortal";
 import type { JoinLobbyEvent } from "./Main";
 import {
@@ -91,14 +92,33 @@ export class MatchmakingModal extends BaseModal {
 
   protected renderBody() {
     // Clan wars rates the clan, so show who the player is playing for instead.
+    const details =
+      typeof this.elo === "number" ? getClientEloTierDetails(this.elo) : null;
     const eloDisplay = html`
-      <p class="text-center mt-2 mb-4 text-white/60">
+      <div class="flex flex-col items-center gap-1.5 mt-2 mb-4">
         ${this.mode === "clanwars"
-          ? translateText("matchmaking_modal.clanwars_clan", {
-              clan: this.selectedClanTag ?? "",
-            })
-          : translateText("matchmaking_modal.elo", { elo: this.elo })}
-      </p>
+          ? html`<p class="text-white/60">
+              ${translateText("matchmaking_modal.clanwars_clan", {
+                clan: this.selectedClanTag ?? "",
+              })}
+            </p>`
+          : html`
+              <div class="flex items-center gap-2">
+                ${details
+                  ? html`<span
+                      class="px-2 py-0.5 text-xs font-black uppercase rounded-md border tracking-wider bg-black/40"
+                      style="color: ${details.color}; border-color: ${details.color}66"
+                      >${details.label}</span
+                    >`
+                  : ""}
+                <span class="text-white/80 font-mono font-bold"
+                  >${translateText("matchmaking_modal.elo", {
+                    elo: this.elo,
+                  })}</span
+                >
+              </div>
+            `}
+      </div>
     `;
     return html`
       <div class="flex flex-col items-center justify-center gap-6 p-6">

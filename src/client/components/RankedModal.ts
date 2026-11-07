@@ -4,6 +4,7 @@ import { customElement, state } from "lit/decorators.js";
 import { responseHasLinkedIdentity } from "../AccountIdentity";
 import { getUserMe } from "../Api";
 import { userAuth } from "../Auth";
+import { getClientEloTierDetails } from "../EloProgress";
 import { gamePortal } from "../GamePortal";
 import type { MatchmakingMode } from "../Matchmaking";
 import { translateText } from "../Utils";
@@ -137,6 +138,9 @@ export class RankedModal extends BaseModal {
                 ? translateText("matchmaking_modal.elo", { elo: this.elo })
                 : translateText("mode_selector.ranked_title")),
             () => this.handleRanked("1v1"),
+            this.isRankedEligible() && typeof this.elo === "number"
+              ? this.elo
+              : undefined,
           )}
           ${this.renderCard(
             translateText("mode_selector.ranked_2v2_title"),
@@ -145,6 +149,9 @@ export class RankedModal extends BaseModal {
                 ? translateText("matchmaking_modal.elo", { elo: this.elo2v2 })
                 : translateText("mode_selector.ranked_title")),
             () => this.handleRanked("2v2"),
+            this.isRankedEligible() && typeof this.elo2v2 === "number"
+              ? this.elo2v2
+              : undefined,
           )}
           ${this.renderCard(
             translateText("mode_selector.ranked_ffa_title"),
@@ -153,6 +160,9 @@ export class RankedModal extends BaseModal {
                 ? translateText("matchmaking_modal.elo", { elo: this.eloFfa })
                 : translateText("mode_selector.ranked_title")),
             () => this.handleRanked("ffa"),
+            this.isRankedEligible() && typeof this.eloFfa === "number"
+              ? this.eloFfa
+              : undefined,
           )}
           ${this.renderCard(
             translateText("mode_selector.ranked_clanwars_title"),
@@ -175,7 +185,12 @@ export class RankedModal extends BaseModal {
     `;
   }
 
-  private renderCard(title: string, subtitle: string, onClick: () => void) {
+  private renderCard(
+    title: string,
+    subtitle: string,
+    onClick: () => void,
+    eloValue?: number,
+  ) {
     // Ranked admits trusted accounts only: a green open lock when the
     // player's account is trusted, a red closed one otherwise.
     const lock = this.trustKnown()
@@ -185,22 +200,51 @@ export class RankedModal extends BaseModal {
           ),
         })
       : "";
+
+    const details =
+      eloValue !== undefined ? getClientEloTierDetails(eloValue) : null;
+
     return html`
       <button
         @click=${onClick}
-        class="relative flex flex-col w-full h-28 sm:h-32 rounded-2xl bg-malibu-blue border-0 transition-all duration-200 hover:bg-aquarius hover:scale-[1.03] hover:shadow-[var(--shadow-action-card-hover)] active:bg-malibu-blue/80 active:scale-[0.98] p-6 items-center justify-center gap-3"
+        class="relative flex flex-col w-full min-h-[7.5rem] rounded-2xl bg-malibu-blue border-0 transition-all duration-200 hover:bg-aquarius hover:scale-[1.02] hover:shadow-[var(--shadow-action-card-hover)] active:bg-malibu-blue/80 active:scale-[0.98] p-4 items-center justify-center gap-2"
       >
-        <div class="flex flex-col items-center gap-1 text-center">
+        <div class="flex flex-col items-center gap-1 text-center w-full">
           <h3
-            class="text-lg sm:text-xl font-bold text-white uppercase tracking-widest leading-tight"
+            class="text-base sm:text-lg font-bold text-white uppercase tracking-widest leading-tight"
           >
             ${title}
           </h3>
-          <p
-            class="text-xs text-white/80 uppercase tracking-wider whitespace-pre-line leading-tight"
-          >
-            ${subtitle}
-          </p>
+          ${details
+            ? html`
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span
+                    class="px-2 py-0.5 text-[10px] font-black uppercase rounded-md border tracking-wider bg-black/40"
+                    style="color: ${details.color}; border-color: ${details.color}66"
+                  >
+                    ${details.label}
+                  </span>
+                  <span class="text-xs font-mono font-bold text-white/90">
+                    ${eloValue} Elo
+                  </span>
+                </div>
+                <div
+                  class="w-3/4 max-w-[160px] bg-black/30 rounded-full h-1.5 overflow-hidden mt-1"
+                  title="${details.progressPercent}%"
+                >
+                  <div
+                    class="h-full rounded-full transition-all duration-300"
+                    style="width: ${details.progressPercent}%; background-color: ${details.color}"
+                  ></div>
+                </div>
+              `
+            : html`
+                <p
+                  class="text-xs text-white/80 uppercase tracking-wider whitespace-pre-line leading-tight"
+                >
+                  ${subtitle}
+                </p>
+              `}
         </div>
         ${lock}
       </button>

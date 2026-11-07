@@ -41,42 +41,47 @@ export function renderTierBadge(tier?: string, elo = 1000, rank = 999) {
     tier ??
     (rank <= 10 && rank > 0
       ? "Top 10"
-      : elo >= 2000
-        ? "Elite"
-        : elo >= 1800
-          ? "Expert"
-          : elo >= 1600
-            ? "Diamond"
-            : elo >= 1400
-              ? "Platinum"
-              : elo >= 1200
-                ? "Gold"
-                : elo >= 1000
-                  ? "Silber"
-                  : elo >= 800
-                    ? "Bronze"
-                    : "Wood");
+      : elo >= 2400
+        ? "Champion"
+        : elo >= 2000
+          ? "Grandmaster"
+          : elo >= 1800
+            ? "Master"
+            : elo >= 1600
+              ? "Diamant"
+              : elo >= 1400
+                ? "Platin"
+                : elo >= 1200
+                  ? "Gold"
+                  : elo >= 1000
+                    ? "Silber"
+                    : elo >= 800
+                      ? "Bronze"
+                      : "Eisen");
 
-  let color = "bg-amber-950/60 text-amber-500 border-amber-800/40"; // Wood
+  let color = "bg-slate-800/60 text-slate-400 border-slate-700/40"; // Eisen / Wood
   if (t === "Bronze")
     color = "bg-orange-950/60 text-orange-400 border-orange-700/40";
-  else if (t === "Silber")
+  else if (t === "Silber" || t === "Silver")
     color = "bg-slate-800/60 text-slate-300 border-slate-600/40";
   else if (t === "Gold")
     color =
       "bg-yellow-950/60 text-yellow-400 border-yellow-600/50 shadow-[0_0_8px_rgba(234,179,8,0.2)]";
-  else if (t === "Platinum")
+  else if (t === "Platin" || t === "Platinum")
     color =
       "bg-teal-950/60 text-teal-300 border-teal-600/50 shadow-[0_0_8px_rgba(20,184,166,0.2)]";
-  else if (t === "Diamond")
+  else if (t === "Diamant" || t === "Diamond")
     color =
       "bg-cyan-950/60 text-cyan-300 border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.3)]";
-  else if (t === "Expert")
+  else if (t === "Master" || t === "Expert")
     color =
       "bg-indigo-950/60 text-indigo-300 border-indigo-500/50 shadow-[0_0_10px_rgba(99,102,241,0.3)]";
-  else if (t === "Elite")
+  else if (t === "Grandmaster" || t === "Elite")
     color =
-      "bg-purple-950/60 text-purple-300 border-purple-500/60 shadow-[0_0_12px_rgba(168,85,247,0.4)]";
+      "bg-rose-950/60 text-rose-300 border-rose-500/60 shadow-[0_0_12px_rgba(244,63,94,0.4)]";
+  else if (t === "Champion")
+    color =
+      "bg-pink-950/70 text-pink-300 border-pink-500/70 shadow-[0_0_14px_rgba(244,114,182,0.5)]";
   else if (t === "Top 10")
     color =
       "bg-red-950/70 text-red-300 border-red-500/70 font-black animate-pulse shadow-[0_0_14px_rgba(239,68,68,0.4)]";

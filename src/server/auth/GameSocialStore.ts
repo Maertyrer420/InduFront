@@ -129,17 +129,21 @@ export interface TribeLeaderboardEntry {
   rating: number;
 }
 
-export function getEloTier(elo: number, rank?: number): string {
-  if (rank !== undefined && rank <= 10 && rank > 0) return "Top 10";
-  if (elo >= 2000) return "Elite";
-  if (elo >= 1800) return "Expert";
-  if (elo >= 1600) return "Diamond";
-  if (elo >= 1400) return "Platinum";
-  if (elo >= 1200) return "Gold";
-  if (elo >= 1000) return "Silber";
-  if (elo >= 800) return "Bronze";
-  return "Wood";
-}
+import {
+  calculate1v1Elo,
+  calculate2v2Elo,
+  calculateFfaElo,
+  getEloTier,
+  getEloTierDetails,
+} from "./EloCalculator";
+
+export {
+  calculate1v1Elo,
+  calculate2v2Elo,
+  calculateFfaElo,
+  getEloTier,
+  getEloTierDetails,
+};
 
 export function calculateQpPoints(placement: number): number {
   switch (placement) {

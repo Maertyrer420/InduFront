@@ -12,6 +12,7 @@ import {
   createPublicKey,
 } from "node:crypto";
 import fs from "node:fs";
+import http from "node:http";
 import path from "node:path";
 import {
   AuthStore,
@@ -21,12 +22,18 @@ import {
 } from "./AuthStore";
 import { sendAuthEmail } from "./DbStorage";
 import {
+  calculate1v1Elo,
+  calculate2v2Elo,
+  calculateFfaElo,
+  getEloTier,
+} from "./EloCalculator";
+import {
   GameSocialStore,
   ClanRole,
-  getEloTier,
   calculateQpPoints,
   calculateSteelReward,
 } from "./GameSocialStore";
+import { MatchmakingServer } from "./MatchmakingServer";
 
 dotenv.config();
 
@@ -186,6 +193,11 @@ function userMe(u: UserRecord): UserMeResponse {
       qp: stats.qp,
       elo: stats.eloFfa,
       tier: getEloTier(stats.eloFfa),
+      leaderboard: {
+        oneVone: { elo: stats.elo1v1 },
+        twoVtwo: { elo: stats.elo2v2 },
+        ffa: { elo: stats.eloFfa },
+      },
     },
   } as UserMeResponse;
 }
@@ -279,6 +291,12 @@ async function main() {
   const keys = await loadKeys();
   const signKey = await importJWK(keys.privateJwk, "EdDSA");
   const verifyKey = await importJWK(keys.publicJwk, "EdDSA");
+  const matchmakingServer = new MatchmakingServer(
+    socialStore,
+    verifyKey,
+    ISSUER,
+    AUDIENCE,
+  );
 
   async function issueAccessToken(u: UserRecord): Promise<string> {
     return new SignJWT({
@@ -1176,12 +1194,15 @@ async function main() {
         const username = p.username ?? "Player";
         const kills = p.stats?.kills ?? 0;
         const territory = p.stats?.territory ?? 0;
+        const teamIndex =
+          p.teamIndex !== undefined ? Number(p.teamIndex) : undefined;
         playerList.push({
           publicId,
           username,
           winner: isWinner,
           kills,
           territory,
+          teamIndex,
           placement: isWinner ? 1 : ++rankCounter,
         });
       }
@@ -1192,8 +1213,58 @@ async function main() {
       playerList.forEach((pl, idx) => {
         pl.placement = idx + 1;
         pl.qpEarned = calculateQpPoints(pl.placement);
-        pl.eloChange = pl.winner ? 25 : -15;
       });
+
+      // Calculate sophisticated Elo changes
+      const participants = playerList.map((pl) => {
+        const stats = socialStore.getOrCreatePlayerStats(
+          pl.publicId,
+          pl.username,
+        );
+        const currentElo =
+          rankedType === "1v1"
+            ? stats.elo1v1
+            : rankedType === "2v2"
+              ? stats.elo2v2
+              : stats.eloFfa;
+        return {
+          publicId: pl.publicId,
+          currentElo,
+          gamesPlayed: stats.games,
+          placement: pl.placement,
+          teamIndex: pl.teamIndex,
+          kills: pl.kills,
+          territory: pl.territory,
+        };
+      });
+
+      if (rankedType === "1v1" && participants.length === 2) {
+        const { p1Change, p2Change } = calculate1v1Elo(
+          participants[0],
+          participants[1],
+        );
+        playerList[0].eloChange = p1Change;
+        playerList[1].eloChange = p2Change;
+      } else if (rankedType === "2v2" && participants.length >= 4) {
+        const team0 = participants.filter((p) => (p.teamIndex ?? 0) === 0);
+        const team1 = participants.filter((p) => (p.teamIndex ?? 1) === 1);
+        if (team0.length > 0 && team1.length > 0) {
+          const deltas = calculate2v2Elo(team0, team1);
+          playerList.forEach((pl) => {
+            pl.eloChange = deltas.get(pl.publicId) ?? (pl.winner ? 16 : -16);
+          });
+        } else {
+          const deltas = calculateFfaElo(participants);
+          playerList.forEach((pl) => {
+            pl.eloChange = deltas.get(pl.publicId) ?? (pl.winner ? 16 : -16);
+          });
+        }
+      } else {
+        const deltas = calculateFfaElo(participants);
+        playerList.forEach((pl) => {
+          pl.eloChange = deltas.get(pl.publicId) ?? (pl.winner ? 16 : -16);
+        });
+      }
 
       socialStore.recordFinishedMatch({
         gameId,
@@ -1726,8 +1797,21 @@ async function main() {
     res.json({ verifiedAt: new Date().toISOString(), featured: [], live: [] });
   });
 
-  app.post("/matchmaking/checkin", (_req, res) => {
-    res.json({ assignment: null });
+  app.post("/matchmaking/checkin", (req, res) => {
+    const { mode, gameId, id } = req.body ?? {};
+    if (!mode || !gameId) {
+      return void res.json({ assignment: null });
+    }
+    const assignment = matchmakingServer.handleCheckin(
+      mode,
+      String(gameId),
+      Number(id ?? 0),
+    );
+    res.json({ assignment });
+  });
+
+  app.get("/matchmaking/stats", (_req, res) => {
+    res.json(matchmakingServer.getQueueStats());
   });
 
   app.get("/health", (_req, res) =>
@@ -1738,7 +1822,10 @@ async function main() {
   );
   app.use((_req, res) => res.status(404).json({ error: "not_found" }));
 
-  app.listen(PORT, () => {
+  const server = http.createServer(app);
+  matchmakingServer.attachToHttpServer(server);
+
+  server.listen(PORT, () => {
     console.log(
       `[auth] listening on :${PORT} issuer=${ISSUER} public=${PUBLIC_URL} google=${googleEnabled}`,
     );
