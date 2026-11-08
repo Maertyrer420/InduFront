@@ -786,6 +786,14 @@ export class WarshipExecution implements Execution {
       return;
     }
 
+    // Iron Dome penalty: -15% fleet movement speed (skip step on 3 out of 20 ticks)
+    if (
+      pClass === PlayerClass.IronDome &&
+      (ticks % 20 === 0 || ticks % 20 === 7 || ticks % 20 === 14)
+    ) {
+      return;
+    }
+
     if (this.warship.targetTile() === undefined) {
       this.warship.setTargetTile(this.randomTile());
       if (this.warship.targetTile() === undefined) {
@@ -812,10 +820,10 @@ export class WarshipExecution implements Execution {
       }
     }
 
-    // Marine bonus: +25% fleet movement speed (extra move step every 4th tick)
+    // Marine bonus: +30% fleet movement speed (extra move step 3 out of 10 ticks)
     if (
       pClass === PlayerClass.Marine &&
-      ticks % 4 === 0 &&
+      (ticks % 10 === 0 || ticks % 10 === 3 || ticks % 10 === 7) &&
       this.warship.targetTile() !== undefined
     ) {
       const extraStep = this.pathfinder.next(

@@ -3,6 +3,7 @@ import {
   Difficulty,
   GameMode,
   Gold,
+  PlayerClass,
   PlayerType,
   Relation,
   Structures,
@@ -63,6 +64,7 @@ const TEAM_PORT_RATIO = 1;
 function getStructureRatios(
   difficulty: Difficulty,
   gameMode: GameMode,
+  playerClass?: PlayerClass,
 ): Partial<Record<UnitType, StructureRatioConfig>> {
   const teamPorts =
     gameMode === GameMode.Team && difficulty !== Difficulty.Easy;
@@ -76,58 +78,110 @@ function getStructureRatios(
   const residentialRatio = isEasy ? 0.3 : isMed ? 0.6 : 0.9;
   const bunkerRatio = isEasy ? 0.05 : isMed ? 0.15 : 0.25;
 
+  let portRatio = teamPorts ? TEAM_PORT_RATIO : 0.75;
+  let portCostIncrease = 1.0;
+  const factoryRatio = 0.75;
+  let samRatio = SAM_RATIO_BY_DIFFICULTY[difficulty];
+  let samCostIncrease = 0.3;
+  let siloRatio = 0.2;
+  let siloCostIncrease = 1.0;
+  let resRatio = residentialRatio;
+  let mineMultiplier = 1.0;
+  let mineCostIncrease = 0.8;
+  let refineryMultiplier = 1.0;
+  let centrifugeMultiplier = 1.0;
+  let centrifugeCostIncrease = 1.2;
+  let uraniumMineMultiplier = 1.0;
+  let bunkerMultiplier = 1.0;
+  let bunkerCostIncrease = 1.5;
+
+  if (playerClass === PlayerClass.Industrialist) {
+    // Industrialist: Heavy emphasis on mining, smelters, refineries
+    mineMultiplier = 1.6;
+    refineryMultiplier = 1.6;
+    mineCostIncrease = 0.5;
+  } else if (playerClass === PlayerClass.Infantry) {
+    // Infantry: Manpower & residential focus, less complex tech
+    resRatio = residentialRatio * 1.5;
+    centrifugeMultiplier = 0.5;
+    siloRatio = 0.1;
+  } else if (playerClass === PlayerClass.Marine) {
+    // Marine: Port-heavy naval networks and fuel refining
+    portRatio = (teamPorts ? TEAM_PORT_RATIO : 0.75) * 1.8;
+    portCostIncrease = 0.6;
+    refineryMultiplier = 1.3;
+    bunkerMultiplier = 0.5;
+  } else if (playerClass === PlayerClass.IronDome) {
+    // Iron Dome: Dense SAM air defense web and fortified bunkers
+    samRatio *= 2.2;
+    samCostIncrease = 0.15;
+    bunkerMultiplier = 2.5;
+    bunkerCostIncrease = 0.8;
+    siloRatio = 0.1;
+  } else if (playerClass === PlayerClass.Scientist) {
+    // Scientist: Centrifuges, uranium enrichment, and missile silos
+    centrifugeMultiplier = 2.5;
+    centrifugeCostIncrease = 0.7;
+    uraniumMineMultiplier = 2.0;
+    siloRatio = 0.45;
+    siloCostIncrease = 0.6;
+  }
+
   return {
     [UnitType.Port]: {
-      ratioPerCity: teamPorts ? TEAM_PORT_RATIO : 0.75,
-      perceivedCostIncreasePerOwned: 1,
+      ratioPerCity: portRatio,
+      perceivedCostIncreasePerOwned: portCostIncrease,
     },
     [UnitType.Factory]: {
-      ratioPerCity: 0.75,
+      ratioPerCity: factoryRatio,
       perceivedCostIncreasePerOwned: 1,
     },
     [UnitType.SAMLauncher]: {
-      ratioPerCity: SAM_RATIO_BY_DIFFICULTY[difficulty],
-      perceivedCostIncreasePerOwned: 0.3,
+      ratioPerCity: samRatio,
+      perceivedCostIncreasePerOwned: samCostIncrease,
     },
     [UnitType.MissileSilo]: {
-      ratioPerCity: 0.2,
-      perceivedCostIncreasePerOwned: 1,
+      ratioPerCity: siloRatio,
+      perceivedCostIncreasePerOwned: siloCostIncrease,
     },
     [UnitType.Residential]: {
-      ratioPerCity: residentialRatio,
+      ratioPerCity: resRatio,
       perceivedCostIncreasePerOwned: 0.5,
     },
     [UnitType.IronMine]: {
-      ratioPerCity: mineRatio,
-      perceivedCostIncreasePerOwned: 0.8,
+      ratioPerCity: mineRatio * mineMultiplier,
+      perceivedCostIncreasePerOwned: mineCostIncrease,
     },
     [UnitType.CoalMine]: {
-      ratioPerCity: mineRatio,
-      perceivedCostIncreasePerOwned: 0.8,
+      ratioPerCity: mineRatio * mineMultiplier,
+      perceivedCostIncreasePerOwned: mineCostIncrease,
     },
     [UnitType.OilRig]: {
-      ratioPerCity: mineRatio * 0.8,
-      perceivedCostIncreasePerOwned: 0.8,
+      ratioPerCity:
+        mineRatio *
+        0.8 *
+        (playerClass === PlayerClass.Marine ? 1.4 : mineMultiplier),
+      perceivedCostIncreasePerOwned: mineCostIncrease,
     },
     [UnitType.UraniumMine]: {
-      ratioPerCity: mineRatio * 0.5,
+      ratioPerCity: mineRatio * 0.5 * uraniumMineMultiplier,
       perceivedCostIncreasePerOwned: 1.0,
     },
     [UnitType.SteelMill]: {
-      ratioPerCity: refineryRatio,
+      ratioPerCity: refineryRatio * refineryMultiplier,
       perceivedCostIncreasePerOwned: 1.0,
     },
     [UnitType.Refinery]: {
-      ratioPerCity: refineryRatio,
+      ratioPerCity: refineryRatio * refineryMultiplier,
       perceivedCostIncreasePerOwned: 1.0,
     },
     [UnitType.Centrifuge]: {
-      ratioPerCity: refineryRatio * 0.6,
-      perceivedCostIncreasePerOwned: 1.2,
+      ratioPerCity: refineryRatio * 0.6 * centrifugeMultiplier,
+      perceivedCostIncreasePerOwned: centrifugeCostIncrease,
     },
     [UnitType.Bunker]: {
-      ratioPerCity: bunkerRatio,
-      perceivedCostIncreasePerOwned: 1.5,
+      ratioPerCity: bunkerRatio * bunkerMultiplier,
+      perceivedCostIncreasePerOwned: bunkerCostIncrease,
     },
   };
 }
@@ -748,14 +802,14 @@ export class NationStructureBehavior {
 
     // Build order for non-city structures (priority order)
     const buildOrder: UnitType[] = [
+      UnitType.Port,
+      UnitType.Factory,
       UnitType.Residential,
       UnitType.IronMine,
       UnitType.CoalMine,
       UnitType.OilRig,
       UnitType.SteelMill,
       UnitType.Refinery,
-      UnitType.Port,
-      UnitType.Factory,
       UnitType.SAMLauncher,
       UnitType.UraniumMine,
       UnitType.Centrifuge,
@@ -838,11 +892,35 @@ export class NationStructureBehavior {
     );
   }
 
+  private isIndustrialStructure(type: UnitType): boolean {
+    switch (type) {
+      case UnitType.Residential:
+      case UnitType.IronMine:
+      case UnitType.CoalMine:
+      case UnitType.OilRig:
+      case UnitType.SteelMill:
+      case UnitType.Refinery:
+      case UnitType.UraniumMine:
+      case UnitType.Centrifuge:
+      case UnitType.Bunker:
+        return true;
+      default:
+        return false;
+    }
+  }
+
   private shouldBuildStructure(
     type: UnitType,
     cityCount: number,
     hasCoastalTiles: boolean,
   ): boolean {
+    if (
+      this.isIndustrialStructure(type) &&
+      (this.game.config().isUnitDisabled(UnitType.City) ||
+        this.player.unitsOwned(UnitType.City) < 3)
+    ) {
+      return false;
+    }
     return this.levelsDue(type, cityCount, hasCoastalTiles) > 0;
   }
 
@@ -854,7 +932,11 @@ export class NationStructureBehavior {
   ): number {
     const gameConfig = this.game.config();
     const { difficulty, gameMode } = gameConfig.gameConfig();
-    const ratios = getStructureRatios(difficulty, gameMode);
+    const ratios = getStructureRatios(
+      difficulty,
+      gameMode,
+      this.player.playerClass?.(),
+    );
     const config = ratios[type];
     if (config === undefined) {
       return 0;
@@ -983,7 +1065,11 @@ export class NationStructureBehavior {
 
     // Like humans, nations don't save up before their first few cities stand
     const { difficulty, gameMode } = this.game.config().gameConfig();
-    if (this.cityCount() < CITIES_BEFORE_SAVING[difficulty]) {
+    const reqCities =
+      this.player.playerClass?.() === PlayerClass.Scientist
+        ? Math.max(1, CITIES_BEFORE_SAVING[difficulty] - 1)
+        : CITIES_BEFORE_SAVING[difficulty];
+    if (this.cityCount() < reqCities) {
       return realCost;
     }
 
@@ -993,7 +1079,11 @@ export class NationStructureBehavior {
     if (type === UnitType.City) {
       increasePerOwned = CITY_PERCEIVED_COST_INCREASE_PER_OWNED;
     } else {
-      const ratios = getStructureRatios(difficulty, gameMode);
+      const ratios = getStructureRatios(
+        difficulty,
+        gameMode,
+        this.player.playerClass?.(),
+      );
       const config = ratios[type];
       increasePerOwned = config?.perceivedCostIncreasePerOwned ?? 0.1;
     }

@@ -488,7 +488,10 @@ export class EngineConfig extends Config {
   }
 
   private goldMultiplierFor(player: PlayerLike): number {
-    const base = this.goldMultiplier();
+    let base = this.goldMultiplier();
+    if (player.playerClass?.() === PlayerClass.Infantry) {
+      base *= 0.90; // -10% Gold Income for Infantry
+    }
     const hc = this._gameConfig.hostCheats;
     if (hc?.goldMultiplier && player.isLobbyCreator()) {
       return hc.goldMultiplier;
@@ -856,7 +859,7 @@ export class EngineConfig extends Config {
       range *= 1.5;
     }
     if (sam.owner().playerClass?.() === PlayerClass.IronDome) {
-      range *= 1.35; // +35% SAM interception range for Iron Dome
+      range *= 1.20; // +20% SAM interception range for Iron Dome
     }
     return range;
   }

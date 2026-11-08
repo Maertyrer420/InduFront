@@ -3,6 +3,7 @@ import {
   Difficulty,
   GameMode,
   Nation,
+  PlayerClass,
   PlayerID,
   PlayerType,
   Relation,
@@ -71,9 +72,33 @@ export class NationExecution implements Execution {
     this.random = new PseudoRandom(
       simpleHash(nation.playerInfo.id) + simpleHash(gameID),
     );
-    this.triggerRatio = this.random.nextInt(50, 60) / 100;
-    this.reserveRatio = this.random.nextInt(30, 40) / 100;
-    this.expandRatio = this.random.nextInt(10, 20) / 100;
+    const pClass = nation.playerInfo.playerClass;
+    if (pClass === PlayerClass.Infantry) {
+      // Infantry: Aggressive blitzkrieg, lower troop threshold, lower reserve, fast land grab
+      this.triggerRatio = this.random.nextInt(35, 45) / 100;
+      this.reserveRatio = this.random.nextInt(20, 28) / 100;
+      this.expandRatio = this.random.nextInt(24, 34) / 100;
+    } else if (pClass === PlayerClass.IronDome) {
+      // Iron Dome: Turtle fortress doctrine, high reserve garrison
+      this.triggerRatio = this.random.nextInt(65, 75) / 100;
+      this.reserveRatio = this.random.nextInt(48, 58) / 100;
+      this.expandRatio = this.random.nextInt(10, 15) / 100;
+    } else if (pClass === PlayerClass.Industrialist) {
+      // Industrialist: Build economy before massive land attacks
+      this.triggerRatio = this.random.nextInt(55, 65) / 100;
+      this.reserveRatio = this.random.nextInt(35, 42) / 100;
+      this.expandRatio = this.random.nextInt(12, 18) / 100;
+    } else if (pClass === PlayerClass.Marine) {
+      // Marine: Naval expeditions, moderate land aggression
+      this.triggerRatio = this.random.nextInt(46, 56) / 100;
+      this.reserveRatio = this.random.nextInt(28, 36) / 100;
+      this.expandRatio = this.random.nextInt(14, 22) / 100;
+    } else {
+      // Scientist / Default: Tech & nuclear focus
+      this.triggerRatio = this.random.nextInt(52, 62) / 100;
+      this.reserveRatio = this.random.nextInt(32, 40) / 100;
+      this.expandRatio = this.random.nextInt(12, 18) / 100;
+    }
   }
 
   init(mg: Game) {
@@ -90,18 +115,32 @@ export class NationExecution implements Execution {
 
   private getAttackRate(): number {
     const { difficulty } = this.mg.config().gameConfig();
+    let baseRate: number;
     switch (difficulty) {
       case Difficulty.Easy:
-        return this.random.nextInt(65, 100); // Slower reactions
+        baseRate = this.random.nextInt(65, 100); // Slower reactions
+        break;
       case Difficulty.Medium:
-        return this.random.nextInt(55, 70);
+        baseRate = this.random.nextInt(55, 70);
+        break;
       case Difficulty.Hard:
-        return this.random.nextInt(45, 60);
+        baseRate = this.random.nextInt(45, 60);
+        break;
       case Difficulty.Impossible:
-        return this.random.nextInt(30, 50); // Faster reactions
+        baseRate = this.random.nextInt(30, 50); // Faster reactions
+        break;
       default:
         assertNever(difficulty);
     }
+    const pClass = this.nation.playerInfo.playerClass;
+    if (pClass === PlayerClass.Infantry) {
+      // Infantry attacks 20% more frequently
+      baseRate = Math.max(20, Math.round(baseRate * 0.8));
+    } else if (pClass === PlayerClass.IronDome) {
+      // Iron Dome attacks 20% less frequently (turtle fortress)
+      baseRate = Math.round(baseRate * 1.2);
+    }
+    return baseRate;
   }
 
   tick(ticks: number) {

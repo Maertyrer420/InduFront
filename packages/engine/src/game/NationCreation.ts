@@ -5,6 +5,7 @@ import {
   GameType,
   HumansVsNations,
   Nation,
+  PlayerClass,
   PlayerInfo,
   PlayerType,
 } from "@openfront/engine-api/game/GameTypes";
@@ -14,6 +15,14 @@ import {
 } from "@openfront/engine-api/game/MapFiles";
 import { GameStartInfo } from "@openfront/engine-api/Schemas";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
+
+const ALL_NATION_CLASSES: readonly PlayerClass[] = [
+  PlayerClass.Industrialist,
+  PlayerClass.Infantry,
+  PlayerClass.Marine,
+  PlayerClass.IronDome,
+  PlayerClass.Scientist,
+];
 
 /**
  * Creates the nations array for a game.
@@ -50,6 +59,7 @@ export function createNationsForGame(
         [],
         null,
         n.flag ?? null,
+        random.randElement(ALL_NATION_CLASSES as PlayerClass[]),
       ),
     );
 
@@ -144,6 +154,7 @@ function createRandomNations(
             [],
             null,
             extra.flag ?? null,
+            random.randElement(ALL_NATION_CLASSES as PlayerClass[]),
           ),
         ),
       );
@@ -158,7 +169,18 @@ function createRandomNations(
     nations.push(
       new Nation(
         undefined,
-        new PlayerInfo(name, PlayerType.Nation, null, random.nextID()),
+        new PlayerInfo(
+          name,
+          PlayerType.Nation,
+          null,
+          random.nextID(),
+          false,
+          null,
+          [],
+          null,
+          null,
+          random.randElement(ALL_NATION_CLASSES as PlayerClass[]),
+        ),
       ),
     );
   }

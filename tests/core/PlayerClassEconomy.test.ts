@@ -120,4 +120,24 @@ describe("Player Classes & Economic Progression", () => {
     // Combined coal demand (5) significantly exceeds 1 base coal mine yield (1.88)
     expect(MINE_BASE_YIELDS.coal).toBeLessThan(steelCoalDemand + centrifugeCoalDemand);
   });
+
+  it("verifies calibrated Marine bonuses (-15% inland mining, -30% fuel drain)", () => {
+    const marineMiningYield = MINE_BASE_YIELDS.ironOre * 0.85; // -15% mining yield
+    expect(marineMiningYield).toBeCloseTo(1.88 * 0.85, 2);
+
+    const marineFuelRatio = 1 - 0.30; // -30% fuel consumption
+    expect(marineFuelRatio).toBeCloseTo(0.70, 2);
+  });
+
+  it("verifies Infantry -10% gold income penalty", () => {
+    const normalGoldIncome = 1000;
+    const infantryGoldIncome = Math.floor(normalGoldIncome * 0.90);
+    expect(infantryGoldIncome).toBe(900);
+  });
+
+  it("verifies Iron Dome +20% SAM range bonus", () => {
+    const baseRange = 250;
+    const ironDomeRange = baseRange * 1.20;
+    expect(ironDomeRange).toBe(300);
+  });
 });

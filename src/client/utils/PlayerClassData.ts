@@ -59,6 +59,7 @@ export function getAllPlayerClasses(): PlayerClassMeta[] {
       debuffs: [
         translateText("player_classes.infantry_debuff_1"),
         translateText("player_classes.infantry_debuff_2"),
+        translateText("player_classes.infantry_debuff_3"),
       ],
       icon: (css = "w-4 h-4") => html`<svg
         class="${css} shrink-0"
@@ -122,6 +123,7 @@ export function getAllPlayerClasses(): PlayerClassMeta[] {
       debuffs: [
         translateText("player_classes.iron_dome_debuff_1"),
         translateText("player_classes.iron_dome_debuff_2"),
+        translateText("player_classes.iron_dome_debuff_3"),
       ],
       icon: (css = "w-4 h-4") => html`<svg
         class="${css} shrink-0"

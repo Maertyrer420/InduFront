@@ -736,7 +736,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
                   >${playerType}</span
                 >`}
             ${this.renderPlayerNameIcons(playerIcons)}
-            ${player.type() === PlayerType.Human
+            ${player.type() !== PlayerType.Bot
               ? this.renderClassBadge(player.playerClass?.())
               : ""}
             ${betrayalHtml ?? ""}
@@ -983,7 +983,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
       <div class="p-2">
         <div class="font-bold mb-1 ${isAlly ? "text-green-500" : "text-white"} flex items-center justify-between gap-2">
           <span>${unit.owner().displayName()}</span>
-          ${unit.owner().type() === PlayerType.Human
+          ${unit.owner().type() !== PlayerType.Bot
             ? this.renderClassBadge(unit.owner().playerClass?.())
             : ""}
         </div>

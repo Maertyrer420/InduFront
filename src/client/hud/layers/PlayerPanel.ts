@@ -683,7 +683,7 @@ export class PlayerPanel extends LitElement implements Controller {
           >
             ${other.displayName()}
           </h2>
-          ${other.type() === PlayerType.Human
+          ${other.type() !== PlayerType.Bot
             ? renderPlayerClassBadge(other.playerClass?.(), { size: "xs" })
             : ""}
         </div>
@@ -865,7 +865,7 @@ export class PlayerPanel extends LitElement implements Controller {
                     title=${p.displayName()}
                   >
                     <span class="truncate">${p.displayName()}</span>
-                    ${p.type() === PlayerType.Human
+                    ${p.type() !== PlayerType.Bot
                       ? renderPlayerClassBadge(p.playerClass?.(), {
                           showName: false,
                           size: "xs",

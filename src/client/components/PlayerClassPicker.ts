@@ -119,15 +119,29 @@ export class PlayerClassPicker extends LitElement {
               </div>
             `
           : html`
-              <!-- Quick mini perks preview when collapsed -->
-              <div class="flex flex-wrap gap-2 pt-1 border-t border-white/5 text-[10px]">
-                <div class="flex items-center gap-1 text-emerald-400">
-                  <span>+</span>
-                  <span class="truncate">${currentMeta.buffs[0]}</span>
-                </div>
-                <div class="flex items-center gap-1 text-red-400">
-                  <span>-</span>
-                  <span class="truncate">${currentMeta.debuffs[0]}</span>
+              <!-- Full perks preview of selected class -->
+              <div class="flex flex-col gap-1 pt-1.5 border-t border-white/10 text-[11px]">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  <div class="flex flex-col gap-0.5">
+                    ${currentMeta.buffs.map(
+                      (buff) => html`
+                        <div class="flex items-start gap-1.5 text-emerald-400 leading-snug">
+                          <span class="font-bold shrink-0">+</span>
+                          <span>${buff}</span>
+                        </div>
+                      `,
+                    )}
+                  </div>
+                  <div class="flex flex-col gap-0.5">
+                    ${currentMeta.debuffs.map(
+                      (debuff) => html`
+                        <div class="flex items-start gap-1.5 text-red-400 leading-snug">
+                          <span class="font-bold shrink-0">-</span>
+                          <span>${debuff}</span>
+                        </div>
+                      `,
+                    )}
+                  </div>
                 </div>
               </div>
             `}
@@ -176,23 +190,27 @@ export class PlayerClassPicker extends LitElement {
 
         ${this.showPerks
           ? html`
-              <div class="flex flex-col gap-0.5 mt-1 pt-1 border-t border-white/5 text-[10px]">
-                ${cls.buffs.slice(0, 2).map(
-                  (buff) => html`
-                    <div class="flex items-start gap-1 text-emerald-400 leading-tight">
-                      <span class="font-bold shrink-0">+</span>
-                      <span class="truncate">${buff}</span>
-                    </div>
-                  `,
-                )}
-                ${cls.debuffs.slice(0, 1).map(
-                  (debuff) => html`
-                    <div class="flex items-start gap-1 text-red-400 leading-tight">
-                      <span class="font-bold shrink-0">-</span>
-                      <span class="truncate">${debuff}</span>
-                    </div>
-                  `,
-                )}
+              <div class="flex flex-col gap-1 mt-1.5 pt-1.5 border-t border-white/10 text-[10px]">
+                <div class="flex flex-col gap-0.5">
+                  ${cls.buffs.map(
+                    (buff) => html`
+                      <div class="flex items-start gap-1 text-emerald-400 leading-snug">
+                        <span class="font-bold shrink-0">+</span>
+                        <span>${buff}</span>
+                      </div>
+                    `,
+                  )}
+                </div>
+                <div class="flex flex-col gap-0.5 mt-0.5 pt-0.5 border-t border-white/5">
+                  ${cls.debuffs.map(
+                    (debuff) => html`
+                      <div class="flex items-start gap-1 text-red-400 leading-snug">
+                        <span class="font-bold shrink-0">-</span>
+                        <span>${debuff}</span>
+                      </div>
+                    `,
+                  )}
+                </div>
               </div>
             `
           : null}

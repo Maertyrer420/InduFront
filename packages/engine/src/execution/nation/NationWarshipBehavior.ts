@@ -3,6 +3,7 @@ import {
   AllPlayers,
   Difficulty,
   Gold,
+  PlayerClass,
   PlayerType,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
@@ -79,14 +80,17 @@ export class NationWarshipBehavior {
     if (this.game.config().isUnitDisabled(UnitType.Warship)) {
       return false;
     }
-    if (!this.random.chance(50)) {
+    const pClass = this.player.playerClass?.();
+    const maxShips = pClass === PlayerClass.Marine ? 3 : 1;
+    const spawnOdds = pClass === PlayerClass.Marine ? 15 : 50;
+    if (!this.random.chance(spawnOdds)) {
       return false;
     }
     const ports = this.player.units(UnitType.Port);
     const ships = this.player.units(UnitType.Warship);
     if (
       ports.length > 0 &&
-      ships.length === 0 &&
+      ships.length < maxShips &&
       this.player.canBuildUnitType(UnitType.Warship)
     ) {
       const port = this.random.randElement(ports);

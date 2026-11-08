@@ -222,7 +222,7 @@ export class EconomyExecution implements Execution {
           if (pClass === PlayerClass.Industrialist) {
             minedAmount *= 1.25; // +25% Resource Yield for Industrialist
           } else if (pClass === PlayerClass.Marine) {
-            minedAmount *= 0.80; // -20% inland mining for Marine
+            minedAmount *= 0.85; // -15% inland mining for Marine
           }
 
           // Fractional extraction per tick (minedAmount is calibrated per second at 10 ticks/s)
@@ -296,9 +296,12 @@ export class EconomyExecution implements Execution {
       // Gold Income: G_second = floor(alpha * T + (beta / 10) * P) evaluated once per second
       if (ticks % 10 === 0) {
         const numTiles = player.numTilesOwned();
-        const goldIncome = Math.floor(
+        let goldIncome = Math.floor(
           GOLD_ALPHA * numTiles + (GOLD_BETA * 0.1) * econ.population,
         );
+        if (pClass === PlayerClass.Infantry) {
+          goldIncome = Math.floor(goldIncome * 0.90); // -10% demographic gold income for Infantry
+        }
         if (goldIncome > 0) {
           player.addGold(BigInt(goldIncome));
         }
@@ -394,7 +397,7 @@ export class EconomyExecution implements Execution {
       if (pClass === PlayerClass.Industrialist) {
         fuelDrain *= 1.15; // +15% ship fuel cost for Industrialist
       } else if (pClass === PlayerClass.Marine) {
-        fuelDrain *= 0.75; // -25% ship fuel cost for Marine
+        fuelDrain *= 0.70; // -30% ship fuel cost for Marine
       }
 
       if (econ.refined.fuel >= fuelDrain) {
