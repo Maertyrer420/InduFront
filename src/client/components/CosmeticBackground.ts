@@ -72,10 +72,20 @@ export class CosmeticBackground extends LitElement {
     if (this.pattern) {
       const url = generatePreviewDataUrl(this.pattern);
       if (!url) return nothing;
-      return html`<div
-        class="w-full h-full pointer-events-none [image-rendering:pixelated]"
-        style="background-image:url('${url}');background-repeat:repeat;background-size:auto 100%"
-      ></div>`;
+      return html`
+        <div class="relative w-full h-full pointer-events-none">
+          <div
+            class="absolute inset-0 [image-rendering:pixelated]"
+            style="background-image:url('${url}');background-repeat:repeat;background-size:auto 100%"
+          ></div>
+          ${this.color
+            ? html`<div
+                class="absolute inset-0 opacity-40 mix-blend-color transition-colors duration-300"
+                style="background-color:${this.color}"
+              ></div>`
+            : nothing}
+        </div>
+      `;
     }
     if (this.color) {
       return html`<div

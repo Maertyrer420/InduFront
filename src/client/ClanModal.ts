@@ -3,6 +3,7 @@ import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { getUserMe, invalidateUserMe } from "./Api";
 import { createClan, type ClanInfo, type ClanMember } from "./ClanApi";
+import { ClanLevelService } from "./ClanLevelService";
 import { ClientEnv } from "./ClientEnv";
 import { BaseModal } from "./components/BaseModal";
 import "./components/clan/ClanBansView";
@@ -15,8 +16,6 @@ import "./components/clan/ClanDonationsView";
 import "./components/clan/ClanGameHistoryView";
 import type { ClanGameHistoryCache } from "./components/clan/ClanGameHistoryView";
 import "./components/clan/ClanManageView";
-import "./components/clan/ClanMapView";
-import type { ClanMapView } from "./components/clan/ClanMapView";
 import "./components/clan/ClanMyRequestsView";
 import "./components/clan/ClanRequestsView";
 import type { ClanRole } from "./components/clan/ClanShared";
@@ -43,14 +42,13 @@ type View =
   | "create";
 
 // List tabs share BaseModal's `activeTab` slot with detail tabs ("overview" /
-// "members" / "game-history" / "donations"); which set is live depends on `view`.
-// "map" is first in the tab bar but not the landing tab (see the constructor).
-const LIST_TABS = ["map", "my-clans", "browse"] as const;
+// "members" / "game-history"); which set is live depends on `view`.
+const LIST_TABS = ["my-clans", "browse"] as const;
 type ListTab = (typeof LIST_TABS)[number];
 
 // Detail tabs a player profile can be opened from and returned to. Overview
 // has no member links of its own, so it falls back to Members.
-type DetailReturnTab = "members" | "game-history" | "donations";
+type DetailReturnTab = "members" | "game-history";
 
 function isListTab(key: string): key is ListTab {
   return (LIST_TABS as readonly string[]).includes(key);
@@ -62,8 +60,6 @@ export class ClanModal extends BaseModal {
 
   constructor() {
     super();
-    // BaseModal would otherwise default to the first tab, "map", which would
-    // mount the map iframe (and its API polling) before the modal ever opens.
     this.activeTab = "my-clans";
   }
 
@@ -148,7 +144,6 @@ export class ClanModal extends BaseModal {
     return {
       tabs: this.onListView
         ? [
-            { key: "map", label: translateText("clan_modal.tab_map") },
             { key: "my-clans", label: translateText("clan_modal.my_clans") },
             { key: "browse", label: translateText("clan_modal.browse") },
           ]
@@ -164,15 +159,11 @@ export class ClanModal extends BaseModal {
               },
               {
                 key: "chat",
-                label: "💬 Clan-Chat",
+                label: translateText("clan_modal.tab_chat"),
               },
               {
                 key: "game-history",
                 label: translateText("clan_modal.tab_game_history"),
-              },
-              {
-                key: "donations",
-                label: translateText("clan_modal.tab_donations"),
               },
             ]
           : [],
@@ -185,22 +176,12 @@ export class ClanModal extends BaseModal {
           title: translateText("clan_modal.title"),
           onBack: () => this.close(),
           ariaLabel: translateText("common.back"),
-          rightContent:
-            this.activeTab === "map" && !this.mapComingSoon
-              ? this.fullscreenButton()
-              : undefined,
         })
       : this.renderSubViewHeader();
   }
 
   protected renderBody() {
-    // The map fills the content box edge to edge and exactly to its height
-    // (the modal is an inline page, so the scroll area has a fixed height and
-    // anything taller scrolls); everything else is padded.
-    const onMap = this.onListView && this.activeTab === "map";
-    return html`<div class=${onMap ? "h-full" : "p-4 lg:p-[1.4rem]"}>
-      ${this.renderInner()}
-    </div>`;
+    return html`<div class="p-4 lg:p-[1.4rem]">${this.renderInner()}</div>`;
   }
 
   protected onTabEnter(tab: string): void {
@@ -219,34 +200,6 @@ export class ClanModal extends BaseModal {
     // No additional side effects required here.
   }
 
-  private fullscreenButton() {
-    const label = translateText("fullscreen.enter");
-    return html`<button
-      type="button"
-      data-testid="map-fullscreen"
-      title=${label}
-      aria-label=${label}
-      class="flex items-center justify-center w-10 h-10 rounded-full shrink-0 bg-white/5 hover:bg-white/10 transition-all border border-white/10 text-white/70 hover:text-white"
-      @click=${() =>
-        this.querySelector<ClanMapView>("clan-map-view")?.enterFullscreen()}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="w-5 h-5"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-        stroke-width="2"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4"
-        />
-      </svg>
-    </button>`;
-  }
-
   private tagPill(tag: string) {
     return html`<span
       class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/10 text-white/50 border border-white/10"
@@ -254,16 +207,28 @@ export class ClanModal extends BaseModal {
     >`;
   }
 
-  // The clan treasury, sitting in the header the way the store shows the
-  // player's own wallet. These are the clan's balances, not the viewer's, and
-  // they are public — every viewer sees them, member or not. Renders nothing
-  // when the API reported neither balance.
+  // Clan level badge and tag pill shown in detail header
   private clanBalances(clan: ClanInfo) {
-    return html`<div class="flex items-center gap-3">
-      <currency-display
-        .hard=${clan.hardBalance ?? null}
-        .soft=${clan.softBalance ?? null}
-      ></currency-display>
+    const levelData = ClanLevelService.getClanLevelData(clan.tag);
+    return html`<div class="flex items-center gap-2">
+      <span
+        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30"
+      >
+        <svg
+          class="w-3.5 h-3.5 text-amber-400"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path
+            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+          />
+        </svg>
+        <span
+          >${translateText("clan_modal.clan_level", {
+            level: levelData.level,
+          })}</span
+        >
+      </span>
       ${this.tagPill(clan.tag)}
     </div>`;
   }
@@ -663,20 +628,7 @@ export class ClanModal extends BaseModal {
       ></clan-detail-view>`;
     }
 
-    // List view (map / my clans / browse) — header + tabs are rendered by o-modal
-    if (this.activeTab === "map") {
-      if (this.mapComingSoon) {
-        return html`<div class="flex h-full items-center justify-center">
-          <p class="text-white/40 text-sm">
-            ${translateText("clan_modal.map_coming_soon")}
-          </p>
-        </div>`;
-      }
-      // Mounted only while open: the page polls its API while framed.
-      return this.isModalOpen
-        ? html`<clan-map-view class="block h-full"></clan-map-view>`
-        : html``;
-    }
+    // List view (my clans / browse) — header + tabs are rendered by o-modal
     return html`
       ${this.activeTab === "my-clans"
         ? this.renderMyClans()
@@ -741,9 +693,7 @@ export class ClanModal extends BaseModal {
     // Route the profile modal's Back button to whichever tab opened it. Only
     // the game-history tab needs its scroll position preserved on return.
     this.profileOpenedFromTab =
-      this.activeTab === "game-history" || this.activeTab === "donations"
-        ? this.activeTab
-        : "members";
+      this.activeTab === "game-history" ? "game-history" : "members";
     if (this.profileOpenedFromTab === "game-history") {
       this.gameHistoryScrollTop = this.modalEl?.getScrollTop() ?? 0;
     }

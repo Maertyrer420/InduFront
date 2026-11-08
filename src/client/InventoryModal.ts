@@ -91,7 +91,23 @@ export class InventoryModal extends BaseModal {
       }
     | undefined;
   private readonly countryFlagTiles = Countries.filter(
-    (country) => country.code !== "xx" && country.restricted !== true,
+    (country) =>
+      country.code.length === 2 &&
+      country.code !== "xx" &&
+      country.restricted !== true,
+  ).map<ResolvedCosmetic>((country) => ({
+    type: "flag",
+    cosmetic: countryFlag(country.name, country.code),
+    colorPalette: null,
+    relationship: "owned",
+    key: `country:${country.code}`,
+  }));
+
+  private readonly specialFlagTiles = Countries.filter(
+    (country) =>
+      country.code.length !== 2 &&
+      country.code !== "xx" &&
+      country.restricted !== true,
   ).map<ResolvedCosmetic>((country) => ({
     type: "flag",
     cosmetic: countryFlag(country.name, country.code),
@@ -327,6 +343,7 @@ export class InventoryModal extends BaseModal {
         (item) => item.type === "flag" && item.key === selectedFlag,
       ) ??
       this.countryFlagTiles.find((item) => item.key === selectedFlag) ??
+      this.specialFlagTiles.find((item) => item.key === selectedFlag) ??
       null
     );
   }
@@ -571,9 +588,20 @@ export class InventoryModal extends BaseModal {
         this.includedInSearch(resolved.key.slice("country:".length)),
     );
 
+    const unlockedSpecialFlags = this.specialFlagTiles.filter(
+      (resolved) =>
+        (SteelStoreService.isUnlocked(resolved.key) ||
+          SteelStoreService.isUnlocked(
+            resolved.key.replace("country:", "flag:"),
+          )) &&
+        (this.includedInSearch(resolved.cosmetic!.name) ||
+          this.includedInSearch(resolved.key.slice("country:".length))),
+    );
+
     const page = this.pages.page("inventory-flags", this.search, [
       ...cosmeticFlags,
       ...countryFlags,
+      ...unlockedSpecialFlags,
     ]);
     return html`
       <div

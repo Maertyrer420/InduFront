@@ -156,8 +156,15 @@ export const buildTable: BuildItemDisplay[][] = [
       key: "unit_type.factory",
       countable: true,
     },
+    {
+      unitType: UnitType.Residential,
+      icon: residentialIcon,
+      description: "build_menu.desc.residential",
+      key: "unit_type.residential",
+      countable: true,
+    },
   ],
-  // Row 3: Raw Resource Extraction (Heatmap-dependent Mines)
+  // Row 3: Steel Production Chain (Iron Mine + Coal Mine -> Steel Mill)
   [
     {
       unitType: UnitType.IronMine,
@@ -174,27 +181,20 @@ export const buildTable: BuildItemDisplay[][] = [
       countable: true,
     },
     {
-      unitType: UnitType.OilRig,
-      icon: oilRigIcon,
-      description: "build_menu.desc.oil_rig",
-      key: "unit_type.oil_rig",
-      countable: true,
-    },
-    {
-      unitType: UnitType.UraniumMine,
-      icon: uraniumMineIcon,
-      description: "build_menu.desc.uranium_mine",
-      key: "unit_type.uranium_mine",
-      countable: true,
-    },
-  ],
-  // Row 4: Industrial Refinement & Demographics
-  [
-    {
       unitType: UnitType.SteelMill,
       icon: steelMillIcon,
       description: "build_menu.desc.steel_mill",
       key: "unit_type.steel_mill",
+      countable: true,
+    },
+  ],
+  // Row 4: Fuel & Nuclear Production Chains (Oil Rig -> Refinery, Uranium Mine -> Centrifuge)
+  [
+    {
+      unitType: UnitType.OilRig,
+      icon: oilRigIcon,
+      description: "build_menu.desc.oil_rig",
+      key: "unit_type.oil_rig",
       countable: true,
     },
     {
@@ -205,17 +205,17 @@ export const buildTable: BuildItemDisplay[][] = [
       countable: true,
     },
     {
+      unitType: UnitType.UraniumMine,
+      icon: uraniumMineIcon,
+      description: "build_menu.desc.uranium_mine",
+      key: "unit_type.uranium_mine",
+      countable: true,
+    },
+    {
       unitType: UnitType.Centrifuge,
       icon: centrifugeIcon,
       description: "build_menu.desc.centrifuge",
       key: "unit_type.centrifuge",
-      countable: true,
-    },
-    {
-      unitType: UnitType.Residential,
-      icon: residentialIcon,
-      description: "build_menu.desc.residential",
-      key: "unit_type.residential",
       countable: true,
     },
   ],

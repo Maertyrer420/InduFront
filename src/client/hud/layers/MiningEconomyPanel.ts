@@ -8,6 +8,7 @@ import { Controller } from "../../Controller";
 import { ToggleGeologicalScoutingEvent } from "../../InputHandler";
 import { GeologicalDataService } from "../../render/gl/utils/GeologicalDataService";
 import { BuildUnitIntentEvent } from "../../Transport";
+import { translateText } from "../../Utils";
 import { GameView } from "../../view";
 import {
   bunkerIcon,
@@ -501,14 +502,22 @@ export class MiningEconomyPanel extends LitElement implements Controller {
                 <div
                   style="font-size: 0.75rem; color: #9ca3af; margin-top: 0.15rem;"
                 >
-                  Rohstoff-Extraktion, Veredelungswerke & Geologische Heatmap
+                  ${(
+                    document.documentElement.lang ||
+                    navigator.language ||
+                    "en"
+                  )
+                    .toLowerCase()
+                    .startsWith("en")
+                    ? "Resource extraction, refinement plants & geological heatmap"
+                    : "Rohstoff-Extraktion, Veredelungswerke & Geologische Heatmap"}
                 </div>
               </div>
             </div>
             <button
               style="background: transparent; border: none; color: #9ca3af; font-size: 1.5rem; cursor: pointer; padding: 0.2rem 0.5rem; border-radius: 0.375rem;"
               @click=${this.close}
-              title="Schließen (Esc)"
+              title="${translateText("common.close")} (Esc)"
             >
               ✕
             </button>
@@ -563,8 +572,11 @@ export class MiningEconomyPanel extends LitElement implements Controller {
 
               return html`
                 <div class="building-card">
-                  <div class="count-chip" title="Aktive Anzahl">
-                    ${count}x Aktiv
+                  <div
+                    class="count-chip"
+                    title=${translateText("economy.active")}
+                  >
+                    ${count}x ${translateText("economy.active")}
                   </div>
                   <div>
                     <div class="card-top">
@@ -580,7 +592,10 @@ export class MiningEconomyPanel extends LitElement implements Controller {
                   </div>
 
                   <div class="cost-row">
-                    <div class="cost-badge" title="Baukosten (Gold)">
+                    <div
+                      class="cost-badge"
+                      title="${translateText("economy.construction_cost")}"
+                    >
                       <img
                         src=${goldCoinIcon}
                         width="14"
@@ -591,19 +606,21 @@ export class MiningEconomyPanel extends LitElement implements Controller {
                       ${costObj.steel > 0
                         ? html`<span
                             style="color: #60a5fa; font-size: 0.7rem; margin-left: 0.25rem;"
-                            >+${costObj.steel} Stahl</span
+                            >+${costObj.steel}
+                            ${translateText("economy.steel")}</span
                           >`
                         : ""}
                       ${costObj.fuel > 0
                         ? html`<span
                             style="color: #a855f7; font-size: 0.7rem; margin-left: 0.25rem;"
-                            >+${costObj.fuel} Fuel</span
+                            >+${costObj.fuel}
+                            ${translateText("economy.fuel")}</span
                           >`
                         : ""}
                       ${costObj.enrichedUranium > 0
                         ? html`<span
                             style="color: #34d399; font-size: 0.7rem; margin-left: 0.25rem;"
-                            >+${costObj.enrichedUranium} Spalt</span
+                            >+${costObj.enrichedUranium} U_ref</span
                           >`
                         : ""}
                     </div>
@@ -657,7 +674,7 @@ export class MiningEconomyPanel extends LitElement implements Controller {
                   : ""}"
                 @click=${() => this.toggleScouting("coal")}
               >
-                C (Kohle)
+                C (${translateText("economy.coal")})
               </button>
               <button
                 class="scout-btn ${this._activeScouting === "crudeOil"
@@ -668,7 +685,7 @@ export class MiningEconomyPanel extends LitElement implements Controller {
                   : ""}"
                 @click=${() => this.toggleScouting("crudeOil")}
               >
-                Oil (Rohöl)
+                Oil (${translateText("economy.crude_oil")})
               </button>
               <button
                 class="scout-btn ${this._activeScouting === "uraniumOre"
@@ -679,15 +696,18 @@ export class MiningEconomyPanel extends LitElement implements Controller {
                   : ""}"
                 @click=${() => this.toggleScouting("uraniumOre")}
               >
-                U (Uran)
+                U (${translateText("economy.uranium")})
               </button>
             </div>
 
             <div class="info-footer-text">
-              <span>ℹ️</span>
+              <span class="text-sky-400 font-bold">[Info]</span>
               <span
-                >Dynamische Erschöpfung: Cluster fördern unendlich mit
-                15%-Basis-Tiefenförderung fort.</span
+                >${(document.documentElement.lang || navigator.language || "en")
+                  .toLowerCase()
+                  .startsWith("en")
+                  ? "Dynamic depletion: resource clusters produce indefinitely with 15% base deep extraction."
+                  : "Dynamische Erschöpfung: Cluster fördern unendlich mit 15%-Basis-Tiefenförderung fort."}</span
               >
             </div>
           </div>

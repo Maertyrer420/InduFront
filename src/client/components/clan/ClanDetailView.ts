@@ -13,6 +13,8 @@ import {
   joinClan,
   leaveClan,
 } from "../../ClanApi";
+import { ClanLevelService } from "../../ClanLevelService";
+import { SteelStoreService } from "../../SteelStore";
 import { translateText } from "../../Utils";
 import "../ConfirmDialog";
 import "../CopyButton";
@@ -75,15 +77,24 @@ export class ClanDetailView extends LitElement {
   @state() private memberSearch = "";
   @state() private donateOpen = false;
   @state() private boostOpen = false;
+  @state() private steelDonateInput = "250";
   private memberSearchDebounce: ReturnType<typeof setTimeout> | null = null;
   private memberLoadSeq = 0;
   private asyncGeneration = 0;
+  private clanLevelUnsub: (() => void) | null = null;
+  private steelStoreUnsub: (() => void) | null = null;
 
   // Re-renders once a minute so the boost's "time left" counts down.
   private boostTicker: ReturnType<typeof setInterval> | null = null;
 
   connectedCallback() {
     super.connectedCallback();
+    this.clanLevelUnsub = ClanLevelService.subscribe(() =>
+      this.requestUpdate(),
+    );
+    this.steelStoreUnsub = SteelStoreService.subscribe(() =>
+      this.requestUpdate(),
+    );
     this.boostTicker = setInterval(() => {
       if (this.selectedClan?.boostEndsAt) this.requestUpdate();
     }, 60_000);
@@ -125,6 +136,10 @@ export class ClanDetailView extends LitElement {
     if (this.boostTicker) clearInterval(this.boostTicker);
     this.boostTicker = null;
     if (this.memberSearchDebounce) clearTimeout(this.memberSearchDebounce);
+    this.clanLevelUnsub?.();
+    this.clanLevelUnsub = null;
+    this.steelStoreUnsub?.();
+    this.steelStoreUnsub = null;
     this.memberLoadSeq++;
     super.disconnectedCallback();
   }
@@ -514,18 +529,7 @@ export class ClanDetailView extends LitElement {
           clan,
         )}
       </div>
-      ${this.donateOpen && isMember
-        ? html`<clan-donate-dialog
-            .clanTag=${clan.tag}
-            @donated=${(
-              e: CustomEvent<{
-                currencyType: "soft" | "hard";
-                amount: string;
-              }>,
-            ) => void this.handleDonated(e)}
-            @cancel=${() => (this.donateOpen = false)}
-          ></clan-donate-dialog>`
-        : ""}
+      ${this.donateOpen && isMember ? this.renderSteelDonateModal(clan) : ""}
       ${this.boostOpen && (isLeader || isOfficer)
         ? html`<clan-boost-dialog
             .clanTag=${clan.tag}
@@ -546,6 +550,7 @@ export class ClanDetailView extends LitElement {
           <div class="grid gap-4 sm:grid-cols-5 items-start">
             <div class="sm:col-span-3 flex flex-col gap-4">
               ${this.renderDescriptionCard(clan)}
+              ${this.renderClanLevelCard(clan, isMember)}
               <div class="grid grid-cols-2 gap-4">
                 ${this.renderStatTiles(clan)}
               </div>
@@ -562,6 +567,7 @@ export class ClanDetailView extends LitElement {
     return html`
       <div class="space-y-6">
         ${this.renderDescriptionCard(clan)}
+        ${this.renderClanLevelCard(clan, isMember)}
         <div class="grid grid-cols-2 gap-3">${this.renderStatTiles(clan)}</div>
         ${actions}
       </div>
@@ -705,11 +711,298 @@ export class ClanDetailView extends LitElement {
     `;
   }
 
+  private handleQuickDonate(tag: string, amount: number) {
+    const res = ClanLevelService.donateSteel(tag, amount);
+    if (res.success) {
+      const data = ClanLevelService.getClanLevelData(tag);
+      showToast(
+        res.newLevel > data.level
+          ? translateText("clan_modal.level_up_success", {
+              level: res.newLevel,
+              members: data.maxMembers,
+            })
+          : `${amount} Stahl an [${tag}] gespendet!`,
+        "green",
+      );
+      this.requestUpdate();
+    } else {
+      showToast(res.error ?? "Fehler beim Spenden", "red");
+    }
+  }
+
+  private handleCustomSteelDonate(tag: string) {
+    const amount = parseInt(this.steelDonateInput, 10);
+    if (!amount || amount <= 0) {
+      showToast("Bitte gib eine gültige Menge Stahl ein.", "red");
+      return;
+    }
+    const res = ClanLevelService.donateSteel(tag, amount);
+    if (res.success) {
+      this.donateOpen = false;
+      const data = ClanLevelService.getClanLevelData(tag);
+      showToast(
+        translateText("clan_modal.level_up_success", {
+          level: res.newLevel,
+          members: data.maxMembers,
+        }) || `${amount} Stahl gespendet!`,
+        "green",
+      );
+      this.requestUpdate();
+    } else {
+      showToast(res.error ?? "Fehler beim Spenden", "red");
+    }
+  }
+
+  private renderClanLevelCard(clan: ClanInfo, isMember: boolean) {
+    const levelData = ClanLevelService.getClanLevelData(clan.tag);
+    const progressPercent = Math.min(
+      100,
+      Math.floor((levelData.steelProgress / levelData.nextCost) * 100),
+    );
+    const userBalance = SteelStoreService.getBalance();
+
+    return html`
+      <div class="bg-white/5 rounded-xl border border-white/10 p-5 space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div
+              class="w-11 h-11 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center justify-center font-bold font-mono text-lg shadow-sm"
+            >
+              ${levelData.level}
+            </div>
+            <div>
+              <div class="text-white font-bold text-sm flex items-center gap-2">
+                <span
+                  >${translateText("clan_modal.clan_level", {
+                    level: levelData.level,
+                  })}</span
+                >
+                <span
+                  class="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                >
+                  +${levelData.level - 1} Slots
+                </span>
+              </div>
+              <div class="text-white/50 text-xs">
+                ${translateText("clan_modal.donate_steel_desc")}
+              </div>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-[10px] uppercase font-bold text-white/40">
+              ${translateText("clan_modal.members")}
+            </div>
+            <div class="text-sm font-bold text-white font-mono">
+              ${clan.memberCount ?? 0} / ${levelData.maxMembers}
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <div class="flex justify-between text-xs font-semibold">
+            <span class="text-white/70">
+              ${levelData.steelProgress.toLocaleString()} /
+              ${levelData.nextCost.toLocaleString()} Stahl
+            </span>
+            <span class="text-amber-400 font-bold">${progressPercent}%</span>
+          </div>
+          <div class="w-full h-2.5 rounded-full bg-white/10 overflow-hidden">
+            <div
+              class="h-full bg-gradient-to-r from-amber-500 to-amber-300 transition-all duration-300 rounded-full"
+              style="width: ${progressPercent}%"
+            ></div>
+          </div>
+        </div>
+
+        ${isMember
+          ? html`
+              <div
+                class="pt-3 border-t border-white/10 flex flex-wrap items-center justify-between gap-3"
+              >
+                <div class="text-xs text-white/60">
+                  Dein Stahl:
+                  <span class="text-white font-bold font-mono"
+                    >${userBalance.toLocaleString()}</span
+                  >
+                </div>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    @click=${() => this.handleQuickDonate(clan.tag, 250)}
+                    class="px-3 py-1.5 text-xs font-bold uppercase rounded-lg bg-white/10 hover:bg-white/20 text-white transition-all border border-white/10 cursor-pointer"
+                  >
+                    +250 Stahl
+                  </button>
+                  <button
+                    type="button"
+                    @click=${() => this.handleQuickDonate(clan.tag, 1000)}
+                    class="px-3 py-1.5 text-xs font-bold uppercase rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 transition-all cursor-pointer"
+                  >
+                    +1.000 Stahl
+                  </button>
+                  <button
+                    type="button"
+                    @click=${() => (this.donateOpen = true)}
+                    class="px-3 py-1.5 text-xs font-bold uppercase rounded-lg bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white shadow transition-all cursor-pointer"
+                  >
+                    ${translateText("clan_modal.donate_steel")}
+                  </button>
+                </div>
+              </div>
+            `
+          : ""}
+      </div>
+    `;
+  }
+
+  private renderSteelDonateModal(clan: ClanInfo) {
+    const levelData = ClanLevelService.getClanLevelData(clan.tag);
+    const userBalance = SteelStoreService.getBalance();
+    const needed = Math.max(0, levelData.nextCost - levelData.steelProgress);
+
+    return html`
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+        @click=${(e: Event) => {
+          if (e.target === e.currentTarget) this.donateOpen = false;
+        }}
+      >
+        <div
+          class="bg-[#181d29] border border-white/15 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-150"
+        >
+          <div
+            class="flex items-center justify-between border-b border-white/10 pb-4"
+          >
+            <div>
+              <h3
+                class="text-base font-bold text-white flex items-center gap-2"
+              >
+                <svg
+                  class="w-5 h-5 text-amber-400"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                  />
+                </svg>
+                <span>${translateText("clan_modal.donate_steel")}</span>
+              </h3>
+              <p class="text-xs text-white/50 mt-0.5">
+                ${translateText("clan_modal.donate_steel_desc")}
+              </p>
+            </div>
+            <button
+              type="button"
+              @click=${() => (this.donateOpen = false)}
+              class="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 text-white/50 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+
+          <div
+            class="bg-white/5 rounded-xl border border-white/10 p-4 space-y-2"
+          >
+            <div class="flex justify-between text-xs text-white/70">
+              <span>Aktuelle Stufe:</span>
+              <span class="font-bold text-white"
+                >Stufe ${levelData.level} (max. ${levelData.maxMembers}
+                Mitglieder)</span
+              >
+            </div>
+            <div class="flex justify-between text-xs text-white/70">
+              <span>Nächste Stufe:</span>
+              <span class="font-bold text-amber-300"
+                >Stufe ${levelData.level + 1} (max. ${levelData.maxMembers + 1}
+                Mitglieder)</span
+              >
+            </div>
+            <div class="flex justify-between text-xs text-white/70">
+              <span>Fortschritt:</span>
+              <span class="font-bold text-white font-mono"
+                >${levelData.steelProgress} / ${levelData.nextCost} Stahl</span
+              >
+            </div>
+            <div
+              class="flex justify-between text-xs text-amber-400 font-semibold pt-1 border-t border-white/5"
+            >
+              <span>Noch benötigt:</span>
+              <span class="font-mono">${needed.toLocaleString()} Stahl</span>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs font-semibold">
+              <span class="text-white/60">Spendenmenge (Stahl)</span>
+              <span class="text-white/60">
+                Guthaben:
+                <strong class="text-white font-mono"
+                  >${userBalance.toLocaleString()}</strong
+                >
+              </span>
+            </div>
+            <div class="flex gap-2">
+              <input
+                type="number"
+                min="1"
+                max=${userBalance}
+                .value=${this.steelDonateInput}
+                @input=${(e: Event) =>
+                  (this.steelDonateInput = (
+                    e.target as HTMLInputElement
+                  ).value)}
+                class="flex-1 bg-black/40 border border-white/15 rounded-xl px-4 py-2.5 text-white font-mono text-base focus:outline-none focus:border-amber-500"
+                placeholder="z.B. 1000"
+              />
+            </div>
+
+            <div class="grid grid-cols-4 gap-2 pt-1">
+              ${[100, 250, 500, 1000].map(
+                (val) => html`
+                  <button
+                    type="button"
+                    @click=${() => (this.steelDonateInput = String(val))}
+                    class="py-1.5 px-2 text-xs font-bold rounded-lg bg-white/5 hover:bg-white/15 text-white/80 hover:text-white border border-white/10 transition-colors cursor-pointer"
+                  >
+                    +${val}
+                  </button>
+                `,
+              )}
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 pt-2">
+            <button
+              type="button"
+              @click=${() => (this.donateOpen = false)}
+              class="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-white/10 hover:bg-white/15 text-white transition-colors cursor-pointer"
+            >
+              Abbrechen
+            </button>
+            <button
+              type="button"
+              @click=${() => this.handleCustomSteelDonate(clan.tag)}
+              class="flex-1 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white shadow-lg hover:shadow-amber-900/40 transition-all cursor-pointer"
+            >
+              Spenden
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   private renderStatTiles(clan: ClanInfo) {
+    const levelData = ClanLevelService.getClanLevelData(clan.tag);
     return html`
       ${renderStat(
+        translateText("clan_modal.clan_level_title") || "Clan-Stufe",
+        `Stufe ${levelData.level}`,
+      )}
+      ${renderStat(
         translateText("clan_modal.members"),
-        `${clan.memberCount ?? 0}`,
+        `${clan.memberCount ?? 0} / ${levelData.maxMembers}`,
       )}
       ${renderStat(
         translateText("clan_modal.status"),
@@ -894,9 +1187,9 @@ export class ClanDetailView extends LitElement {
       buttons.push(html`
         <button
           @click=${() => (this.donateOpen = true)}
-          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r bg-origin-border from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5"
+          class="w-full px-4 py-3 text-sm font-bold text-white uppercase tracking-wider bg-gradient-to-r bg-origin-border from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 rounded-xl transition-all shadow-lg hover:shadow-amber-900/40 border border-white/5 cursor-pointer"
         >
-          ${translateText("clan_modal.donate")}
+          ${translateText("clan_modal.donate_steel")}
         </button>
       `);
     }

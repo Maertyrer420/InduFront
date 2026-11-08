@@ -661,7 +661,7 @@ export class ControlPanel extends LitElement implements Controller {
         ? html`<div
             class="bg-red-600/90 text-white font-extrabold text-xs px-2 py-0.5 rounded text-center animate-pulse mb-1 border border-red-400 drop-shadow-[0_1px_3px_rgba(0,0,0,0.8)]"
           >
-            ⚠️ TREIBSTOFF-ENGPASS! (0 Fuel: -80% Speed, -50% Kampfkraft)
+            ${translateText("economy.fuel_starvation")}
           </div>`
         : ""}
 
@@ -679,7 +679,7 @@ export class ControlPanel extends LitElement implements Controller {
               this.toggleScouting(
                 this._activeScouting === "none" ? "all" : "none",
               )}
-            title="Rohstoff-Heatmap ein-/ausschalten (Taste: H)"
+            title=${translateText("economy.heatmap_toggle_hint")}
           >
             <img
               src=${highlightIcon}
@@ -689,7 +689,11 @@ export class ControlPanel extends LitElement implements Controller {
             />
             <span
               >HEATMAP:
-              ${this._activeScouting !== "none" ? "AKTIV" : "AUS"}</span
+              ${translateText(
+                this._activeScouting !== "none"
+                  ? "economy.heatmap_active"
+                  : "economy.heatmap_off",
+              )}</span
             >
             <span
               class="text-[10px] opacity-75 font-mono px-1 py-0.2 bg-black/30 rounded text-white"
@@ -706,7 +710,7 @@ export class ControlPanel extends LitElement implements Controller {
               ? "bg-cyan-500 text-slate-950 font-black shadow-md ring-1 ring-cyan-300"
               : "bg-slate-800/80 text-cyan-300 hover:bg-slate-700 border border-cyan-800/50"}"
             @click=${() => this.toggleScouting("all")}
-            title="Alle Rohstoffe hervorheben"
+            title=${translateText("economy.heatmap_all")}
           >
             <img
               src=${highlightIcon}
@@ -722,7 +726,7 @@ export class ControlPanel extends LitElement implements Controller {
               ? "bg-amber-500 text-slate-950 font-black shadow-md ring-1 ring-amber-300"
               : "bg-slate-800/80 text-amber-300 hover:bg-slate-700 border border-amber-800/50"}"
             @click=${() => this.toggleScouting("ironOre")}
-            title="Eisenerz-Vorkommen anzeigen"
+            title=${translateText("economy.iron_ore")}
           >
             <img
               src=${ironMineIcon}
@@ -730,7 +734,7 @@ export class ControlPanel extends LitElement implements Controller {
                 ? "filter invert"
                 : ""}"
             />
-            <span>Eisen</span>
+            <span>${translateText("economy.iron_ore")}</span>
           </button>
           <button
             class="flex items-center gap-1 px-2 py-0.5 rounded font-bold transition-all text-[11px] ${this
@@ -738,7 +742,7 @@ export class ControlPanel extends LitElement implements Controller {
               ? "bg-stone-300 text-slate-950 font-black shadow-md ring-1 ring-stone-100"
               : "bg-slate-800/80 text-stone-300 hover:bg-slate-700 border border-stone-700/50"}"
             @click=${() => this.toggleScouting("coal")}
-            title="Kohle-Vorkommen anzeigen"
+            title=${translateText("economy.coal")}
           >
             <img
               src=${coalMineIcon}
@@ -746,7 +750,7 @@ export class ControlPanel extends LitElement implements Controller {
                 ? "filter invert"
                 : ""}"
             />
-            <span>Kohle</span>
+            <span>${translateText("economy.coal")}</span>
           </button>
           <button
             class="flex items-center gap-1 px-2 py-0.5 rounded font-bold transition-all text-[11px] ${this
@@ -754,10 +758,10 @@ export class ControlPanel extends LitElement implements Controller {
               ? "bg-purple-500 text-white font-black shadow-md ring-1 ring-purple-300"
               : "bg-slate-800/80 text-purple-300 hover:bg-slate-700 border border-purple-800/50"}"
             @click=${() => this.toggleScouting("crudeOil")}
-            title="Rohöl-Vorkommen anzeigen"
+            title=${translateText("economy.crude_oil")}
           >
             <img src=${oilRigIcon} class="w-3 h-3" />
-            <span>Öl</span>
+            <span>${translateText("economy.crude_oil")}</span>
           </button>
           <button
             class="flex items-center gap-1 px-2 py-0.5 rounded font-bold transition-all text-[11px] ${this
@@ -765,7 +769,7 @@ export class ControlPanel extends LitElement implements Controller {
               ? "bg-emerald-400 text-slate-950 font-black shadow-md ring-1 ring-emerald-200"
               : "bg-slate-800/80 text-emerald-300 hover:bg-slate-700 border border-emerald-800/50"}"
             @click=${() => this.toggleScouting("uraniumOre")}
-            title="Uranerz-Vorkommen anzeigen"
+            title=${translateText("economy.uranium")}
           >
             <img
               src=${uraniumMineIcon}
@@ -773,7 +777,7 @@ export class ControlPanel extends LitElement implements Controller {
                 ? "filter invert"
                 : ""}"
             />
-            <span>Uran</span>
+            <span>${translateText("economy.uranium")}</span>
           </button>
         </div>
       </div>

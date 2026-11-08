@@ -2,6 +2,7 @@ import {
   isGrantedSubscription,
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
+import { assetUrl } from "@openfront/shared/AssetUrls";
 import {
   CosmeticPack,
   Cosmetics,
@@ -11,6 +12,7 @@ import {
 import type { PropertyValues, TemplateResult } from "lit";
 import { html } from "lit";
 import { customElement, state } from "lit/decorators.js";
+import { unsafeHTML } from "lit/directives/unsafe-html.js";
 import { BaseModal } from "./components/BaseModal";
 import "./components/CosmeticCard";
 import { cosmeticSelectionLabel } from "./components/CosmeticPresentation";
@@ -41,7 +43,7 @@ import {
   priceStringToCents,
   reportPendingSteamAuthorizations,
 } from "./Payments";
-import { STEEL_CATALOG, SteelStoreService } from "./SteelStore";
+import { getAllSteelCatalog, SteelStoreService } from "./SteelStore";
 import { lastUserMeResponse } from "./UserMeBroadcast";
 import { translateText } from "./Utils";
 
@@ -101,6 +103,7 @@ export class StoreModal extends BaseModal {
   // not wait on a slow catalog before it may say so.
   @state() private authSettled = false;
   @state() private steelCategoryFilter: string = "all";
+  @state() private steelSearch = "";
   private cosmeticsSubTab: CosmeticsSubTab = "patterns";
   // Item the URL asked for (`#modal=store&item=<key>`). Held until its group
   // is visible, then inspected so the store opens on that item.
@@ -234,9 +237,21 @@ export class StoreModal extends BaseModal {
           class="flex items-center gap-1.5 bg-slate-900/90 border border-cyan-400/50 px-3 py-1 rounded-full text-xs font-bold text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.2)]"
           title="Dein gesammelter Stahl aus gespielten Runden"
         >
-          <span>⚙️</span>
+          <svg
+            class="w-4 h-4 text-cyan-400"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+            />
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+            <line x1="12" y1="22.08" x2="12" y2="12" />
+          </svg>
           <span class="tabular-nums font-extrabold"
-            >${SteelStoreService.getBalance()}</span
+            >${SteelStoreService.getBalance().toLocaleString()}</span
           >
           <span class="text-white/70">Stahl</span>
         </div>
@@ -743,13 +758,28 @@ export class StoreModal extends BaseModal {
       { key: "badges", label: "Abzeichen (Badges)" },
       { key: "skins", label: "Skins & Tarnungen" },
       { key: "sounds", label: "Custom Sounds" },
+      { key: "flags", label: "Spezial-Flaggen (5.000 Stahl)" },
     ];
 
-    const items = STEEL_CATALOG.filter(
-      (item) =>
+    const allItems = getAllSteelCatalog();
+    const searchLower = this.steelSearch.trim().toLowerCase();
+    const filtered = allItems.filter((item) => {
+      const matchCat =
         this.steelCategoryFilter === "all" ||
-        item.category === this.steelCategoryFilter,
-    );
+        item.category === this.steelCategoryFilter;
+      if (!matchCat) return false;
+      if (!searchLower) return true;
+      return (
+        item.name.toLowerCase().includes(searchLower) ||
+        item.description.toLowerCase().includes(searchLower)
+      );
+    });
+
+    const isFlags = this.steelCategoryFilter === "flags";
+    const totalCount = filtered.length;
+    const displayLimit = isFlags && !searchLower ? 48 : 120;
+    const isLimited = totalCount > displayLimit;
+    const items = isLimited ? filtered.slice(0, displayLimit) : filtered;
 
     return html`
       <div class="flex flex-col gap-4 p-4 sm:p-6 max-w-5xl mx-auto w-full">
@@ -795,27 +825,74 @@ export class StoreModal extends BaseModal {
           </div>
         </div>
 
-        <!-- Filter Sub-Tabs -->
+        <!-- Filter Sub-Tabs & Search -->
         <div
-          class="flex flex-wrap items-center gap-2 border-b border-white/10 pb-3"
+          class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between border-b border-white/10 pb-3"
         >
-          ${categories.map(
-            (cat) => html`
-              <button
-                class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${this
-                  .steelCategoryFilter === cat.key
-                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                  : "bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white"}"
-                @click=${() => {
-                  this.steelCategoryFilter = cat.key;
-                  this.requestUpdate();
-                }}
-              >
-                ${cat.label}
-              </button>
-            `,
-          )}
+          <div class="flex flex-wrap items-center gap-2">
+            ${categories.map(
+              (cat) => html`
+                <button
+                  class="px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all ${this
+                    .steelCategoryFilter === cat.key
+                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
+                    : "bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white"}"
+                  @click=${() => {
+                    this.steelCategoryFilter = cat.key;
+                    this.requestUpdate();
+                  }}
+                >
+                  ${cat.label}
+                </button>
+              `,
+            )}
+          </div>
+          <div class="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Shop durchsuchen..."
+              .value=${this.steelSearch}
+              @input=${(e: Event) => {
+                this.steelSearch = (e.target as HTMLInputElement).value;
+                this.requestUpdate();
+              }}
+              class="w-full sm:w-56 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-cyan-400"
+            />
+            ${this.steelSearch
+              ? html`
+                  <button
+                    type="button"
+                    @click=${() => {
+                      this.steelSearch = "";
+                      this.requestUpdate();
+                    }}
+                    class="px-2 py-1 text-xs font-bold rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
+                  >
+                    ✕
+                  </button>
+                `
+              : ""}
+          </div>
         </div>
+
+        ${isFlags
+          ? html`
+              <div
+                class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-200/90 flex flex-wrap items-center justify-between gap-2"
+              >
+                <span
+                  >Alle Spezial-Flaggen (Bundesländer, historische Reiche,
+                  Regionen) kosten <strong>5.000 Stahl</strong> und werden
+                  dauerhaft im Inventar freigeschaltet.</span
+                >
+                ${isLimited
+                  ? html`<span class="text-white/50 text-[11px] font-mono"
+                      >Zeige ${displayLimit} von ${totalCount} Flaggen</span
+                    >`
+                  : ""}
+              </div>
+            `
+          : ""}
 
         <!-- Catalog Grid -->
         <div
@@ -836,7 +913,17 @@ export class StoreModal extends BaseModal {
               >
                 <div>
                   <div class="flex items-start justify-between gap-2 mb-2">
-                    <span class="text-3xl">${item.icon}</span>
+                    ${item.category === "flags"
+                      ? html`<img
+                          src="${assetUrl(item.icon)}"
+                          class="w-12 h-8 object-cover rounded shadow ring-1 ring-white/10"
+                          alt="${item.name}"
+                        />`
+                      : html`<div
+                          class="w-8 h-8 flex items-center justify-center text-white"
+                        >
+                          ${unsafeHTML(item.icon)}
+                        </div>`}
                     <span
                       class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full ${isEquipped
                         ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"

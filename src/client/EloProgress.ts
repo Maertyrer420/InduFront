@@ -1,3 +1,5 @@
+import { translateText } from "./Utils";
+
 export interface ClientEloTierDetails {
   tier: string;
   division: "I" | "II" | "III" | "IV" | "";
@@ -51,26 +53,43 @@ export function getClientEloTierDetails(elo: number): ClientEloTierDetails {
         Math.max(0, Math.round((offsetInDivision / divisionSpan) * 100)),
       );
 
+      const tierKey =
+        t.tier.toLowerCase() === "platin"
+          ? "platinum"
+          : t.tier.toLowerCase() === "diamant"
+            ? "diamond"
+            : t.tier.toLowerCase() === "silber"
+              ? "silver"
+              : t.tier.toLowerCase() === "eisen"
+                ? "iron"
+                : t.tier.toLowerCase();
+      const translatedTier = translateText("ranked_tier." + tierKey);
+      const displayTier =
+        translatedTier !== "ranked_tier." + tierKey ? translatedTier : t.tier;
+
       return {
-        tier: t.tier,
+        tier: displayTier,
         division,
         minElo: t.min,
         maxElo: t.max,
         progressPercent,
         color: t.color,
-        label: `${t.tier} ${division}`,
+        label: `${displayTier} ${division}`,
       };
     }
   }
 
+  const ironTier = translateText("ranked_tier.iron");
+  const displayIron = ironTier !== "ranked_tier.iron" ? ironTier : "Eisen";
+
   return {
-    tier: "Eisen",
+    tier: displayIron,
     division: "IV",
     minElo: 0,
     maxElo: 800,
     progressPercent: 0,
     color: "#6b7280",
-    label: "Eisen IV",
+    label: `${displayIron} IV`,
   };
 }
 

@@ -265,13 +265,22 @@ export class WinModal extends LitElement implements Controller {
                       <span>+${this.animatedSteel}</span>
                       <span
                         class="text-xs font-semibold text-amber-400/80 uppercase"
-                        >Stahl</span
+                        >${translateText("economy.steel")}</span
                       >
                     </div>
                     <p class="text-[11px] text-slate-400 mt-1">
-                      Aktuelles Guthaben:
+                      ${(
+                        document.documentElement.lang ||
+                        navigator.language ||
+                        "en"
+                      )
+                        .toLowerCase()
+                        .startsWith("en")
+                        ? "Current balance:"
+                        : "Aktuelles Guthaben:"}
                       <strong class="text-white"
-                        >${SteelStoreService.getBalance()} ⚙️</strong
+                        >${SteelStoreService.getBalance()}
+                        ${translateText("economy.steel")}</strong
                       >
                     </p>
                   </div>
@@ -281,8 +290,20 @@ export class WinModal extends LitElement implements Controller {
                       class="w-full px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold text-[11px] tracking-wider uppercase transition shadow-md hover:shadow-amber-500/30 flex items-center justify-center gap-1.5 cursor-pointer"
                       @click=${() => this.openSteelShop()}
                     >
-                      <span>🛒</span>
-                      <span>Zum Stahl-Shop</span>
+                      <svg
+                        class="w-3.5 h-3.5"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      >
+                        <circle cx="9" cy="21" r="1"></circle>
+                        <circle cx="20" cy="21" r="1"></circle>
+                        <path
+                          d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"
+                        ></path>
+                      </svg>
+                      <span>${translateText("win_modal.to_steel_shop")}</span>
                     </button>
                   </div>
                 </div>

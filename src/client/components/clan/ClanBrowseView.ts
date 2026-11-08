@@ -158,12 +158,8 @@ export class ClanBrowseView extends LitElement {
       ? Math.ceil(this.browseData.total / this.browseData.limit)
       : 0;
     const pendingTags = new Set(this.myPendingRequests.map((r) => r.tag));
-    const filtered = (this.browseData?.results ?? []).filter(
-      (clan) => !this.myClanRoles.has(clan.tag),
-    );
-    const boostedBlock = (this.browseData?.boostedBlock ?? []).filter(
-      (clan) => !this.myClanRoles.has(clan.tag),
-    );
+    const filtered = this.browseData?.results ?? [];
+    const boostedBlock = this.browseData?.boostedBlock ?? [];
     // A search has no shuffle: the server lists it A–Z unless another sort
     // is picked, so the dropdown shows that instead of "Random".
     const searching = this.searchQuery.length >= 2;
@@ -272,6 +268,7 @@ export class ClanBrowseView extends LitElement {
                 (clan) =>
                   html`<clan-card
                     .clan=${clan}
+                    .clanRole=${this.myClanRoles.get(clan.tag)}
                     source="boosted"
                     ?pending=${pendingTags.has(clan.tag)}
                   ></clan-card>`,
@@ -288,6 +285,7 @@ export class ClanBrowseView extends LitElement {
                 (clan) =>
                   html`<clan-card
                     .clan=${clan}
+                    .clanRole=${this.myClanRoles.get(clan.tag)}
                     ?pending=${pendingTags.has(clan.tag)}
                   ></clan-card>`,
               )}

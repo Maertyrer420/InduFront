@@ -86,6 +86,13 @@ export class ColorPalettePicker extends LitElement {
             <span class="font-semibold text-gray-200"
               >Startfarbe der Nation:</span
             >
+            ${isCustom && this.selectedColor
+              ? html`<span
+                  class="ml-1 px-1.5 py-0.2 rounded text-[10px] font-mono font-bold text-white shadow-sm border border-white/20"
+                  style="background-color: ${this.selectedColor}"
+                  >${this.selectedColor.toUpperCase()}</span
+                >`
+              : null}
           </span>
           <button
             class="text-[10px] text-gray-400 hover:text-white transition-colors underline cursor-pointer"
@@ -129,12 +136,17 @@ export class ColorPalettePicker extends LitElement {
             `;
           })}
 
-          <!-- Custom Color Picker -->
+          <!-- Custom Color Picker (Shows chosen custom color) -->
           <label
-            class="w-6 h-6 rounded-full transition-transform hover:scale-110 cursor-pointer relative shadow-md flex items-center justify-center border border-white/20 bg-gradient-to-br from-pink-500 via-emerald-400 to-cyan-500 overflow-hidden ${isCustom
-              ? "ring-2 ring-white ring-offset-1 ring-offset-surface scale-110"
+            class="w-6 h-6 rounded-full transition-transform hover:scale-110 cursor-pointer relative shadow-md flex items-center justify-center border ${isCustom
+              ? "ring-2 ring-white ring-offset-1 ring-offset-surface scale-110 border-white"
+              : "border-white/20 bg-gradient-to-br from-pink-500 via-emerald-400 to-cyan-500"} overflow-hidden"
+            style="${isCustom && this.selectedColor
+              ? `background-color: ${this.selectedColor};`
               : ""}"
-            title="Eigene Farbe wählen"
+            title="${isCustom
+              ? `Gewählte eigene Farbe: ${this.selectedColor}`
+              : "Eigene Farbe wählen"}"
           >
             <input
               type="color"
@@ -142,15 +154,29 @@ export class ColorPalettePicker extends LitElement {
               .value=${this.selectedColor ?? "#3b7a57"}
               @input=${this.onCustomColorChange}
             />
-            <svg
-              class="w-3.5 h-3.5 text-white drop-shadow pointer-events-none"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2.5"
-            >
-              <path d="M12 5v14M5 12h14" stroke-linecap="round" />
-            </svg>
+            ${isCustom
+              ? html`<svg
+                  class="w-3.5 h-3.5 text-white drop-shadow pointer-events-none"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                >
+                  <path
+                    d="M5 13l4 4L19 7"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>`
+              : html`<svg
+                  class="w-3.5 h-3.5 text-white drop-shadow pointer-events-none"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                >
+                  <path d="M12 5v14M5 12h14" stroke-linecap="round" />
+                </svg>`}
           </label>
         </div>
       </div>

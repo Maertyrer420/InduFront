@@ -1569,13 +1569,13 @@ export class InputHandler {
           case 2:
             return UnitType.CoalMine;
           case 3:
-            return UnitType.OilRig;
-          case 4:
-            return UnitType.UraniumMine;
-          case 5:
             return UnitType.SteelMill;
-          case 6:
+          case 4:
+            return UnitType.OilRig;
+          case 5:
             return UnitType.Refinery;
+          case 6:
+            return UnitType.UraniumMine;
           case 7:
             return UnitType.Centrifuge;
           default:

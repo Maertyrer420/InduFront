@@ -397,7 +397,7 @@ export class UnitDisplay extends LitElement implements Controller {
     ];
   }
 
-  // Row 2: Mining & Refining
+  // Row 2: Mining & Refining (Production Chains: Iron+Coal->Steel, Oil->Fuel, Uranium+Coal->Enriched Uranium)
   public get economyUnits(): UnitConfigItem[] {
     return [
       {
@@ -419,31 +419,22 @@ export class UnitDisplay extends LitElement implements Controller {
         structureKey: "coal_mine",
       },
       {
-        type: UnitType.OilRig,
-        icon: oilRigIcon,
-        name: "Ölturm / Bohrinsel",
-        description: "Fördert Rohöl (Oil) auf Land- oder Offshore-Feldern.",
-        yieldInfo: "+1.8 Öl / Sekunde",
-        defaultHotkey: "Shift+3",
-        structureKey: "oil_rig",
-      },
-      {
-        type: UnitType.UraniumMine,
-        icon: uraniumMineIcon,
-        name: "Uranmine",
-        description: "Fördert seltenes Uranerz (U) für die Nuklearindustrie.",
-        yieldInfo: "+0.6 Uran / Sekunde",
-        defaultHotkey: "Shift+4",
-        structureKey: "uranium_mine",
-      },
-      {
         type: UnitType.SteelMill,
         icon: steelMillIcon,
         name: "Stahlwerk",
         description: "Schmilzt Eisenerz und Kohle zu Panzerstahl.",
         yieldInfo: "Rezept: 2 Fe + 1 C ➔ 1 Stahl",
-        defaultHotkey: "Shift+5",
+        defaultHotkey: "Shift+3",
         structureKey: "steel_mill",
+      },
+      {
+        type: UnitType.OilRig,
+        icon: oilRigIcon,
+        name: "Ölturm / Bohrinsel",
+        description: "Fördert Rohöl (Oil) auf Land- oder Offshore-Feldern.",
+        yieldInfo: "+1.8 Öl / Sekunde",
+        defaultHotkey: "Shift+4",
+        structureKey: "oil_rig",
       },
       {
         type: UnitType.Refinery,
@@ -451,8 +442,17 @@ export class UnitDisplay extends LitElement implements Controller {
         name: "Raffinerie",
         description: "Raffiniert Rohöl zu Treibstoff für Schiffe & Flotte.",
         yieldInfo: "Rezept: 2 Öl ➔ 1 Treibstoff",
-        defaultHotkey: "Shift+6",
+        defaultHotkey: "Shift+5",
         structureKey: "refinery",
+      },
+      {
+        type: UnitType.UraniumMine,
+        icon: uraniumMineIcon,
+        name: "Uranmine",
+        description: "Fördert seltenes Uranerz (U) für die Nuklearindustrie.",
+        yieldInfo: "+0.6 Uran / Sekunde",
+        defaultHotkey: "Shift+6",
+        structureKey: "uranium_mine",
       },
       {
         type: UnitType.Centrifuge,
@@ -817,17 +817,26 @@ export class UnitDisplay extends LitElement implements Controller {
     const curGold = player?.gold() ?? 0n;
     const missingGold = curGold < goldCost;
 
+    const unitTypeKey = "unit_type." + structureKey;
+    const translatedName = translateText(unitTypeKey);
     const displayName =
-      customName ??
-      (hasOwnTranslation("unit_type." + structureKey)
-        ? translateText("unit_type." + structureKey)
-        : unitType);
+      translatedName !== unitTypeKey
+        ? translatedName
+        : (customName ?? unitType);
 
+    const descKey = "build_menu.desc." + structureKey;
+    const translatedDesc = translateText(descKey);
     const displayDesc =
-      customDesc ??
-      (hasOwnTranslation("build_menu.desc." + structureKey)
-        ? translateText("build_menu.desc." + structureKey)
-        : "");
+      translatedDesc !== descKey ? translatedDesc : (customDesc ?? "");
+
+    const yieldKey = "unit_yield." + structureKey;
+    const translatedYield = translateText(yieldKey);
+    const resolvedYield =
+      translatedYield !== yieldKey ? translatedYield : (yieldInfo ?? "");
+
+    const isEn = (document.documentElement.lang || navigator.language || "en")
+      .toLowerCase()
+      .startsWith("en");
 
     const canBuildNow = this.canBuild(unitType);
 
@@ -857,11 +866,11 @@ export class UnitDisplay extends LitElement implements Controller {
                 <div class="text-[11px] text-gray-300 mb-1.5 leading-tight">
                   ${displayDesc}
                 </div>
-                ${yieldInfo
+                ${resolvedYield
                   ? html`<div
                       class="text-[11px] font-semibold text-amber-300 bg-amber-950/40 border border-amber-800/40 rounded px-1.5 py-0.5 mb-1.5"
                     >
-                      ${yieldInfo}
+                      ${resolvedYield}
                     </div>`
                   : null}
 
@@ -870,19 +879,22 @@ export class UnitDisplay extends LitElement implements Controller {
                   ? html`<div
                       class="text-[11px] font-bold text-red-400 bg-red-950/50 border border-red-800/40 rounded px-1.5 py-0.5 mb-1"
                     >
-                      [Voraussetzung: Raketensilo]
+                      [${isEn
+                        ? "Requirement: Missile Silo"
+                        : "Voraussetzung: Raketensilo"}]
                     </div>`
                   : null}
                 ${missingUranium
                   ? html`<div
                         class="text-[11px] font-bold text-red-400 bg-red-950/50 border border-red-800/40 rounded px-1.5 py-0.5 mb-1"
                       >
-                        Spaltmaterial fehlt: ${costs.enrichedUranium} U_ref
-                        benötigt (Vorhanden: ${curUranium})
+                        ${translateText("economy.fissile_missing", {
+                          cost: costs.enrichedUranium,
+                          current: curUranium,
+                        })}
                       </div>
                       <div class="text-[10px] text-amber-400 mb-1">
-                        Fördere Uran mit Uranminen & reichere es in Zentrifugen
-                        an!
+                        ${translateText("economy.fissile_hint")}
                       </div>`
                   : null}
                 ${(unitType === UnitType.Warship ||
@@ -892,7 +904,9 @@ export class UnitDisplay extends LitElement implements Controller {
                   ? html`<div
                       class="text-[11px] font-bold text-red-400 bg-red-950/50 border border-red-800/40 rounded px-1.5 py-0.5 mb-1"
                     >
-                      [Voraussetzung: Marinehafen]
+                      [${isEn
+                        ? "Requirement: Naval Port"
+                        : "Voraussetzung: Marinehafen"}]
                     </div>`
                   : null}
 
@@ -903,7 +917,7 @@ export class UnitDisplay extends LitElement implements Controller {
                   <div
                     class="text-[10px] text-gray-400 uppercase tracking-wider font-semibold"
                   >
-                    Baukosten
+                    ${translateText("economy.construction_cost")}
                   </div>
                   <div
                     class="flex items-center justify-center gap-2 font-medium flex-wrap"
@@ -912,10 +926,13 @@ export class UnitDisplay extends LitElement implements Controller {
                       class="flex items-center gap-1 ${missingGold
                         ? "text-red-400 font-bold bg-red-950/40"
                         : "text-yellow-300 bg-yellow-950/40"} px-1.5 py-0.5 rounded border border-white/10"
-                      title="Gold"
+                      title=${translateText("economy.gold")}
                     >
                       <img src=${goldCoinIcon} width="13" height="13" />
-                      <span>${renderNumber(goldCost)} Gold</span>
+                      <span
+                        >${renderNumber(goldCost)}
+                        ${translateText("economy.gold")}</span
+                      >
                     </div>
                     ${costs.steel > 0
                       ? html`<div
@@ -923,10 +940,13 @@ export class UnitDisplay extends LitElement implements Controller {
                           costs.steel
                             ? "text-red-400 font-bold bg-red-950/40"
                             : "text-cyan-300 bg-cyan-950/40"} px-1.5 py-0.5 rounded border border-white/10"
-                          title="Stahl"
+                          title=${translateText("economy.steel")}
                         >
                           <img src=${steelMillIcon} width="13" height="13" />
-                          <span>${costs.steel} Stahl</span>
+                          <span
+                            >${costs.steel}
+                            ${translateText("economy.steel")}</span
+                          >
                         </div>`
                       : null}
                     ${costs.fuel > 0
@@ -934,10 +954,13 @@ export class UnitDisplay extends LitElement implements Controller {
                           class="flex items-center gap-1 ${curFuel < costs.fuel
                             ? "text-red-400 font-bold bg-red-950/40"
                             : "text-orange-400 bg-orange-950/40"} px-1.5 py-0.5 rounded border border-white/10"
-                          title="Treibstoff"
+                          title=${translateText("economy.fuel")}
                         >
                           <img src=${refineryIcon} width="13" height="13" />
-                          <span>${costs.fuel} Fuel</span>
+                          <span
+                            >${costs.fuel}
+                            ${translateText("economy.fuel")}</span
+                          >
                         </div>`
                       : null}
                     ${costs.enrichedUranium > 0
@@ -945,7 +968,7 @@ export class UnitDisplay extends LitElement implements Controller {
                           class="flex items-center gap-1 ${missingUranium
                             ? "text-red-400 font-bold bg-red-950/40"
                             : "text-lime-300 bg-lime-950/40"} px-1.5 py-0.5 rounded border border-white/10"
-                          title="Spaltmaterial"
+                          title="U_ref"
                         >
                           <img src=${centrifugeIcon} width="13" height="13" />
                           <span>${costs.enrichedUranium} U_ref</span>
@@ -1028,14 +1051,5 @@ export class UnitDisplay extends LitElement implements Controller {
         </div>
       </div>
     `;
-  }
-}
-
-function hasOwnTranslation(arg0: string) {
-  try {
-    const t = translateText(arg0);
-    return t !== arg0;
-  } catch {
-    return false;
   }
 }

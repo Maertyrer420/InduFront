@@ -37,6 +37,9 @@ const emptyLadders = (): Record<PlayerLadder, LadderState> => ({
 });
 
 export function renderTierBadge(tier?: string, elo = 1000, rank = 999) {
+  const isEn = (document.documentElement.lang || navigator.language || "en")
+    .toLowerCase()
+    .startsWith("en");
   const t =
     tier ??
     (rank <= 10 && rank > 0
@@ -48,16 +51,24 @@ export function renderTierBadge(tier?: string, elo = 1000, rank = 999) {
           : elo >= 1800
             ? "Master"
             : elo >= 1600
-              ? "Diamant"
+              ? isEn
+                ? "Diamond"
+                : "Diamant"
               : elo >= 1400
-                ? "Platin"
+                ? isEn
+                  ? "Platinum"
+                  : "Platin"
                 : elo >= 1200
                   ? "Gold"
                   : elo >= 1000
-                    ? "Silber"
+                    ? isEn
+                      ? "Silver"
+                      : "Silber"
                     : elo >= 800
                       ? "Bronze"
-                      : "Eisen");
+                      : isEn
+                        ? "Iron"
+                        : "Eisen");
 
   let color = "bg-slate-800/60 text-slate-400 border-slate-700/40"; // Eisen / Wood
   if (t === "Bronze")
@@ -656,7 +667,15 @@ export class LeaderboardPlayerList extends LitElement {
                   </th>
                   <th class="py-4 px-4 text-right font-bold">
                     ${this.rankedType === "qp"
-                      ? "QP Punkte"
+                      ? (
+                          document.documentElement.lang ||
+                          navigator.language ||
+                          "en"
+                        )
+                          .toLowerCase()
+                          .startsWith("en")
+                        ? "QP Points"
+                        : "QP Punkte"
                       : translateText("leaderboard_modal.elo")}
                   </th>
                   <th class="py-4 px-4 text-right font-bold">

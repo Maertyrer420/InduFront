@@ -5,10 +5,12 @@ import {
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { fetchClanLeaderboard } from "../../ClanApi";
+import { ClanLevelService } from "../../ClanLevelService";
 import { translateText } from "../../Utils";
 
 export type ClanSortColumn =
   | "rank"
+  | "level"
   | "elo"
   | "games"
   | "winScore"
@@ -79,6 +81,10 @@ export class LeaderboardClanTable extends LitElement {
     sorted.sort((a, b) => {
       let aVal: number, bVal: number;
       switch (this.sortBy) {
+        case "level":
+          aVal = ClanLevelService.getClanLevelData(a.clanTag).level;
+          bVal = ClanLevelService.getClanLevelData(b.clanTag).level;
+          break;
         case "elo":
           // Unrated clans sort last either way.
           if (a.elo === null || b.elo === null) {
@@ -214,7 +220,8 @@ export class LeaderboardClanTable extends LitElement {
                 <col style="width: 4rem" />
                 <col style="width: 5rem" />
                 <col style="width: 5rem" />
-                <col style="width: 8rem" />
+                <col style="width: 5rem" />
+                <col style="width: 7rem" />
                 <col style="width: 6rem" />
                 <col style="width: 6rem" />
                 <col style="width: 6rem" />
@@ -228,6 +235,26 @@ export class LeaderboardClanTable extends LitElement {
                   </th>
                   <th class="py-4 px-4 text-left font-bold">
                     ${translateText("leaderboard_modal.clan")}
+                  </th>
+                  <th
+                    class="py-4 px-4 text-center font-bold cursor-pointer hover:text-white/60 transition-colors"
+                  >
+                    <button
+                      class="whitespace-nowrap uppercase"
+                      @click=${() => this.handleSort("level")}
+                      aria-sort=${this.sortBy === "level"
+                        ? this.sortOrder === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"}
+                    >
+                      ${translateText("clan_modal.clan_level_title") || "Stufe"}
+                      ${this.sortBy === "level"
+                        ? this.sortOrder === "asc"
+                          ? "↑"
+                          : "↓"
+                        : "↕"}
+                    </button>
                   </th>
                   <th
                     class="py-4 px-4 text-right font-bold cursor-pointer hover:text-white/60 transition-colors"
@@ -348,14 +375,7 @@ export class LeaderboardClanTable extends LitElement {
                         : displayRank === 3
                           ? "text-amber-600 bg-amber-600/10 ring-1 ring-amber-600/20"
                           : "text-white/40 bg-white/5";
-                  const rankIcon =
-                    displayRank === 1
-                      ? "👑"
-                      : displayRank === 2
-                        ? "🥈"
-                        : displayRank === 3
-                          ? "🥉"
-                          : String(displayRank);
+                  const rankIcon = String(displayRank);
 
                   return html`
                     <tr
@@ -363,7 +383,7 @@ export class LeaderboardClanTable extends LitElement {
                     >
                       <td class="py-3 px-4 text-center">
                         <div
-                          class="w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono text-lg ${rankColor}"
+                          class="w-10 h-10 mx-auto flex items-center justify-center rounded-lg font-bold font-mono text-base ${rankColor}"
                         >
                           ${rankIcon}
                         </div>
@@ -374,6 +394,25 @@ export class LeaderboardClanTable extends LitElement {
                         >
                           ${clan.clanTag}
                         </div>
+                      </td>
+                      <td class="py-3 px-4 text-center">
+                        <span
+                          class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold font-mono bg-amber-500/15 text-amber-300 border border-amber-500/30"
+                        >
+                          <svg
+                            class="w-3 h-3 text-amber-400"
+                            viewBox="0 0 24 24"
+                            fill="currentColor"
+                          >
+                            <path
+                              d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                            />
+                          </svg>
+                          <span
+                            >${ClanLevelService.getClanLevelData(clan.clanTag)
+                              .level}</span
+                          >
+                        </span>
                       </td>
                       <td
                         class="py-3 px-4 text-right font-mono font-bold text-white"

@@ -232,19 +232,36 @@ export class SendResourceModal extends LitElement {
 
   private i18n = {
     title: (name: string) => {
-      const resourceNames: Record<string, string> = {
-        troops: "Truppen",
-        gold: "Gold",
-        ironOre: "Eisenerz",
-        coal: "Kohle",
-        crudeOil: "Rohöl",
-        uraniumOre: "Uranerz",
-        steel: "Stahl",
-        fuel: "Treibstoff",
-        enrichedUranium: "Spaltmaterial",
-      };
+      const isEn = (document.documentElement.lang || navigator.language || "en")
+        .toLowerCase()
+        .startsWith("en");
+      const resourceNames: Record<string, string> = isEn
+        ? {
+            troops: "Troops",
+            gold: "Gold",
+            ironOre: "Iron Ore",
+            coal: "Coal",
+            crudeOil: "Crude Oil",
+            uraniumOre: "Uranium Ore",
+            steel: "Steel",
+            fuel: "Fuel",
+            enrichedUranium: "Fissile Material",
+          }
+        : {
+            troops: "Truppen",
+            gold: "Gold",
+            ironOre: "Eisenerz",
+            coal: "Kohle",
+            crudeOil: "Rohöl",
+            uraniumOre: "Uranerz",
+            steel: "Stahl",
+            fuel: "Treibstoff",
+            enrichedUranium: "Spaltmaterial",
+          };
       const resName = resourceNames[this.mode] ?? this.mode;
-      return `${resName} senden an ${name}`;
+      return isEn
+        ? `Send ${resName} to ${name}`
+        : `${resName} senden an ${name}`;
     },
 
     availableChip: () => translateText("common.available"),
@@ -311,17 +328,32 @@ export class SendResourceModal extends LitElement {
   }
 
   private renderResourceSelector() {
-    const options: Array<{ key: string; label: string }> = [
-      { key: "troops", label: "Truppen" },
-      { key: "gold", label: "Gold" },
-      { key: "ironOre", label: "Eisen" },
-      { key: "coal", label: "Kohle" },
-      { key: "crudeOil", label: "Rohöl" },
-      { key: "uraniumOre", label: "Uran" },
-      { key: "steel", label: "Stahl" },
-      { key: "fuel", label: "Treibstoff" },
-      { key: "enrichedUranium", label: "Spaltmaterial" },
-    ];
+    const isEn = (document.documentElement.lang || navigator.language || "en")
+      .toLowerCase()
+      .startsWith("en");
+    const options: Array<{ key: string; label: string }> = isEn
+      ? [
+          { key: "troops", label: "Troops" },
+          { key: "gold", label: "Gold" },
+          { key: "ironOre", label: "Iron" },
+          { key: "coal", label: "Coal" },
+          { key: "crudeOil", label: "Oil" },
+          { key: "uraniumOre", label: "Uranium" },
+          { key: "steel", label: "Steel" },
+          { key: "fuel", label: "Fuel" },
+          { key: "enrichedUranium", label: "Enriched U" },
+        ]
+      : [
+          { key: "troops", label: "Truppen" },
+          { key: "gold", label: "Gold" },
+          { key: "ironOre", label: "Eisen" },
+          { key: "coal", label: "Kohle" },
+          { key: "crudeOil", label: "Rohöl" },
+          { key: "uraniumOre", label: "Uran" },
+          { key: "steel", label: "Stahl" },
+          { key: "fuel", label: "Treibstoff" },
+          { key: "enrichedUranium", label: "Spaltmaterial" },
+        ];
 
     return html`
       <div class="mb-3 flex items-center gap-1.5 overflow-x-auto pb-1">

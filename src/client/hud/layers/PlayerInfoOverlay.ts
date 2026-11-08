@@ -753,62 +753,62 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
               player,
               UnitType.Port,
               portIcon,
-              "Marinehäfen",
+              translateText("unit_type.port"),
             )}
             ${this.displayUnitCount(
               player,
               UnitType.IronMine,
               ironMineIcon,
-              "Eisenminen",
+              translateText("unit_type.iron_mine"),
               true,
             )}
             ${this.displayUnitCount(
               player,
               UnitType.CoalMine,
               coalMineIcon,
-              "Kohleminen",
+              translateText("unit_type.coal_mine"),
               true,
             )}
             ${this.displayUnitCount(
               player,
               UnitType.OilRig,
               oilRigIcon,
-              "Öltürme",
+              translateText("unit_type.oil_rig"),
               true,
             )}
             ${this.displayUnitCount(
               player,
               UnitType.UraniumMine,
               uraniumMineIcon,
-              "Uranminen",
+              translateText("unit_type.uranium_mine"),
               true,
             )}
             ${this.displayUnitCount(
               player,
               UnitType.SteelMill,
               steelMillIcon,
-              "Stahlwerke",
+              translateText("unit_type.steel_mill"),
               true,
             )}
             ${this.displayUnitCount(
               player,
               UnitType.Refinery,
               refineryIcon,
-              "Raffinerien",
+              translateText("unit_type.refinery"),
               true,
             )}
             ${this.displayUnitCount(
               player,
               UnitType.Centrifuge,
               centrifugeIcon,
-              "Zentrifugen",
+              translateText("unit_type.centrifuge"),
               true,
             )}
             ${this.displayUnitCount(
               player,
               UnitType.Bunker,
               bunkerIcon,
-              "Bunker",
+              translateText("unit_type.bunker"),
               true,
             )}
             ${this.displayUnitCount(

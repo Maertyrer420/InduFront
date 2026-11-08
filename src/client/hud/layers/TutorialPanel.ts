@@ -114,10 +114,10 @@ const HOTKEY_FALLBACKS: Record<string, string> = {
   buildResidential: "8",
   buildIronMine: "Shift+1",
   buildCoalMine: "Shift+2",
-  buildOilRig: "Shift+3",
-  buildUraniumMine: "Shift+4",
-  buildSteelMill: "Shift+5",
-  buildRefinery: "Shift+6",
+  buildSteelMill: "Shift+3",
+  buildOilRig: "Shift+4",
+  buildRefinery: "Shift+5",
+  buildUraniumMine: "Shift+6",
   buildCentrifuge: "Shift+7",
 };
 
