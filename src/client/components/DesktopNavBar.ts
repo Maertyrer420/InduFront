@@ -217,6 +217,7 @@ export class DesktopNavBar extends LitElement {
         <button
           class="nav-menu-item text-white/70 hover:text-malibu-blue font-medium tracking-wider uppercase cursor-pointer transition-colors [&.active]:text-malibu-blue flex items-center gap-1.5"
           data-page="page-inventory"
+          data-i18n="main.inventory"
         >
           <svg
             class="w-4 h-4 shrink-0"

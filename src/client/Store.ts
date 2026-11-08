@@ -104,6 +104,8 @@ export class StoreModal extends BaseModal {
   @state() private authSettled = false;
   @state() private steelCategoryFilter: string = "all";
   @state() private steelSearch = "";
+  @state() private flagPage = 1;
+  private static readonly FLAGS_PER_PAGE = 36;
   private cosmeticsSubTab: CosmeticsSubTab = "patterns";
   // Item the URL asked for (`#modal=store&item=<key>`). Held until its group
   // is visible, then inspected so the store opens on that item.
@@ -133,33 +135,11 @@ export class StoreModal extends BaseModal {
       // Affiliate mode: hide tabs, show only items associated with the code.
       return {};
     }
-    const userTabs = [
-      { key: "steel_shop", label: "Stahl-Shop" },
-      { key: "tribes", label: translateText("store.tribes") },
-    ];
-    const legacyCandidates = [
-      "packs",
-      "subscriptions",
-      "bundles",
-      "cosmetics",
-      "effects",
-    ];
-    const activeLegacy = legacyCandidates.filter(
-      (k) => this.activeTab === k || this.requestedLegacyTab === k,
-    );
-    if (activeLegacy.length > 0) {
-      return {
-        tabs: [
-          ...userTabs,
-          ...activeLegacy.map((key) => ({
-            key,
-            label: translateText(`store.${key}`) || key,
-          })),
-        ],
-      };
-    }
     return {
-      tabs: userTabs,
+      tabs: [
+        { key: "steel_shop", label: "Stahl-Shop" },
+        { key: "tribes", label: translateText("store.tribes") },
+      ],
     };
   }
 
@@ -777,9 +757,13 @@ export class StoreModal extends BaseModal {
 
     const isFlags = this.steelCategoryFilter === "flags";
     const totalCount = filtered.length;
-    const displayLimit = isFlags && !searchLower ? 48 : 120;
-    const isLimited = totalCount > displayLimit;
-    const items = isLimited ? filtered.slice(0, displayLimit) : filtered;
+    const pageSize = StoreModal.FLAGS_PER_PAGE;
+    const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+    const currentPage = Math.min(Math.max(1, this.flagPage), totalPages);
+    const startIndex = (currentPage - 1) * pageSize;
+    const items = isFlags
+      ? filtered.slice(startIndex, startIndex + pageSize)
+      : filtered;
 
     return html`
       <div class="flex flex-col gap-4 p-4 sm:p-6 max-w-5xl mx-auto w-full">
@@ -839,6 +823,7 @@ export class StoreModal extends BaseModal {
                     : "bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white"}"
                   @click=${() => {
                     this.steelCategoryFilter = cat.key;
+                    this.flagPage = 1;
                     this.requestUpdate();
                   }}
                 >
@@ -854,6 +839,7 @@ export class StoreModal extends BaseModal {
               .value=${this.steelSearch}
               @input=${(e: Event) => {
                 this.steelSearch = (e.target as HTMLInputElement).value;
+                this.flagPage = 1;
                 this.requestUpdate();
               }}
               class="w-full sm:w-56 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-white/30 focus:outline-none focus:border-cyan-400"
@@ -864,6 +850,7 @@ export class StoreModal extends BaseModal {
                     type="button"
                     @click=${() => {
                       this.steelSearch = "";
+                      this.flagPage = 1;
                       this.requestUpdate();
                     }}
                     class="px-2 py-1 text-xs font-bold rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
@@ -885,11 +872,40 @@ export class StoreModal extends BaseModal {
                   Regionen) kosten <strong>5.000 Stahl</strong> und werden
                   dauerhaft im Inventar freigeschaltet.</span
                 >
-                ${isLimited
-                  ? html`<span class="text-white/50 text-[11px] font-mono"
-                      >Zeige ${displayLimit} von ${totalCount} Flaggen</span
-                    >`
-                  : ""}
+                <span class="text-white/60 text-xs font-mono"
+                  >Insgesamt ${totalCount} Spezial-Flaggen</span
+                >
+              </div>
+
+              <!-- Top Pagination Controls -->
+              <div
+                class="flex items-center justify-between gap-2 p-3 bg-white/5 border border-white/10 rounded-xl text-xs text-white"
+              >
+                <button
+                  type="button"
+                  ?disabled=${currentPage <= 1}
+                  @click=${() => {
+                    this.flagPage = Math.max(1, currentPage - 1);
+                    this.requestUpdate();
+                  }}
+                  class="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed font-bold transition-colors cursor-pointer"
+                >
+                  ‹ Vorherige
+                </button>
+                <div class="font-bold text-cyan-300">
+                  Seite ${currentPage} von ${totalPages} <span class="hidden sm:inline text-white/50">(Zeige ${startIndex + 1}–${Math.min(startIndex + pageSize, totalCount)} von ${totalCount})</span>
+                </div>
+                <button
+                  type="button"
+                  ?disabled=${currentPage >= totalPages}
+                  @click=${() => {
+                    this.flagPage = Math.min(totalPages, currentPage + 1);
+                    this.requestUpdate();
+                  }}
+                  class="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed font-bold transition-colors cursor-pointer"
+                >
+                  Nächste ›
+                </button>
               </div>
             `
           : ""}
@@ -1000,6 +1016,40 @@ export class StoreModal extends BaseModal {
             `;
           })}
         </div>
+
+        ${isFlags && totalPages > 1
+          ? html`
+              <div
+                class="flex items-center justify-between gap-2 p-3 bg-white/5 border border-white/10 rounded-xl text-xs text-white"
+              >
+                <button
+                  type="button"
+                  ?disabled=${currentPage <= 1}
+                  @click=${() => {
+                    this.flagPage = Math.max(1, currentPage - 1);
+                    this.requestUpdate();
+                  }}
+                  class="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed font-bold transition-colors cursor-pointer"
+                >
+                  ‹ Vorherige
+                </button>
+                <div class="font-bold text-cyan-300">
+                  Seite ${currentPage} von ${totalPages}
+                </div>
+                <button
+                  type="button"
+                  ?disabled=${currentPage >= totalPages}
+                  @click=${() => {
+                    this.flagPage = Math.min(totalPages, currentPage + 1);
+                    this.requestUpdate();
+                  }}
+                  class="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed font-bold transition-colors cursor-pointer"
+                >
+                  Nächste ›
+                </button>
+              </div>
+            `
+          : ""}
       </div>
     `;
   }

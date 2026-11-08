@@ -385,3 +385,5 @@ export class SteelStoreService {
     this.notify();
   }
 }
+
+export const SteelStore = SteelStoreService;

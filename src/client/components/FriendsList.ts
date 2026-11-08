@@ -75,14 +75,21 @@ export class FriendsList extends LitElement {
         fetchFriendRequests(),
         fetchFriends(1, PAGE_LIMIT),
       ]);
-      if (requests) {
-        this.incoming = requests.incoming;
-        this.outgoing = requests.outgoing;
-      }
       if (firstPage) {
         this.friends = firstPage.results;
         this.friendsTotal = firstPage.total;
         this.friendsPage = firstPage.page;
+      }
+      if (requests) {
+        const friendIdSet = new Set(
+          (this.friends || []).map((f) => f.publicId.toLowerCase()),
+        );
+        this.incoming = requests.incoming.filter(
+          (r) => !friendIdSet.has(r.publicId.toLowerCase()),
+        );
+        this.outgoing = requests.outgoing.filter(
+          (r) => !friendIdSet.has(r.publicId.toLowerCase()),
+        );
       }
     } finally {
       this.loading = false;
@@ -161,8 +168,15 @@ export class FriendsList extends LitElement {
         // never insert `target`, which may not be a publicId.
         const requests = await fetchFriendRequests();
         if (requests) {
-          this.incoming = requests.incoming;
-          this.outgoing = requests.outgoing;
+          const friendIdSet = new Set(
+            (this.friends || []).map((f) => f.publicId.toLowerCase()),
+          );
+          this.incoming = requests.incoming.filter(
+            (r) => !friendIdSet.has(r.publicId.toLowerCase()),
+          );
+          this.outgoing = requests.outgoing.filter(
+            (r) => !friendIdSet.has(r.publicId.toLowerCase()),
+          );
         }
       }
     } finally {

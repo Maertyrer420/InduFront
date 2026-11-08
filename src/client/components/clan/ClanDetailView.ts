@@ -650,7 +650,29 @@ export class ClanDetailView extends LitElement {
   }
 
   private renderMembersList() {
-    const filtered = filterMembersBySearch(this.members, this.memberSearch);
+    let filtered = filterMembersBySearch(this.members, this.memberSearch);
+    if (this.myRole && this.myPublicId) {
+      const myIdLower = this.myPublicId.toLowerCase();
+      const idx = filtered.findIndex(
+        (m) => m.publicId.toLowerCase() === myIdLower,
+      );
+      if (idx > -1) {
+        const [me] = filtered.splice(idx, 1);
+        filtered = [me, ...filtered];
+      } else if (!this.memberSearch) {
+        const storedUsername =
+          localStorage.getItem("username") ??
+          localStorage.getItem("openfront_username") ??
+          this.myPublicId;
+        const myMember: ClanMember = {
+          publicId: this.myPublicId,
+          username: storedUsername,
+          role: this.myRole,
+          joinedAt: new Date().toISOString(),
+        };
+        filtered = [myMember, ...filtered];
+      }
+    }
     const levelSlot = membersHaveLevels(filtered);
     const toggleLabel = translateText(
       this.allStatsExpanded ? "common.collapse_all" : "common.expand_all",

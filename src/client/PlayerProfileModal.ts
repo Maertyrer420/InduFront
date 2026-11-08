@@ -36,7 +36,8 @@ import {
   parsePlayerProfilePath,
   playerProfileUrl,
 } from "./utilities/PlayerProfileUrl";
-import { currentPagePath, translateText } from "./Utils";
+import { currentPagePath, showToast, translateText } from "./Utils";
+import { SteelStoreService, STEEL_CATALOG } from "./SteelStore";
 
 export { playerProfileUrl };
 
@@ -53,6 +54,8 @@ export class PlayerProfileModal extends BaseModal {
   @state() private publicId: string | null = null;
   @state() private username: string | null = null;
   @state() private statsTree: PlayerStatsTree | null = null;
+  @state() private editingBio = false;
+  @state() private bioDraft = "";
   @state() private clans: NonNullable<PlayerProfile["clans"]> = [];
   @state() private displayClanTag: string | null = null;
   // Level / XP, when progression is on and the player has any.
@@ -334,6 +337,7 @@ export class PlayerProfileModal extends BaseModal {
             .provisional=${view.provisional}
             .openKey=${`profile-${this.openCount}`}
           ></profile-card>`}
+      ${this.renderBioAndEquipment(publicId)}
       <profile-share
         class="mb-[18px] block"
         .url=${playerProfileUrl(publicId)}
@@ -342,6 +346,210 @@ export class PlayerProfileModal extends BaseModal {
       <player-stats-tree-view
         .statsTree=${this.statsTree}
       ></player-stats-tree-view>
+    `;
+  }
+
+  private renderBioAndEquipment(publicId: string) {
+    const isOwn = isOwnAccount(publicId);
+    const ownBio =
+      localStorage.getItem("indufront_player_bio") ??
+      localStorage.getItem(`indufront_bio_${publicId}`) ??
+      "";
+    const otherBio = localStorage.getItem(`indufront_bio_${publicId}`) ?? "";
+    const currentBio = isOwn ? ownBio : otherBio;
+
+    const equipped =
+      typeof SteelStoreService?.getEquipped === "function"
+        ? SteelStoreService.getEquipped()
+        : {};
+    const equippedTitle =
+      equipped["titel"] && Array.isArray(STEEL_CATALOG)
+        ? STEEL_CATALOG.find((i) => i.id === equipped["titel"])
+        : null;
+    const equippedBadge =
+      equipped["badges"] && Array.isArray(STEEL_CATALOG)
+        ? STEEL_CATALOG.find((i) => i.id === equipped["badges"])
+        : null;
+    const steelBalance =
+      typeof SteelStoreService?.getBalance === "function"
+        ? SteelStoreService.getBalance()
+        : 0;
+
+    return html`
+      <div
+        class="mb-4 bg-white/5 rounded-xl border border-white/10 p-5 space-y-4"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-2">
+            ${equippedTitle
+              ? html`
+                  <span
+                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-sm"
+                  >
+                    <span>👑</span>
+                    <span>${equippedTitle.name}</span>
+                  </span>
+                `
+              : nothing}
+            ${equippedBadge
+              ? html`
+                  <span
+                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm"
+                  >
+                    <span>🛡️</span>
+                    <span>${equippedBadge.name}</span>
+                  </span>
+                `
+              : nothing}
+            ${!equippedTitle && !equippedBadge
+              ? html`
+                  <span class="text-xs text-white/40 italic"
+                    >Keine Titel oder Abzeichen ausgerüstet</span
+                  >
+                `
+              : nothing}
+          </div>
+          ${isOwn
+            ? html`
+                <div
+                  class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs font-bold text-slate-200"
+                >
+                  <svg
+                    class="w-4 h-4 text-amber-400"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path
+                      d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                    />
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                    <line x1="12" y1="22.08" x2="12" y2="12" />
+                  </svg>
+                  <span
+                    >Stahl:
+                    <strong class="text-amber-300 font-mono"
+                      >${steelBalance.toLocaleString()}</strong
+                    ></span
+                  >
+                </div>
+              `
+            : nothing}
+        </div>
+
+        <div class="border-t border-white/10 pt-3">
+          <div class="flex items-center justify-between mb-2">
+            <span
+              class="text-xs uppercase font-bold text-white/50 tracking-wider flex items-center gap-1.5"
+            >
+              <svg
+                class="w-3.5 h-3.5 text-white/40"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
+              </svg>
+              <span>Biografie</span>
+            </span>
+            ${isOwn && !this.editingBio
+              ? html`
+                  <button
+                    type="button"
+                    @click=${() => {
+                      this.bioDraft = currentBio;
+                      this.editingBio = true;
+                    }}
+                    class="text-xs font-semibold text-malibu-blue hover:text-aquarius cursor-pointer flex items-center gap-1"
+                  >
+                    <svg
+                      class="w-3.5 h-3.5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path d="M12 20h9" />
+                      <path
+                        d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+                      />
+                    </svg>
+                    <span>${currentBio ? "Bearbeiten" : "+ Bio hinzufügen"}</span>
+                  </button>
+                `
+              : nothing}
+          </div>
+
+          ${isOwn && this.editingBio
+            ? html`
+                <div class="space-y-2">
+                  <textarea
+                    maxlength="200"
+                    rows="3"
+                    class="w-full px-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white text-sm placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-malibu-blue"
+                    placeholder="Erzähle kurz etwas über dich... (max. 200 Zeichen)"
+                    .value=${this.bioDraft}
+                    @input=${(e: Event) => {
+                      this.bioDraft = (
+                        e.target as HTMLTextAreaElement
+                      ).value.slice(0, 200);
+                    }}
+                  ></textarea>
+                  <div
+                    class="flex items-center justify-between text-xs text-white/40"
+                  >
+                    <span>${this.bioDraft.length} / 200 Zeichen</span>
+                    <div class="flex gap-2">
+                      <button
+                        type="button"
+                        @click=${() => (this.editingBio = false)}
+                        class="px-3 py-1 rounded bg-white/10 hover:bg-white/20 text-white font-medium cursor-pointer"
+                      >
+                        Abbrechen
+                      </button>
+                      <button
+                        type="button"
+                        @click=${() => {
+                          const trimmed = this.bioDraft.trim().slice(0, 200);
+                          localStorage.setItem("indufront_player_bio", trimmed);
+                          localStorage.setItem(
+                            `indufront_bio_${publicId}`,
+                            trimmed,
+                          );
+                          this.editingBio = false;
+                          showToast("Biografie gespeichert!", "green");
+                        }}
+                        class="px-3 py-1 rounded bg-malibu-blue hover:bg-aquarius text-white font-bold cursor-pointer"
+                      >
+                        Speichern
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `
+            : html`
+                <p
+                  class="text-sm text-white/80 ${currentBio
+                    ? "italic"
+                    : "text-white/40 not-italic"}"
+                >
+                  ${currentBio
+                    ? `"${currentBio}"`
+                    : isOwn
+                      ? "Noch keine Biografie eingetragen. Klicke auf '+ Bio hinzufügen'."
+                      : "Keine Biografie angegeben."}
+                </p>
+              `}
+        </div>
+      </div>
     `;
   }
 

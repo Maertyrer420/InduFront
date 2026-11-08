@@ -391,6 +391,21 @@ export class NavAccountMenu extends LitElement {
 
     const items: MenuItem[] = [];
 
+    if (publicId) {
+      items.push({
+        key: "view-profile",
+        labelKey: "nav_account_menu.view_profile",
+        icon: iconUser,
+        onSelect: () => {
+          document
+            .querySelector<
+              HTMLElement & { open(args?: Record<string, unknown>): void }
+            >("player-profile-modal")
+            ?.open({ publicID: publicId });
+        },
+      });
+    }
+
     // Nothing to share without a publicId (older backend, or a session whose
     // player record hasn't resolved). Not on Poki: the link leads players off
     // Poki.

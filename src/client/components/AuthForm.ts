@@ -1,7 +1,6 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { getApiBase } from "../ApiBase";
-import { googleLogin } from "../Auth";
 
 type Mode = "login" | "register" | "recover" | "recovery_key_created";
 
@@ -51,7 +50,6 @@ export class AuthForm extends LitElement {
   @state() private error = "";
   @state() private successMsg = "";
   @state() private busy = false;
-  @state() private googleAvailable = false;
 
   // Recovery flow states
   @state() private recoveryStep = 1;
@@ -68,12 +66,6 @@ export class AuthForm extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-    fetch(`${getApiBase()}/auth/providers`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((p) => {
-        this.googleAvailable = p?.google === true;
-      })
-      .catch(() => {});
   }
 
   private async submit(e: Event) {
@@ -620,16 +612,6 @@ export class AuthForm extends LitElement {
             ? t("Konto erstellen", "Create account")
             : t("Anmelden", "Sign in")}
         </button>
-
-        ${this.googleAvailable
-          ? html`<button
-              type="button"
-              @click=${() => googleLogin()}
-              class="w-full px-6 py-3 text-sm font-bold rounded-xl bg-white hover:bg-[#f7f8f8] text-[#1f1f1f] border border-[#dadce0]"
-            >
-              ${t("Mit Google anmelden", "Sign in with Google")}
-            </button>`
-          : nothing}
       </form>
     `;
   }

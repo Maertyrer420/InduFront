@@ -17,13 +17,68 @@ import {
 } from "../Api";
 import { fetchCosmetics, InsufficientCurrency } from "../Cosmetics";
 import { showInGameConfirm } from "../InGameModal";
+import { SteelStoreService } from "../SteelStore";
 import { translateText } from "../Utils";
 import { renderLoadingSpinner } from "./BaseModal";
 import "./InsufficientCurrencyDialog";
 import "./PlutoniumIcon";
 import "./TribeStatsView";
 
-const MAX_TRIBE_NAME_LENGTH = 100;
+export interface CommunityTribe {
+  id: string;
+  name: string;
+  creator: string;
+  createdAt: number;
+}
+
+export const COMMUNITY_TRIBES_STORAGE_KEY = "indufront_community_tribes";
+export const TRIBE_NAME_STEEL_PRICE = 1_000_000;
+
+export function getStoredCommunityTribes(): CommunityTribe[] {
+  try {
+    const raw = localStorage.getItem(COMMUNITY_TRIBES_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {
+    /* ignore */
+  }
+  const defaults: CommunityTribe[] = [
+    {
+      id: "tribe_alpha",
+      name: "Eiserne Legion",
+      creator: "KruppStahl",
+      createdAt: Date.now() - 86400000 * 5,
+    },
+    {
+      id: "tribe_beta",
+      name: "Nordfront Pioniere",
+      creator: "GeneralPanzer",
+      createdAt: Date.now() - 86400000 * 3,
+    },
+    {
+      id: "tribe_gamma",
+      name: "Schwerindustrie Kollektiv",
+      creator: "Stahlbaron",
+      createdAt: Date.now() - 86400000 * 1,
+    },
+  ];
+  try {
+    localStorage.setItem(COMMUNITY_TRIBES_STORAGE_KEY, JSON.stringify(defaults));
+  } catch {
+    /* ignore */
+  }
+  return defaults;
+}
+
+export function saveStoredCommunityTribes(tribes: CommunityTribe[]): void {
+  try {
+    localStorage.setItem(COMMUNITY_TRIBES_STORAGE_KEY, JSON.stringify(tribes));
+  } catch {
+    /* ignore */
+  }
+}
 
 // A name goes live in games as soon as it's bought; review happens afterwards
 // and can only take a bad name down. So players only care about two states:
@@ -121,106 +176,64 @@ export class TribesPanel extends LitElement {
     e.preventDefault();
     if (this.purchasing) return;
     const name = this.input?.value.trim() ?? "";
-    if (name.length === 0) {
+    if (name.length < 3) {
       this.notice = {
         kind: "error",
-        text: translateText("store.tribe_name_required"),
+        text: "Der Tribe-Name muss mindestens 3 Zeichen lang sein.",
+      };
+      return;
+    }
+    if (name.length > 30) {
+      this.notice = {
+        kind: "error",
+        text: "Der Tribe-Name darf maximal 30 Zeichen lang sein.",
       };
       return;
     }
 
-    // A charged-back wallet is served as a NEGATIVE balance (the API derives
-    // its own `debt` field as exactly `-hard`), so this is how a player in
-    // debt normally gets here — the 400 branch below only fires when the
-    // chargeback lands mid-session against a stale balance. Catch it before
-    // spending a request on a guaranteed refusal.
-    if (this.hardBalance < 0) {
+    const steelBalance = SteelStoreService.getBalance();
+    if (steelBalance < TRIBE_NAME_STEEL_PRICE) {
       this.notice = {
         kind: "error",
-        text: this.debtText(-this.hardBalance),
+        text: `Nicht genug Stahl! Du benötigst 1.000.000 Stahl (dein Guthaben: ${steelBalance.toLocaleString()} Stahl).`,
       };
       return;
     }
 
     this.purchasing = true;
     this.notice = null;
-    const result = await purchaseTribeName(name);
-    this.purchasing = false;
 
-    if (result.ok) {
+    try {
+      SteelStoreService.setBalance(steelBalance - TRIBE_NAME_STEEL_PRICE);
+
+      const community = getStoredCommunityTribes();
+      const creator =
+        this.userMeResponse !== false
+          ? (this.userMeResponse.player.username ??
+            this.userMeResponse.player.publicId)
+          : (localStorage.getItem("username") ?? "Rekrut");
+
+      const newTribe: CommunityTribe = {
+        id: `tribe_${Date.now()}`,
+        name,
+        creator,
+        createdAt: Date.now(),
+      };
+      community.unshift(newTribe);
+      saveStoredCommunityTribes(community);
+
       if (this.input) this.input.value = "";
       this.notice = {
         kind: "success",
-        text: translateText("store.tribe_purchase_live", {
-          name: result.data.displayName,
-        }),
+        text: `Tribe "${name}" erfolgreich für 1.000.000 Stahl registriert! Er ist nun permanent in der Bot-Rotation aller Spiele verfügbar.`,
       };
+
+      void purchaseTribeName(name);
       await this.refreshAfterPurchase();
-      return;
+    } finally {
+      this.purchasing = false;
+      this.requestUpdate();
     }
-    if (result.code === "debt") {
-      // A refund or chargeback left the wallet negative. Topping up is not
-      // the remedy and the top-up dialog would say the wrong thing, so state
-      // the debt instead — it settles automatically out of the next credit.
-      this.notice = {
-        kind: "error",
-        text: translateText("store.pack_debt", { debt: result.debt }),
-      };
-      await this.refreshAfterPurchase();
-      return;
-    }
-    if (result.code === "insufficient_balance") {
-      // The balance moved under us (another tab, another purchase) — refresh
-      // it and offer the top-up path, as the boost handler does.
-      const fresh = await this.refreshAfterPurchase();
-      const price = this.price;
-      // Two ways to have no honest shortfall to quote: no price (cosmetics.json
-      // has no tribeNames block) and no refreshed balance (the refetch failed,
-      // so the real balance is unknown — quoting the full price as the
-      // shortfall would be a guess wearing a number).
-      if (price === null || fresh === false) {
-        this.notice = {
-          kind: "error",
-          text: translateText("store.purchase_failed"),
-        };
-        return;
-      }
-      const balance = TribesPanel.hardBalanceOf(fresh);
-      const outcome = TribesPanel.balanceOutcome(balance, price);
-      if (outcome !== "shortfall") {
-        this.notice = {
-          kind: "error",
-          text:
-            outcome === "debt"
-              ? this.debtText(-balance)
-              : translateText("store.purchase_failed"),
-        };
-        return;
-      }
-      this.showInsufficient(name, price, balance);
-      return;
-    }
-    if (result.code === "duplicate") {
-      this.notice = {
-        kind: "error",
-        text: translateText("store.tribe_duplicate"),
-      };
-      return;
-    }
-    if (result.code === "rate_limited") {
-      const secs = result.retryAfterSeconds;
-      // The server always sends Retry-After; if it's somehow missing, the
-      // generic failure message below covers it.
-      this.notice = {
-        kind: "error",
-        text:
-          secs && secs > 0
-            ? translateText("store.tribe_rate_limited", { seconds: secs })
-            : translateText("store.purchase_failed"),
-      };
-      return;
-    }
-    this.notice = { kind: "error", text: TribesPanel.refusalText(result) };
   };
 
   // A purchase spends plutonium and adds a pending name, so refresh both the
@@ -431,16 +444,60 @@ export class TribesPanel extends LitElement {
   }
 
   private renderPurchaseCard(): TemplateResult {
-    const price = this.price;
+    const steelBalance = SteelStoreService.getBalance();
+    const canAfford = steelBalance >= TRIBE_NAME_STEEL_PRICE;
+
     return html`<section
-      class="bg-surface rounded-xl border border-white/10 p-6 flex flex-col gap-3"
+      class="bg-surface rounded-xl border border-white/10 p-5 sm:p-6 flex flex-col gap-4 shadow-lg"
     >
-      <h3 class="text-lg font-bold text-white">
-        ${translateText("store.tribes_purchase_heading")}
-      </h3>
-      <p class="text-white/60 text-sm leading-relaxed">
-        ${translateText("store.tribes_purchase_description")}
-      </p>
+      <!-- Warning Banner -->
+      <div
+        class="p-3.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-200 text-xs flex items-start gap-3"
+      >
+        <svg
+          class="w-5 h-5 text-amber-400 shrink-0 mt-0.5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"
+          />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
+        <div class="space-y-0.5">
+          <strong class="font-bold text-amber-300 block"
+            >Inhalts-Richtlinie & Verhaltensregeln:</strong
+          >
+          <p class="leading-relaxed text-amber-200/90">
+            Namen mit unangemessenen, beleidigenden, diskriminierenden oder
+            anstößigen Begriffen werden ohne Rückerstattung und ohne Vorwarnung
+            dauerhaft gelöscht!
+          </p>
+        </div>
+      </div>
+
+      <div
+        class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2"
+      >
+        <div>
+          <h3 class="text-lg font-bold text-white">
+            Permanenten Bot-Tribe-Namen erstellen
+          </h3>
+          <p class="text-white/60 text-xs sm:text-sm mt-0.5">
+            Für <strong>1.000.000 Stahl</strong> wird dein Wunschname dauerhaft
+            registriert und von Bots in Matches getragen.
+          </p>
+        </div>
+        <div
+          class="px-3 py-1 rounded bg-black/40 border border-cyan-400/30 text-cyan-300 font-bold text-xs shrink-0"
+        >
+          Guthaben: ${steelBalance.toLocaleString()} Stahl
+        </div>
+      </div>
+
       <form class="flex flex-col sm:flex-row gap-2" @submit=${this.submit}>
         <label for="tribe-name-input" class="sr-only"
           >${translateText("store.tribe_name_placeholder")}</label
@@ -448,34 +505,83 @@ export class TribesPanel extends LitElement {
         <input
           id="tribe-name-input"
           type="text"
-          maxlength=${MAX_TRIBE_NAME_LENGTH}
-          placeholder=${translateText("store.tribe_name_placeholder")}
-          class="flex-1 min-w-0 bg-black/30 border border-white/10 rounded px-3 py-2 text-white outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/40"
+          maxlength="30"
+          placeholder="Tribe-Name eingeben (3-30 Zeichen)..."
+          class="flex-1 min-w-0 bg-black/30 border border-white/10 rounded-lg px-3.5 py-2.5 text-sm text-white placeholder-white/30 outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/40"
           ?disabled=${this.purchasing}
         />
         <button
           type="submit"
-          class="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded px-4 py-2 whitespace-nowrap transition-colors cursor-pointer"
-          ?disabled=${this.purchasing || price === null}
+          class="flex items-center justify-center gap-2 font-bold rounded-lg px-5 py-2.5 text-sm whitespace-nowrap transition-colors cursor-pointer shadow-md ${canAfford
+            ? "bg-cyan-600 hover:bg-cyan-500 text-white"
+            : "bg-gray-800 text-gray-400 border border-gray-700 cursor-not-allowed"}"
+          ?disabled=${this.purchasing || !canAfford}
         >
-          ${translateText("store.purchase_tribe_button")}
-          ${price !== null
-            ? html`<span class="flex items-center gap-1">
-                <plutonium-icon .size=${18}></plutonium-icon>${price}
-              </span>`
-            : ""}
+          ${this.purchasing
+            ? "Wird gekauft..."
+            : canAfford
+              ? "Für 1.000.000 Stahl kaufen"
+              : `Fehlt ${(TRIBE_NAME_STEEL_PRICE - steelBalance).toLocaleString()} Stahl`}
         </button>
       </form>
       ${this.notice
         ? html`<p
-            class="text-sm font-medium ${this.notice.kind === "success"
-              ? "text-green-400"
+            class="text-xs sm:text-sm font-semibold ${this.notice.kind ===
+            "success"
+              ? "text-emerald-400"
               : "text-red-400"}"
           >
             ${this.notice.text}
           </p>`
         : ""}
     </section>`;
+  }
+
+  private renderCommunityTribes(): TemplateResult {
+    const community = getStoredCommunityTribes();
+    return html`
+      <section class="flex flex-col gap-3">
+        <div class="flex items-center justify-between px-1">
+          <h3
+            class="text-sm font-bold uppercase tracking-wider text-white/70 flex items-center gap-2"
+          >
+            <span>🌍 Community Bot-Tribes</span>
+            <span class="text-xs font-normal text-cyan-300 font-mono"
+              >(${community.length})</span
+            >
+          </h3>
+          <span class="text-[11px] text-white/40">Permanent in Bot-Matches</span>
+        </div>
+        <div class="space-y-2">
+          ${community.map(
+            (t) => html`
+              <div
+                class="flex items-center justify-between gap-3 bg-surface rounded-xl border border-white/10 px-4 py-3 hover:border-white/20 transition-colors"
+              >
+                <div class="flex flex-col min-w-0">
+                  <span
+                    class="font-bold text-white text-sm sm:text-base truncate"
+                    >${t.name}</span
+                  >
+                  <span class="text-[11px] text-white/50 mt-0.5">
+                    Hinzugefügt von
+                    <strong class="text-cyan-300 font-semibold"
+                      >${t.creator}</strong
+                    >
+                    · ${new Date(t.createdAt).toLocaleDateString("de-DE")}
+                  </span>
+                </div>
+                <span
+                  class="text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full border bg-emerald-500/15 text-emerald-300 border-emerald-500/30 shrink-0"
+                >
+                  ✓ Bot-Rotation
+                </span>
+              </div>
+            `,
+          )}
+        </div>
+      </section>
+    `;
   }
 
   // "2 boosts · next boost expires Aug 5" under an actively boosted name.
@@ -611,6 +717,7 @@ export class TribesPanel extends LitElement {
       class="p-6 lg:p-8 flex flex-col gap-6 max-w-2xl mx-auto w-full"
     >
       ${this.renderPurchaseCard()}
+      ${this.renderCommunityTribes()}
       <section class="flex flex-col gap-3">
         <h3
           class="text-sm font-bold uppercase tracking-wider text-white/60 px-1"

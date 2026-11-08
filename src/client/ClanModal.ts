@@ -43,7 +43,7 @@ type View =
 
 // List tabs share BaseModal's `activeTab` slot with detail tabs ("overview" /
 // "members" / "game-history"); which set is live depends on `view`.
-const LIST_TABS = ["my-clans", "browse"] as const;
+const LIST_TABS = ["my-clan", "my-clans", "browse"] as const;
 type ListTab = (typeof LIST_TABS)[number];
 
 // Detail tabs a player profile can be opened from and returned to. Overview
@@ -60,7 +60,7 @@ export class ClanModal extends BaseModal {
 
   constructor() {
     super();
-    this.activeTab = "my-clans";
+    this.activeTab = "my-clan";
   }
 
   @state() private view: View = "list";
@@ -121,7 +121,8 @@ export class ClanModal extends BaseModal {
   // is not restored (see `returnFromPlayerProfile`).
   private openedFromProfile: string | null = null;
   private openedFromProfileOrigin: ProfileOrigin | null = null;
-  private previousListTab: ListTab = "my-clans";
+  private previousListTab: ListTab = "my-clan";
+  private autoOpenUserClan = false;
   // Set when the open clan was picked from the browser's boosted block, so a
   // join from its detail page is attributed to the block.
   private joinSource: "boosted" | undefined = undefined;
@@ -144,7 +145,7 @@ export class ClanModal extends BaseModal {
     return {
       tabs: this.onListView
         ? [
-            { key: "my-clans", label: translateText("clan_modal.my_clans") },
+            { key: "my-clan", label: translateText("clan_modal.my_clans") },
             { key: "browse", label: translateText("clan_modal.browse") },
           ]
         : this.onDetailView
@@ -191,7 +192,7 @@ export class ClanModal extends BaseModal {
       this.selectedClanTag = "";
       this.detailCache = null;
       this.gameHistoryCache = null;
-      if (tab === "my-clans") {
+      if (tab === "my-clans" || tab === "my-clan") {
         this.loadMyClans();
       }
       return;
@@ -334,6 +335,8 @@ export class ClanModal extends BaseModal {
           : "";
     if (targetTag) {
       this.openDetail(targetTag.toUpperCase());
+    } else {
+      this.autoOpenUserClan = true;
     }
     this.loadMyClans();
   }
@@ -342,8 +345,9 @@ export class ClanModal extends BaseModal {
     if (this.preserveStateForModalHandoff) return;
     this.openedFromProfile = null;
     this.openedFromProfileOrigin = null;
-    this.activeTab = "my-clans";
-    this.previousListTab = "my-clans";
+    this.activeTab = "my-clan";
+    this.previousListTab = "my-clan";
+    this.autoOpenUserClan = false;
     this.view = "list";
     this.selectedClan = null;
     this.selectedClanTag = "";
@@ -387,6 +391,16 @@ export class ClanModal extends BaseModal {
       }
       this.myClanRoles = roles;
       this.myClans = clans;
+
+      if (
+        this.autoOpenUserClan &&
+        !this.selectedClanTag &&
+        clans.length > 0 &&
+        (this.activeTab === "my-clan" || this.activeTab === "my-clans")
+      ) {
+        this.autoOpenUserClan = false;
+        this.openDetail(clans[0].tag);
+      }
     } finally {
       this.loading = false;
     }
@@ -630,7 +644,7 @@ export class ClanModal extends BaseModal {
 
     // List view (my clans / browse) — header + tabs are rendered by o-modal
     return html`
-      ${this.activeTab === "my-clans"
+      ${this.activeTab === "my-clan" || this.activeTab === "my-clans"
         ? this.renderMyClans()
         : html`<clan-browse-view
             .myClanRoles=${this.myClanRoles}

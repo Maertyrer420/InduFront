@@ -154,8 +154,15 @@ export class FriendsModal extends BaseModal {
         this.friends = friendsRes.results;
       }
       if (reqRes) {
-        this.incoming = reqRes.incoming;
-        this.outgoing = reqRes.outgoing;
+        const friendIdSet = new Set(
+          (this.friends ?? []).map((f) => (f.publicId ?? "").toLowerCase()),
+        );
+        this.incoming = (reqRes.incoming ?? []).filter(
+          (r: any) => !friendIdSet.has((r.publicId ?? "").toLowerCase()),
+        );
+        this.outgoing = (reqRes.outgoing ?? []).filter(
+          (r: any) => !friendIdSet.has((r.publicId ?? "").toLowerCase()),
+        );
       }
       await this.refreshPresence(false);
     } finally {

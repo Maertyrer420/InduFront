@@ -4,7 +4,6 @@ import {
   PublicProgress,
   UserMeResponse,
 } from "@openfront/shared/ApiSchemas";
-import { assetUrl } from "@openfront/shared/AssetUrls";
 import { html, nothing, PropertyValues, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
@@ -42,9 +41,7 @@ import "./components/AuthForm";
 import "./components/ProfileProgression";
 import "./components/RewardsPanel";
 import type { RewardsChangedDetail } from "./components/RewardsPanel";
-import { googleLinkButton } from "./components/ui/GoogleLinkButton";
 import { modalHeader } from "./components/ui/ModalHeader";
-import { steamGlyph, steamLinkButton } from "./components/ui/SteamLinkButton";
 import { desktopLinkGate, isDesktopShell } from "./DesktopShell";
 import { gamePortal, type PortalUser } from "./GamePortal";
 import "./GameStatsModal";
@@ -246,7 +243,6 @@ export class AccountModal extends BaseModal {
               },
             ]
           : []),
-        { key: "friends", label: translateText("account_modal.tab_friends") },
       ],
     };
   }
@@ -333,16 +329,41 @@ export class AccountModal extends BaseModal {
   }
 
   public returnToFriends(): void {
-    this.open({ tab: "friends" });
+    window.showPage?.("page-friends");
   }
 
   private renderAccountTab(): TemplateResult {
     if (this.portalUser) {
       return this.renderPortalAccount(this.portalUser);
     }
+    const publicId = this.userMeResponse?.player?.publicId;
     return html`
       <div class="flex flex-col gap-6">
         ${this.renderProfileCard("compact")}
+        ${publicId
+          ? html`
+              <div
+                class="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-blue-900/30 via-indigo-900/20 to-purple-900/30 border border-blue-500/30"
+              >
+                <div class="flex flex-col">
+                  <span class="text-sm font-bold text-white"
+                    >Öffentliches Spielerprofil</span
+                  >
+                  <span class="text-xs text-white/50"
+                    >Profil, Rang, Statistiken und persönliche Biografie
+                    verwalten</span
+                  >
+                </div>
+                <button
+                  type="button"
+                  @click=${() => this.openPlayerProfile(publicId)}
+                  class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow"
+                >
+                  Profil öffnen
+                </button>
+              </div>
+            `
+          : null}
         <div class="bg-white/5 rounded-xl border border-white/10 p-6">
           <div class="flex flex-col items-center gap-4">
             <div
@@ -804,87 +825,17 @@ export class AccountModal extends BaseModal {
   // Show the Google link state: a confirmation line when a Google account is
   // already linked, otherwise the button to link one.
   private renderGoogleLink(): TemplateResult {
-    const google = this.userMeResponse?.user?.google;
-    if (google) {
-      const label = google.email
-        ? translateText("account_modal.linked_to_google_email", {
-            email: google.email,
-          })
-        : translateText("account_modal.linked_to_google");
-      return html`
-        <div class="flex items-center gap-2 text-white/70 text-sm">
-          <img
-            src=${assetUrl("images/GoogleLogo.svg")}
-            alt=${translateText("account_modal.google_alt")}
-            class="w-4 h-4"
-          />
-          <span>${label}</span>
-        </div>
-      `;
-    }
-    return this.renderLinkGoogleButton();
+    return html``;
   }
 
-  // Shown when logged in without a Google identity yet. Lets the user attach
-  // Google to their existing account (we never auto-merge by email).
+  // Shown when logged in without a Google identity yet.
   private renderLinkGoogleButton(): TemplateResult {
-    if (this.userMeResponse?.user?.google) return html``;
-    return googleLinkButton(
-      this.handleLinkGoogle,
-      // The shell sends the player to the website for this (see linkGoogle
-      // in Auth.ts); the caption has to say so.
-      isDesktopShell()
-        ? "account_modal.link_google_on_web"
-        : "account_modal.link_google",
-    );
+    return html``;
   }
 
-  // Steam link state (OPE-115): the linked account when there is one,
-  // otherwise the button to link one.
-  //
-  // NOTE THE ASYMMETRY WITH GOOGLE, WHICH IS DELIBERATE: there is no unlink
-  // control here, and there is a permanence warning on the button. Steam
-  // recommends that users cannot self-unlink Steam from an external account,
-  // so this is a one-way change that only support can reverse — the warning
-  // has to be readable BEFORE the click, because afterwards the link exists.
-  //
-  // Not shown inside the desktop shell: a shell player already holds this
-  // identity through the native Steam ticket.
+  // Steam link state (OPE-115) - disabled for now
   private renderSteamLink(): TemplateResult {
-    if (isDesktopShell()) return html``;
-    const steam = this.userMeResponse?.user?.steam;
-    if (steam) {
-      // The attached account is NAMED, not merely reported as linked: a wrong
-      // link — the player's browser was signed into someone else's Steam when
-      // they clicked — cannot be undone by them, so noticing it immediately is
-      // the difference between a quick support fix and a permanent one.
-      // Steam's own consent page is the first defence; this is the second.
-      //
-      // The persona and avatar come from the <steam-user-header> that
-      // renderAccountTab already renders whenever user.steam is set, for every
-      // branch including Steam-primary. Rendering a second one here showed it
-      // TWICE to exactly the players this row is for — anyone Discord-,
-      // Google- or email-primary with Steam linked.
-      return html`
-        <div class="flex flex-col items-center gap-1">
-          <div class="flex items-center gap-2 text-white/70 text-sm">
-            ${steamGlyph("w-4 h-4 shrink-0")}
-            <span>${translateText("account_modal.linked_to_steam")}</span>
-          </div>
-          <span class="text-white/40 text-xs text-center">
-            ${translateText("account_modal.link_steam_permanent")}
-          </span>
-        </div>
-      `;
-    }
-    return html`
-      <div class="w-full flex flex-col gap-1">
-        ${steamLinkButton(this.handleLinkSteam)}
-        <span class="text-white/40 text-xs text-center">
-          ${translateText("account_modal.link_steam_permanent")}
-        </span>
-      </div>
-    `;
+    return html``;
   }
 
   private handleLinkSteam = async (): Promise<void> => {
@@ -1134,6 +1085,11 @@ export class AccountModal extends BaseModal {
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
+    if (args?.tab === "friends") {
+      this.close();
+      window.showPage?.("page-friends");
+      return;
+    }
     // A new opening: the full profile card and the Progression tab play
     // their flourish again, and the tab reads the player's progress afresh.
     // Counted across every account modal, as the profile counts its own, so

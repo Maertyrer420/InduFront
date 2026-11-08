@@ -512,7 +512,7 @@
     "member_unbanned": "Spieler entsperrt.",
     "members": "Mitglieder",
     "members_visible_to_members": "Mitgliederliste ist nur für Clan-Mitglieder sichtbar.",
-    "my_clans": "Meine Clans",
+    "my_clans": "Mein Clan",
     "no_bans": "Keine gesperrten Spieler.",
     "no_clans": "Du bist noch in keinen Clans.",
     "no_description": "Keine Beschreibung",
@@ -1737,7 +1737,8 @@
     "log_out": "Abmelden",
     "log_out_confirm": "Von diesem Konto abmelden?",
     "title": "Kontomenü",
-    "view_account": "Account aufrufen"
+    "view_account": "Account aufrufen",
+    "view_profile": "Mein Profil"
   },
   "new_lobby_prompt": {
     "confirm": "Eine neue Lobby starten? Alle Spieler werden eingeladen, beizutreten.",

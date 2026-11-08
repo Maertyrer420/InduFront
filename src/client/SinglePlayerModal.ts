@@ -24,6 +24,7 @@ import "./components/GameConfigSettings";
 import { MEDAL_ORDER, medalIcon } from "./components/map/Medals";
 import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
+import { getStoredCommunityTribes } from "./components/TribesPanel";
 import { getPlayerCosmetics, prewarmCosmetics } from "./Cosmetics";
 import { gamePortal } from "./GamePortal";
 import { GameStartingModal } from "./GameStartingModal";
@@ -1139,6 +1140,12 @@ export class SinglePlayerModal extends BaseModal {
                   cosmetics,
                 },
               ],
+              tribes: getStoredCommunityTribes().map((t) => ({
+                name: t.name,
+                ownerPublicId: "community",
+                ownerUsername: t.creator,
+                activeBoosts: 1,
+              })),
               config: {
                 gameMap: this.selectedMap,
                 gameMapSize: this.compactMap

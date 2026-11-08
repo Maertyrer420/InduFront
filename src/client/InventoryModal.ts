@@ -119,8 +119,8 @@ export class InventoryModal extends BaseModal {
     return {
       hideTabs: true,
       tabs: [
-        { key: "skins", label: translateText("store.patterns") },
         { key: "flags", label: translateText("store.flags") },
+        { key: "skins", label: translateText("store.patterns") },
         { key: "crowns", label: translateText("store.crowns") },
         { key: "effects", label: translateText("store.effects") },
       ],
@@ -378,44 +378,23 @@ export class InventoryModal extends BaseModal {
   }
 
   private loadoutEntries(): InventoryLoadoutEntry[] {
-    const effects = this.equippedEffects();
     const entries: Array<{
-      category: Exclude<InventoryCategory, "effects">;
+      category: InventoryCategory;
       label: string;
       item: ResolvedCosmetic | null;
     }> = [
-      {
-        category: "skins",
-        label: translateText("store.patterns"),
-        item: this.equippedSkin(),
-      },
       {
         category: "flags",
         label: translateText("store.flags"),
         item: this.equippedFlag(),
       },
-      {
-        category: "crowns",
-        label: translateText("store.crowns"),
-        item: this.equippedCrown(),
-      },
     ];
-    return [
-      ...entries.map(({ category, label, item }) => ({
-        category,
-        label,
-        items: item ? [item] : [],
-        summary: item ? cosmeticDisplayName(item) : "",
-      })),
-      {
-        category: "effects",
-        label: translateText("store.effects"),
-        items: effects,
-        summary: translateText("inventory.showing_effects", {
-          count: effects.length,
-        }),
-      },
-    ];
+    return entries.map(({ category, label, item }) => ({
+      category,
+      label,
+      items: item ? [item] : [],
+      summary: item ? cosmeticDisplayName(item) : "",
+    }));
   }
 
   /** Slot buttons read as a numbered row, so keep them in slot order. */
@@ -795,12 +774,20 @@ export class InventoryModal extends BaseModal {
   private renderSteelEquipmentPanel(): TemplateResult {
     const balance = SteelStoreService.getBalance();
     const equipped = SteelStoreService.getEquipped();
+    const unlocked = SteelStoreService.getUnlockedIds();
     const activeTitle = STEEL_CATALOG.find((i) => i.id === equipped.titel);
     const activeBadge = STEEL_CATALOG.find((i) => i.id === equipped.badges);
     const activeSound = STEEL_CATALOG.find((i) => i.id === equipped.sounds);
 
+    const unlockedTitles = STEEL_CATALOG.filter(
+      (i) => i.category === "titel" && unlocked.has(i.id),
+    );
+    const unlockedBadges = STEEL_CATALOG.filter(
+      (i) => i.category === "badges" && unlocked.has(i.id),
+    );
+
     return html`
-      <div class="px-3 pt-2 pb-1">
+      <div class="px-3 pt-2 pb-1 space-y-2">
         <div
           class="p-3 sm:p-4 rounded-xl bg-gradient-to-r from-slate-900/90 via-[#182234]/80 to-slate-900/90 border border-cyan-500/30 flex flex-col md:flex-row items-center justify-between gap-3 text-white shadow-md"
         >
@@ -859,28 +846,75 @@ export class InventoryModal extends BaseModal {
             >
               ${balance} Stahl
             </div>
-            <button
-              @click=${() => {
-                this.close();
-                window.showPage?.("page-item-store");
-              }}
-              class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shadow"
-            >
-              <svg
-                class="w-3.5 h-3.5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-                <path d="M3 6h18" />
-                <path d="M16 10a4 4 0 0 1-8 0" />
-              </svg>
-              <span>Zum Stahl-Shop</span>
-            </button>
           </div>
         </div>
+
+        ${unlockedTitles.length > 0 || unlockedBadges.length > 0
+          ? html`
+              <div
+                class="p-3 rounded-xl bg-white/5 border border-white/10 text-xs text-white space-y-2"
+              >
+                ${unlockedTitles.length > 0
+                  ? html`
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-white/60 font-semibold"
+                          >Freigeschaltete Titel:</span
+                        >
+                        ${unlockedTitles.map((t) => {
+                          const isEq = equipped.titel === t.id;
+                          return html`
+                            <button
+                              type="button"
+                              @click=${() => {
+                                SteelStoreService.equip(
+                                  "titel",
+                                  isEq ? "" : t.id,
+                                );
+                                this.requestUpdate();
+                              }}
+                              class="px-2 py-0.5 rounded text-[11px] font-bold border transition-colors cursor-pointer ${isEq
+                                ? "bg-cyan-500/20 text-cyan-300 border-cyan-400"
+                                : "bg-white/5 text-white/70 border-white/10 hover:bg-white/10"}"
+                            >
+                              ${isEq ? "✓ " : ""}${t.name}
+                            </button>
+                          `;
+                        })}
+                      </div>
+                    `
+                  : ""}
+                ${unlockedBadges.length > 0
+                  ? html`
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-white/60 font-semibold"
+                          >Freigeschaltete Badges:</span
+                        >
+                        ${unlockedBadges.map((b) => {
+                          const isEq = equipped.badges === b.id;
+                          return html`
+                            <button
+                              type="button"
+                              @click=${() => {
+                                SteelStoreService.equip(
+                                  "badges",
+                                  isEq ? "" : b.id,
+                                );
+                                this.requestUpdate();
+                              }}
+                              class="px-2 py-0.5 rounded text-[11px] font-bold border transition-colors cursor-pointer ${isEq
+                                ? "bg-amber-500/20 text-amber-300 border-amber-400"
+                                : "bg-white/5 text-white/70 border-white/10 hover:bg-white/10"}"
+                            >
+                              ${isEq ? "✓ " : ""}${b.name}
+                            </button>
+                          `;
+                        })}
+                      </div>
+                    `
+                  : ""}
+              </div>
+            `
+          : ""}
       </div>
     `;
   }

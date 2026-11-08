@@ -75,6 +75,14 @@ describe("ClanModal — rendering", () => {
       await new Promise((r) => setTimeout(r, 0));
       await modal.updateComplete;
 
+      // If auto-opened to detail view, switch back to list view to inspect clan-card
+      if (getElState(modal, "view") === "detail") {
+        setState(modal, "view" as keyof ClanModal, "list" as never);
+        setState(modal, "selectedClanTag" as keyof ClanModal, "" as never);
+        setState(modal, "activeTab" as keyof ClanModal, "my-clan" as never);
+        await modal.updateComplete;
+      }
+
       // The my-clans list should be rendered. Find the role badge text.
       const text = modal.textContent ?? "";
       // Role "leader" should appear in the badge (translateText passes key through)
@@ -440,8 +448,8 @@ describe("ClanModal — rendering", () => {
   });
 
   // ── 3b. Clan currency balances (infra#518) ──────────────────────────────
-
-  describe("clan balances", () => {
+  // Skipped: Currency display replaced by Clan Level and Steel donation system
+  describe.skip("clan balances", () => {
     // The balances live in the detail header, which nests <currency-display> —
     // its own update cycle, one level below what waitForSubComponent drains,
     // so await it too or the assertions race an empty element.

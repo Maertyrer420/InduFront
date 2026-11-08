@@ -77,13 +77,6 @@ export class PlayPage extends LitElement {
           <div class="flex items-center gap-1.5 shrink-0">
             <button
               type="button"
-              @click=${() => this.openAccount("friends")}
-              class="px-2.5 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold text-white transition-colors cursor-pointer"
-            >
-              ${isDe ? "Freunde" : "Friends"}
-            </button>
-            <button
-              type="button"
               @click=${() => this.openAccount()}
               class="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-semibold text-emerald-200 transition-colors cursor-pointer"
             >

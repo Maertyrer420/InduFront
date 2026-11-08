@@ -514,7 +514,7 @@
     "member_unbanned": "Player unbanned.",
     "members": "Members",
     "members_visible_to_members": "Member list is visible to clan members only.",
-    "my_clans": "My Clans",
+    "my_clans": "My Clan",
     "no_bans": "No banned players.",
     "no_clans": "You're not in any clans yet.",
     "no_description": "No description",
@@ -1775,7 +1775,8 @@
     "log_out": "Log out",
     "log_out_confirm": "Log out of this account?",
     "title": "Account menu",
-    "view_account": "View account"
+    "view_account": "View account",
+    "view_profile": "My Profile"
   },
   "new_lobby_prompt": {
     "confirm": "Start a new lobby? All players will be invited to join.",

@@ -103,7 +103,7 @@ describe("Inventory navigation", () => {
     desktop.querySelector<HTMLElement>('[data-page="page-inventory"]')!.click();
 
     await vi.waitFor(() => {
-      expect(window.location.hash).toBe("#modal=inventory&tab=skins");
+      expect(window.location.hash).toBe("#modal=inventory&tab=flags");
     });
     expect(
       desktop

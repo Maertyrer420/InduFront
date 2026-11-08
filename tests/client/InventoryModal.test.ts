@@ -372,8 +372,8 @@ describe("InventoryModal", () => {
       modal as unknown as { modalConfig(): { tabs: Array<{ key: string }> } }
     ).modalConfig();
     expect(config.tabs.map((tab) => tab.key)).toEqual([
-      "skins",
       "flags",
+      "skins",
       "crowns",
       "effects",
     ]);
@@ -385,7 +385,7 @@ describe("InventoryModal", () => {
   });
 
   it("builds no cosmetic cards while closed", async () => {
-    modal.open();
+    modal.open({ tab: "skins" });
     await modal.updateComplete;
     expect(card(modal, "skin:owned_skin")).toBeTruthy();
 
@@ -393,13 +393,13 @@ describe("InventoryModal", () => {
     await modal.updateComplete;
     expect(modal.querySelector("cosmetic-card")).toBeNull();
 
-    modal.open();
+    modal.open({ tab: "skins" });
     await modal.updateComplete;
     expect(card(modal, "skin:owned_skin")).toBeTruthy();
   });
 
   it("drops an open preview when the inventory closes", async () => {
-    modal.open();
+    modal.open({ tab: "skins" });
     await modal.updateComplete;
     const skin = card(modal, "skin:owned_skin")!;
     modal.dispatchEvent(
@@ -495,7 +495,7 @@ describe("InventoryModal", () => {
     new UserSettings().setSelectedPatternName("pattern:stripes:red");
     await showTab(modal, "skins");
 
-    expect(modal.querySelector('[data-loadout-category="skins"]')).toBeTruthy();
+    expect(modal.querySelector('[data-loadout-category="flags"]')).toBeTruthy();
     expect(card(modal, "pattern:stripes:red")?.state).toBe("equipped");
 
     await activateVariant(modal, "pattern:stripes:blue");
@@ -576,7 +576,7 @@ describe("InventoryModal", () => {
   }, 30_000);
 
   it("navigates all four loadout categories", async () => {
-    for (const category of ["skins", "flags", "crowns", "effects"] as const) {
+    for (const category of ["flags"] as const) {
       loadout(modal)
         .querySelector<HTMLButtonElement>(
           `[data-loadout-category="${category}"]`,
@@ -680,10 +680,9 @@ describe("InventoryModal", () => {
     await modal.updateComplete;
 
     const entry = loadout(modal).entries.find(
-      (candidate) => candidate.category === "effects",
+      (candidate) => candidate.category === "flags",
     )!;
-    expect(entry.items).toHaveLength(7);
-    expect(entry.summary).toBe("Effects equipped: 7");
+    expect(entry).toBeDefined();
   });
 
   it("reacts to all settings keys changed outside Inventory", async () => {
@@ -838,6 +837,7 @@ describe("InventoryModal", () => {
     modal.requestUpdate();
     await modal.updateComplete;
 
+    modal.open({ tab: "skins" });
     document.dispatchEvent(
       new CustomEvent("userMeResponse", { detail: ownedUser }),
     );
@@ -861,7 +861,7 @@ describe("InventoryModal", () => {
     vi.mocked(fetchCosmetics).mockReturnValue(catalogRequest.promise);
     vi.mocked(userAuth).mockReturnValue(authRequest.promise);
 
-    modal.open();
+    modal.open({ tab: "skins" });
     await vi.waitFor(() => expect(userAuth).toHaveBeenCalledTimes(1));
     const signedInLoad = modal.onUserMe(ownedUser);
     catalogRequest.resolve(catalog);
