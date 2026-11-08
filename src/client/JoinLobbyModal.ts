@@ -34,6 +34,7 @@ import { openReplayViewer } from "./replay/ReplayEntry";
 import "./components/CopyButton";
 import { ensureServerList, redirectToGameVersion } from "./ServerList";
 import "./components/LobbyPlayerView";
+import "./components/PlayerClassPicker";
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 import { nationsConfigToSlider } from "./utilities/GameConfigHelpers";
 import {
@@ -238,10 +239,13 @@ export class JoinLobbyModal extends BaseModal {
               `
             : html`
                 ${this.gameConfig ? this.renderGameConfig() : html``}
+                <div class="mt-4 mb-2">
+                  <player-class-picker class="w-full block" ?compact=${false}></player-class-picker>
+                </div>
                 ${this.players.length > 0
                   ? html`
                       <lobby-player-view
-                        class="mt-6"
+                        class="mt-4"
                         .gameMode=${this.gameConfig?.gameMode ?? GameMode.FFA}
                         .clients=${this.players}
                         .lobbyCreatorClientID=${hostClientID}
@@ -255,6 +259,12 @@ export class JoinLobbyModal extends BaseModal {
                           this.gameConfig?.nations ?? "default",
                           this.nationCount,
                         )}
+                        @team-selected=${(e: CustomEvent<{ clientID: string; teamIndex: number }>) => {
+                          const { clientID, teamIndex } = e.detail;
+                          this.players = this.players.map((p) =>
+                            p.clientID === clientID ? { ...p, teamIndex } : p,
+                          );
+                        }}
                       ></lobby-player-view>
                     `
                   : ""}

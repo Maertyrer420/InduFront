@@ -6,6 +6,7 @@ import { hasLinkedIdentity } from "../AccountIdentity";
 import { latestUserMeResponse } from "../NavAccountButton";
 import "./CosmeticBackground";
 import "./ColorPalettePicker";
+import "./PlayerClassPicker";
 import "./NavAccountMenu";
 import "./NavUtilityIcons";
 import "./NewsBox";
@@ -220,6 +221,9 @@ export class PlayPage extends LitElement {
 
             <!-- Starting nation color palette picker -->
             <color-palette-picker class="w-full"></color-palette-picker>
+
+            <!-- Player class specialization picker -->
+            <player-class-picker class="w-full" ?compact=${true}></player-class-picker>
           </div>
 
           <!-- Right column: Streaming Now (desktop only), stretched to the left column's

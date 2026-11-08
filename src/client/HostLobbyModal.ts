@@ -39,6 +39,7 @@ import "./components/InsufficientCurrencyDialog";
 import "./components/ListLobbyDialog";
 import { ListLobbyOptions } from "./components/ListLobbyDialog";
 import "./components/LobbyPlayerView";
+import "./components/PlayerClassPicker";
 import "./components/PlutoniumIcon";
 import "./components/ToggleInputCard";
 import { inviteFriendsButton } from "./components/ui/InviteFriendsButton";
@@ -766,8 +767,12 @@ export class HostLobbyModal extends BaseModal {
             @unit-toggle-changed=${this.handleConfigUnitToggleChanged}
           ></game-config-settings>
 
+          <div class="mt-8 mb-2">
+            <player-class-picker class="w-full block" ?compact=${false}></player-class-picker>
+          </div>
+
           <lobby-player-view
-            class="mt-10"
+            class="mt-4"
             .gameMode=${this.gameMode}
             .clients=${this.clients}
             .lobbyCreatorClientID=${this.lobbyCreatorClientID}
@@ -782,6 +787,12 @@ export class HostLobbyModal extends BaseModal {
               : (clientID: string) => this.toggleNameReveal(clientID)}
             .nameReveals=${this.nameReveals}
             .anonymizeNames=${this.anonymizeNames}
+            @team-selected=${(e: CustomEvent<{ clientID: string; teamIndex: number }>) => {
+              const { clientID, teamIndex } = e.detail;
+              this.clients = this.clients.map((c) =>
+                c.clientID === clientID ? { ...c, teamIndex } : c,
+              );
+            }}
           ></lobby-player-view>
         </div>
 

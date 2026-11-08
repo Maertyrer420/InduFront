@@ -3,6 +3,7 @@ import {
   Duos,
   GameMode,
   HumansVsNations,
+  PlayerClass,
   PlayerInfo,
   PlayerType,
   Quads,
@@ -32,6 +33,7 @@ import {
   resolveTeamClanTag,
   translateText,
 } from "../Utils";
+import { renderPlayerClassBadge } from "../utils/PlayerClassData";
 import "./LevelBadge";
 
 function sameBadge(
@@ -69,6 +71,7 @@ export class LobbyTeamView extends LitElement {
   @property({ type: Boolean }) anonymizeNames: boolean = false;
   @property({ type: Number }) nationCount: number = 0;
   @property({ type: Boolean }) isPublicGame: boolean = false;
+  @state() private userSelectedTeamIndex?: number;
 
   private get theme(): Theme {
     return themeProvider.current();
@@ -261,6 +264,7 @@ export class LobbyTeamView extends LitElement {
                 : "bg-gray-700/70 border-transparent"}"
             >
               ${this.renderLevelBadge(client, listSlot)}${displayName}
+              ${this.renderClassBadge(client)}
               ${this.renderVerifiedBadge(client)}
               ${this.renderFriendBadge(client)}
             </div>`;
@@ -305,11 +309,21 @@ export class LobbyTeamView extends LitElement {
     return html`<button
       @click=${() => this.onToggleNameReveal?.(clientID)}
       title=${translateText("host_modal.toggle_name_reveal")}
-      style="background:none;border:none;cursor:pointer;font-size:13px;line-height:1;margin-left:4px;opacity:${on
-        ? "1"
-        : "0.35"};"
+      class="ml-1 p-0.5 rounded hover:bg-white/10 transition-colors inline-flex items-center justify-center border-none bg-transparent cursor-pointer"
+      style="opacity:${on ? "1" : "0.35"};"
     >
-      👁
+      <svg
+        class="w-3.5 h-3.5 text-white/80"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+        <circle cx="12" cy="12" r="3" />
+      </svg>
     </button>`;
   }
 
@@ -324,8 +338,9 @@ export class LobbyTeamView extends LitElement {
             ? "current-player"
             : ""}"
         >
-          <span class="text-white"
+          <span class="text-white flex items-center gap-1"
             >${this.renderLevelBadge(client, false)}${displayName}
+            ${this.renderClassBadge(client)}
             ${this.renderVerifiedBadge(client)}
             ${this.renderFriendBadge(client)}</span
           >
@@ -360,6 +375,61 @@ export class LobbyTeamView extends LitElement {
     )} `;
   }
 
+  private handleJoinTeam(teamIndex: number) {
+    if (teamIndex < 0) return;
+    this.userSelectedTeamIndex = teamIndex;
+    const teamsList = this.getTeamList();
+    this.computeTeamPreview(teamsList);
+    this.dispatchEvent(
+      new CustomEvent("team-selected", {
+        detail: { clientID: this.currentClientID, teamIndex },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+    this.requestUpdate();
+  }
+
+  private renderTeamActionButton(preview: TeamPreviewData) {
+    if (this.gameMode !== GameMode.Team) return null;
+    if (preview.team === ColoredTeams.Nations) return null;
+    if (this.teamCount === HumansVsNations) return null;
+
+    const isCurrentTeam = this.teamContainsCurrentPlayer(preview);
+    if (isCurrentTeam) {
+      return html`<span
+        class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-sky-500/20 text-sky-300 border border-sky-400/30"
+      >
+        ${translateText("host_modal.your_team")}
+      </span>`;
+    }
+
+    const teamIndex = this.getTeamList().indexOf(preview.team);
+    if (teamIndex < 0) return null;
+
+    return html`
+      <button
+        type="button"
+        @click=${(e: Event) => {
+          e.stopPropagation();
+          this.handleJoinTeam(teamIndex);
+        }}
+        class="px-2 py-0.5 rounded text-[11px] font-semibold transition-all duration-150 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 hover:border-emerald-400 cursor-pointer shadow-sm active:scale-95"
+      >
+        ${translateText("host_modal.join_team")}
+      </button>
+    `;
+  }
+
+  private renderClassBadge(client: ClientInfo) {
+    const isSelf = this.isCurrentPlayer(client);
+    const cls = isSelf
+      ? this.userSettings.getPlayerClass()
+      : ((client as any).playerClass as PlayerClass | undefined);
+    if (!cls) return html``;
+    return renderPlayerClassBadge(cls, { showName: false, size: "xs" });
+  }
+
   private renderTeamCard(preview: TeamPreviewData, isEmpty: boolean = false) {
     const displayCount =
       preview.team === ColoredTeams.Nations
@@ -379,7 +449,7 @@ export class LobbyTeamView extends LitElement {
       <div
         class="bg-gray-800 border rounded-xl flex flex-col
           ${this.teamContainsCurrentPlayer(preview)
-          ? "border-sky-500/60"
+          ? "border-sky-500/60 ring-1 ring-sky-500/30"
           : "border-gray-700"}"
       >
         <div
@@ -394,9 +464,12 @@ export class LobbyTeamView extends LitElement {
               : null}
             <span class="truncate">${teamLabel}</span>
           </div>
-          <span class="text-white/90 font-bold text-[13px] shrink-0"
-            >${displayCount}/${maxTeamSize}</span
-          >
+          <div class="flex items-center gap-2 shrink-0">
+            ${this.renderTeamActionButton(preview)}
+            <span class="text-white/90 font-bold text-[13px]"
+              >${displayCount}/${maxTeamSize}</span
+            >
+          </div>
         </div>
         <div class="p-2 ${isEmpty ? "" : "flex flex-col gap-1.5"}">
           ${isEmpty
@@ -417,38 +490,41 @@ export class LobbyTeamView extends LitElement {
                     <span class="flex items-center gap-1 min-w-0">
                       ${this.renderLevelBadge(p, badgeSlot)}
                       <span class="truncate text-white">${displayName}</span>
+                      ${this.renderClassBadge(p)}
                       ${this.renderVerifiedBadge(p)}
                       ${this.renderFriendBadge(p)}
                     </span>
-                    ${this.renderRevealToggle(p.clientID)}
-                    ${p.clientID === this.lobbyCreatorClientID
-                      ? html`<span class="ml-2 text-[11px] text-green-300"
-                          >(${translateText("host_modal.host_badge")})</span
-                        >`
-                      : this.onKickPlayer
-                        ? html`<button
-                            class="remove-player-btn ml-2"
-                            @click=${() => this.onKickPlayer?.(p.clientID)}
-                            aria-label=${translateText(
-                              "host_modal.remove_player",
-                              {
-                                username: displayName,
-                              },
-                            )}
-                          >
-                            <svg
-                              class="h-2.5 w-2.5 stroke-white"
-                              viewBox="0 0 16 16"
-                              fill="none"
-                              stroke="currentColor"
-                              stroke-width="2.5"
-                              stroke-linecap="round"
+                    <div class="flex items-center gap-1">
+                      ${this.renderRevealToggle(p.clientID)}
+                      ${p.clientID === this.lobbyCreatorClientID
+                        ? html`<span class="ml-2 text-[11px] text-green-300"
+                            >(${translateText("host_modal.host_badge")})</span
+                          >`
+                        : this.onKickPlayer
+                          ? html`<button
+                              class="remove-player-btn ml-2"
+                              @click=${() => this.onKickPlayer?.(p.clientID)}
+                              aria-label=${translateText(
+                                "host_modal.remove_player",
+                                {
+                                  username: displayName,
+                                },
+                              )}
                             >
-                              <line x1="4" y1="4" x2="12" y2="12" />
-                              <line x1="12" y1="4" x2="4" y2="12" />
-                            </svg>
-                          </button>`
-                        : html``}
+                              <svg
+                                class="h-2.5 w-2.5 stroke-white"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2.5"
+                                stroke-linecap="round"
+                              >
+                                <line x1="4" y1="4" x2="12" y2="12" />
+                                <line x1="12" y1="4" x2="4" y2="12" />
+                              </svg>
+                            </button>`
+                          : html``}
+                    </div>
                   </div>`;
                 },
               )}
@@ -522,19 +598,23 @@ export class LobbyTeamView extends LitElement {
       return;
     }
 
-    const players = this.activePlayers.map(
-      (c) =>
-        new PlayerInfo(
-          c.username,
-          PlayerType.Human,
-          c.clientID,
-          c.clientID,
-          false,
-          c.clanTag,
-          c.friends ?? [],
-          c.teamIndex ?? null,
-        ),
-    );
+    const players = this.activePlayers.map((c) => {
+      const isSelf = c.clientID === this.currentClientID;
+      const assignedTeamIndex =
+        isSelf && this.userSelectedTeamIndex !== undefined
+          ? this.userSelectedTeamIndex
+          : (c.teamIndex ?? null);
+      return new PlayerInfo(
+        c.username,
+        PlayerType.Human,
+        c.clientID,
+        c.clientID,
+        false,
+        c.clanTag,
+        c.friends ?? [],
+        assignedTeamIndex,
+      );
+    });
     const assignment = assignTeamsLobbyPreview(
       players,
       teams,

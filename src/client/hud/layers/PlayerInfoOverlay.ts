@@ -1,5 +1,6 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
+  PlayerClass,
   PlayerProfile,
   PlayerType,
   Relation,
@@ -12,6 +13,7 @@ import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { renderPlayerClassBadge } from "../../utils/PlayerClassData";
 import { Controller } from "../../Controller";
 import {
   ContextMenuEvent,
@@ -733,7 +735,11 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
                   class="text-gray-400 text-xs font-mono font-normal shrink-0 whitespace-nowrap"
                   >${playerType}</span
                 >`}
-            ${this.renderPlayerNameIcons(playerIcons)} ${betrayalHtml ?? ""}
+            ${this.renderPlayerNameIcons(playerIcons)}
+            ${player.type() === PlayerType.Human
+              ? this.renderClassBadge(player.playerClass?.())
+              : ""}
+            ${betrayalHtml ?? ""}
             ${allianceHtml ?? ""}
           </div>
           <div class="flex flex-wrap gap-1 items-center mt-1">
@@ -962,6 +968,11 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
     `;
   }
 
+  private renderClassBadge(cls?: PlayerClass) {
+    if (!cls) return html``;
+    return renderPlayerClassBadge(cls, { showName: true, size: "xs" });
+  }
+
   private renderUnitInfo(unit: UnitView) {
     const isAlly =
       (unit.owner() === this.game.myPlayer() ||
@@ -970,8 +981,11 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
 
     return html`
       <div class="p-2">
-        <div class="font-bold mb-1 ${isAlly ? "text-green-500" : "text-white"}">
-          ${unit.owner().displayName()}
+        <div class="font-bold mb-1 ${isAlly ? "text-green-500" : "text-white"} flex items-center justify-between gap-2">
+          <span>${unit.owner().displayName()}</span>
+          ${unit.owner().type() === PlayerType.Human
+            ? this.renderClassBadge(unit.owner().playerClass?.())
+            : ""}
         </div>
         <div class="mt-1">
           <div class="text-sm opacity-80">${unit.type()}</div>

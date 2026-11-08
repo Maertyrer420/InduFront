@@ -22,6 +22,7 @@ import Countries from "resources/countries.json" with { type: "json" };
 import { fetchLobbyListed, getUserMe } from "../../Api";
 import "../../components/EquippedCosmeticsRow";
 import "../../components/LevelBadge";
+import { renderPlayerClassBadge } from "../../utils/PlayerClassData";
 import { actionButton } from "../../components/ui/ActionButton";
 import "../../components/ui/Divider";
 import { Controller } from "../../Controller";
@@ -682,6 +683,9 @@ export class PlayerPanel extends LitElement implements Controller {
           >
             ${other.displayName()}
           </h2>
+          ${other.type() === PlayerType.Human
+            ? renderPlayerClassBadge(other.playerClass?.(), { size: "xs" })
+            : ""}
         </div>
         ${chip
           ? html`<span
@@ -861,6 +865,12 @@ export class PlayerPanel extends LitElement implements Controller {
                     title=${p.displayName()}
                   >
                     <span class="truncate">${p.displayName()}</span>
+                    ${p.type() === PlayerType.Human
+                      ? renderPlayerClassBadge(p.playerClass?.(), {
+                          showName: false,
+                          size: "xs",
+                        })
+                      : ""}
                     ${remainingSeconds !== null
                       ? html`<span
                           class="text-[11px] font-semibold leading-none tabular-nums ${this.getExpiryColorClass(

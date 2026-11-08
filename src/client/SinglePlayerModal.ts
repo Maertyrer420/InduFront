@@ -1,22 +1,28 @@
 import {
+  ColoredTeams,
   Difficulty,
   GameMapSize,
   GameMapType,
   GameMode,
   GameType,
+  HumansVsNations,
   maps,
   PlayerClass,
+  Team,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { TeamCountConfig } from "@openfront/engine-api/Schemas";
 import { DoomsdayClockSpeed } from "@openfront/engine-lib/game/DoomsdayClock";
+import { resolveTeamsList } from "@openfront/engine-lib/game/TeamAssignment";
 import { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { assetUrl } from "@openfront/shared/AssetUrls";
 import { generateID } from "@openfront/shared/SharedUtil";
 import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { translateText } from "../client/Utils";
+import { themeProvider } from "./theme/ThemeProvider";
+import { getTranslatedPlayerTeamLabel, translateText } from "./Utils";
+import { getAllPlayerClasses } from "./utils/PlayerClassData";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
@@ -217,6 +223,7 @@ export class SinglePlayerModal extends BaseModal {
   private userSettings = new UserSettings();
   @state() private selectedClass: PlayerClass =
     this.userSettings.getPlayerClass();
+  @state() private selectedTeamIndex: number = 0;
   // Drives the Start Game button's busy state. Without it the click produces
   // nothing visible until every await in startGame() settles, which reads as
   // a hang rather than as loading whenever the network is slow or absent.
@@ -417,157 +424,7 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   private renderClassSelection(): TemplateResult {
-    const classes = [
-      {
-        id: PlayerClass.Industrialist,
-        name: translateText("player_classes.industrialist_name"),
-        role: translateText("player_classes.industrialist_role"),
-        buffs: [
-          translateText("player_classes.industrialist_buff_1"),
-          translateText("player_classes.industrialist_buff_2"),
-        ],
-        debuffs: [
-          translateText("player_classes.industrialist_debuff_1"),
-          translateText("player_classes.industrialist_debuff_2"),
-        ],
-        icon: html`<svg
-          class="w-5 h-5 shrink-0"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path
-            d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"
-          />
-          <path d="M17 18h1" />
-          <path d="M12 18h1" />
-          <path d="M7 18h1" />
-        </svg>`,
-      },
-      {
-        id: PlayerClass.Infantry,
-        name: translateText("player_classes.infantry_name"),
-        role: translateText("player_classes.infantry_role"),
-        buffs: [
-          translateText("player_classes.infantry_buff_1"),
-          translateText("player_classes.infantry_buff_2"),
-        ],
-        debuffs: [
-          translateText("player_classes.infantry_debuff_1"),
-          translateText("player_classes.infantry_debuff_2"),
-        ],
-        icon: html`<svg
-          class="w-5 h-5 shrink-0"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5" />
-          <line x1="13" y1="19" x2="19" y2="13" />
-          <line x1="16" y1="16" x2="20" y2="20" />
-          <line x1="19" y1="21" x2="21" y2="19" />
-          <polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5" />
-          <line x1="5" y1="14" x2="9" y2="18" />
-          <line x1="7" y1="17" x2="4" y2="20" />
-          <line x1="3" y1="19" x2="5" y2="21" />
-        </svg>`,
-      },
-      {
-        id: PlayerClass.Marine,
-        name: translateText("player_classes.marine_name"),
-        role: translateText("player_classes.marine_role"),
-        buffs: [
-          translateText("player_classes.marine_buff_1"),
-          translateText("player_classes.marine_buff_2"),
-          translateText("player_classes.marine_buff_3"),
-        ],
-        debuffs: [
-          translateText("player_classes.marine_debuff_1"),
-          translateText("player_classes.marine_debuff_2"),
-        ],
-        icon: html`<svg
-          class="w-5 h-5 shrink-0"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <circle cx="12" cy="5" r="3" />
-          <line x1="12" y1="22" x2="12" y2="8" />
-          <path d="M5 12H2a10 10 0 0 0 20 0h-3" />
-        </svg>`,
-      },
-      {
-        id: PlayerClass.IronDome,
-        name: translateText("player_classes.iron_dome_name"),
-        role: translateText("player_classes.iron_dome_role"),
-        buffs: [
-          translateText("player_classes.iron_dome_buff_1"),
-          translateText("player_classes.iron_dome_buff_2"),
-          translateText("player_classes.iron_dome_buff_3"),
-        ],
-        debuffs: [
-          translateText("player_classes.iron_dome_debuff_1"),
-          translateText("player_classes.iron_dome_debuff_2"),
-        ],
-        icon: html`<svg
-          class="w-5 h-5 shrink-0"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-          <path d="m9 12 2 2 4-4" />
-        </svg>`,
-      },
-      {
-        id: PlayerClass.Scientist,
-        name: translateText("player_classes.scientist_name"),
-        role: translateText("player_classes.scientist_role"),
-        buffs: [
-          translateText("player_classes.scientist_buff_1"),
-          translateText("player_classes.scientist_buff_2"),
-          translateText("player_classes.scientist_buff_3"),
-        ],
-        debuffs: [
-          translateText("player_classes.scientist_debuff_1"),
-          translateText("player_classes.scientist_debuff_2"),
-        ],
-        icon: html`<svg
-          class="w-5 h-5 shrink-0"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <circle cx="12" cy="12" r="3" />
-          <path
-            d="M3.5 12a8.5 8.5 0 0 1 17 0c0 4.69-3.81 8.5-8.5 8.5a8.5 8.5 0 0 1-8.5-8.5"
-          />
-          <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(30 12 12)" />
-          <ellipse
-            cx="12"
-            cy="12"
-            rx="10"
-            ry="4"
-            transform="rotate(-30 12 12)"
-          />
-        </svg>`,
-      },
-    ];
+    const classes = getAllPlayerClasses();
 
     return html`
       <div class="mb-6 p-4 rounded-2xl bg-black/30 border border-white/10">
@@ -602,7 +459,7 @@ export class SinglePlayerModal extends BaseModal {
                           : "bg-white/5 text-white/70"
                       }"
                     >
-                      ${cls.icon}
+                      ${cls.icon("w-5 h-5")}
                     </div>
                     <div class="min-w-0">
                       <div class="text-sm font-bold text-white truncate">
@@ -686,6 +543,77 @@ export class SinglePlayerModal extends BaseModal {
               </span>
             </div>
           </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private renderTeamSelection(): TemplateResult {
+    if (this.gameMode !== GameMode.Team || this.teamCount === HumansVsNations) {
+      return html``;
+    }
+
+    const totalEstimated = (this.bots || 8) + (this.nations || 0) + 1;
+    let availableTeams: Team[];
+    try {
+      availableTeams = resolveTeamsList(this.teamCount, totalEstimated);
+    } catch {
+      availableTeams = [ColoredTeams.Red, ColoredTeams.Blue];
+    }
+    if (availableTeams.length < 2) {
+      availableTeams = [ColoredTeams.Red, ColoredTeams.Blue];
+    }
+
+    return html`
+      <div class="mb-6 p-4 rounded-2xl bg-black/30 border border-white/10">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 class="text-base font-bold text-white tracking-wide">
+              ${translateText("game_settings.choose_team")}
+            </h2>
+            <p class="text-xs text-white/60">
+              Wähle dein Start-Team für den Team-Modus.
+            </p>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+          ${availableTeams.map((team, idx) => {
+            const isSelected = this.selectedTeamIndex === idx;
+            const teamLabel = getTranslatedPlayerTeamLabel(team);
+            let teamHex = "#3b82f6";
+            try {
+              teamHex = themeProvider.current().teamColor(team).toHex();
+            } catch {
+              // fallback
+            }
+
+            return html`
+              <button
+                type="button"
+                @click=${() => {
+                  this.selectedTeamIndex = idx;
+                }}
+                class="flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all duration-150 select-none cursor-pointer ${
+                  isSelected
+                    ? "bg-white/15 border-sky-400 ring-1 ring-sky-400/50 shadow-[0_0_12px_rgba(56,189,248,0.25)]"
+                    : "bg-surface/80 border-white/10 hover:border-white/30 hover:bg-surface"
+                }"
+              >
+                <span
+                  class="w-3.5 h-3.5 rounded-full border-2 border-white/90 shadow-inner shrink-0"
+                  style="background-color: ${teamHex};"
+                ></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-xs font-bold text-white truncate">
+                    ${teamLabel}
+                  </div>
+                  <div class="text-[10px] ${isSelected ? "text-sky-300 font-semibold" : "text-white/40"}">
+                    ${isSelected ? translateText("host_modal.your_team") : `Team ${idx + 1}`}
+                  </div>
+                </div>
+              </button>
+            `;
+          })}
         </div>
       </div>
     `;
@@ -862,6 +790,7 @@ export class SinglePlayerModal extends BaseModal {
             @option-toggle-changed=${this.handleConfigOptionToggleChanged}
             @unit-toggle-changed=${this.handleConfigUnitToggleChanged}
           ></game-config-settings>
+          ${this.renderTeamSelection()}
         </div>
 
         <!-- Footer Action -->
@@ -974,6 +903,7 @@ export class SinglePlayerModal extends BaseModal {
     this.instantBuild = DEFAULT_OPTIONS.instantBuild;
     this.randomSpawn = DEFAULT_OPTIONS.randomSpawn;
     this.teamCount = DEFAULT_OPTIONS.teamCount;
+    this.selectedTeamIndex = 0;
     this.disabledUnits = [...DEFAULT_OPTIONS.disabledUnits];
     this.goldMultiplier = DEFAULT_OPTIONS.goldMultiplier;
     this.goldMultiplierValue = DEFAULT_OPTIONS.goldMultiplierValue;
@@ -1252,6 +1182,7 @@ export class SinglePlayerModal extends BaseModal {
 
   private handleTeamCountSelection(value: TeamCountConfig) {
     this.teamCount = value;
+    this.selectedTeamIndex = 0;
   }
 
   /**
@@ -1426,6 +1357,11 @@ export class SinglePlayerModal extends BaseModal {
                   clanTag: usernameInput?.getClanTag() ?? null,
                   cosmetics,
                   playerClass: this.selectedClass,
+                  teamIndex:
+                    this.gameMode === GameMode.Team &&
+                    this.teamCount !== HumansVsNations
+                      ? this.selectedTeamIndex
+                      : undefined,
                 },
               ],
               tribes: getStoredCommunityTribes().map((t) => ({

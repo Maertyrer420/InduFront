@@ -1039,6 +1039,7 @@
   },
   "game_settings": {
     "bots": "Tribes: ",
+    "choose_team": "Choose Your Team",
     "compact_map": "Compact Map",
     "custom_alliances": "Alliance Duration",
     "disable_units": "Disable Units",
@@ -1329,6 +1330,7 @@
     "hard_nations": "Hard Nations",
     "host_badge": "Host",
     "host_cheats": "Host Cheats",
+    "join_team": "Join Team",
     "leave_confirmation": "Are you sure you want to leave the lobby?",
     "list_lobby_body": "Your lobby will appear in the public lobby list. It starts automatically when the timer runs out or the lobby fills up. Settings can't be changed once it's listed.",
     "list_lobby_confirm": "List lobby",
@@ -1371,7 +1373,8 @@
     "view_subscriptions": "View Subscriptions",
     "visibility_private": "Private",
     "visibility_public": "Public",
-    "waiting": "Waiting for players..."
+    "waiting": "Waiting for players...",
+    "your_team": "Your Team"
   },
   "inventory": {
     "equipped": "Equipped",
