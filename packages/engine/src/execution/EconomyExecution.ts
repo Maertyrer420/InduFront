@@ -212,10 +212,6 @@ export class EconomyExecution implements Execution {
               DEPLETION_EPSILON + (1.0 - DEPLETION_EPSILON) * ratio;
             minedAmount =
               baseYield * (0.6 + deposit.intensity * 1.8 * yieldFactor);
-            clusterDrains.set(
-              deposit.clusterId,
-              (clusterDrains.get(deposit.clusterId) ?? 0) + minedAmount,
-            );
           }
 
           // Building level multiplier: Upgrading mines significantly boosts extraction
@@ -229,20 +225,29 @@ export class EconomyExecution implements Execution {
             minedAmount *= 0.80; // -20% inland mining for Marine
           }
 
+          // Fractional extraction per tick (minedAmount is calibrated per second at 10 ticks/s)
+          const minedThisTick = minedAmount / 10;
+          if (deposit) {
+            clusterDrains.set(
+              deposit.clusterId,
+              (clusterDrains.get(deposit.clusterId) ?? 0) + minedThisTick,
+            );
+          }
+
           const latency = this.getLogisticsLatency(player, unit, minedRes);
           if (latency === 0) {
             econ.resources[minedRes] =
-              (econ.resources[minedRes] || 0) + minedAmount;
+              (econ.resources[minedRes] || 0) + minedThisTick;
           } else {
             const buf = this.mineBuffers.get(unit.id()) ?? {
               resource: minedRes,
               amount: 0,
             };
-            buf.amount += minedAmount;
+            buf.amount += minedThisTick;
             buf.resource = minedRes;
 
-            // Dispatch a shipment every 3 ticks or when accumulated amount >= 8
-            if (buf.amount >= 8 || ticks % 3 === 0) {
+            // Dispatch a shipment when buffer accumulates >= 5 or periodically every 30 ticks (3s)
+            if (buf.amount >= 5 || (ticks % 30 === 0 && buf.amount > 0)) {
               this.shipments.push({
                 id: this.nextShipmentId++,
                 unitId: unit.id(),
@@ -273,8 +278,8 @@ export class EconomyExecution implements Execution {
         econ.maxPopulation = Math.round(econ.maxPopulation * 0.85); // -15% max population for Scientist
       }
 
-      // Demographic Growth: P_{t+1} = P + r * P * (1 - P / K_P)
-      if (econ.population < econ.maxPopulation) {
+      // Demographic Growth: P_{t+1} = P + r * P * (1 - P / K_P) evaluated once per second
+      if (econ.population < econ.maxPopulation && ticks % 10 === 0) {
         let growth =
           DEMOGRAPHIC_GROWTH_RATE *
           econ.population *
@@ -288,13 +293,15 @@ export class EconomyExecution implements Execution {
         );
       }
 
-      // Gold Income: G_tick = floor(alpha * T + beta * P)
-      const numTiles = player.numTilesOwned();
-      const goldIncome = Math.floor(
-        GOLD_ALPHA * numTiles + GOLD_BETA * econ.population,
-      );
-      if (goldIncome > 0) {
-        player.addGold(BigInt(goldIncome));
+      // Gold Income: G_second = floor(alpha * T + (beta / 10) * P) evaluated once per second
+      if (ticks % 10 === 0) {
+        const numTiles = player.numTilesOwned();
+        const goldIncome = Math.floor(
+          GOLD_ALPHA * numTiles + (GOLD_BETA * 0.1) * econ.population,
+        );
+        if (goldIncome > 0) {
+          player.addGold(BigInt(goldIncome));
+        }
       }
 
       // Apply class bonuses to refining throughput
@@ -308,40 +315,43 @@ export class EconomyExecution implements Execution {
       }
 
       // Process Refineries (Level-scaled parallel batch conversions)
-      // Steel Mill: 3 Fe + 2 C -> 1 Steel
-      if (steelMillCap > 0) {
-        const maxConversions = Math.min(
-          steelMillCap,
-          Math.floor(econ.resources.ironOre / REFINERY_RECIPES.steel.ironOre),
-          Math.floor(econ.resources.coal / REFINERY_RECIPES.steel.coal),
-        );
-        if (maxConversions > 0) {
-          econ.resources.ironOre -=
-            maxConversions * REFINERY_RECIPES.steel.ironOre;
-          econ.resources.coal -= maxConversions * REFINERY_RECIPES.steel.coal;
-          econ.refined.steel =
-            (econ.refined.steel ?? 0) +
-            maxConversions * REFINERY_RECIPES.steel.output;
+      // Steel Mill & Fuel Refinery convert once every second (ticks % 10 === 0)
+      if (ticks % 10 === 0) {
+        // Steel Mill: 3 Fe + 2 C -> 1 Steel
+        if (steelMillCap > 0) {
+          const maxConversions = Math.min(
+            steelMillCap,
+            Math.floor(econ.resources.ironOre / REFINERY_RECIPES.steel.ironOre),
+            Math.floor(econ.resources.coal / REFINERY_RECIPES.steel.coal),
+          );
+          if (maxConversions > 0) {
+            econ.resources.ironOre -=
+              maxConversions * REFINERY_RECIPES.steel.ironOre;
+            econ.resources.coal -= maxConversions * REFINERY_RECIPES.steel.coal;
+            econ.refined.steel =
+              (econ.refined.steel ?? 0) +
+              maxConversions * REFINERY_RECIPES.steel.output;
+          }
+        }
+
+        // Refinery: 3 Crude Oil -> 1 Fuel
+        if (refineryCap > 0) {
+          const maxConversions = Math.min(
+            refineryCap,
+            Math.floor(econ.resources.crudeOil / REFINERY_RECIPES.fuel.crudeOil),
+          );
+          if (maxConversions > 0) {
+            econ.resources.crudeOil -=
+              maxConversions * REFINERY_RECIPES.fuel.crudeOil;
+            econ.refined.fuel =
+              (econ.refined.fuel ?? 0) +
+              maxConversions * REFINERY_RECIPES.fuel.output;
+          }
         }
       }
 
-      // Refinery: 3 Crude Oil -> 1 Fuel
-      if (refineryCap > 0) {
-        const maxConversions = Math.min(
-          refineryCap,
-          Math.floor(econ.resources.crudeOil / REFINERY_RECIPES.fuel.crudeOil),
-        );
-        if (maxConversions > 0) {
-          econ.resources.crudeOil -=
-            maxConversions * REFINERY_RECIPES.fuel.crudeOil;
-          econ.refined.fuel =
-            (econ.refined.fuel ?? 0) +
-            maxConversions * REFINERY_RECIPES.fuel.output;
-        }
-      }
-
-      // Centrifuge: 5 Uranium Ore + 3 Coal -> 1 Enriched Uranium
-      if (centrifugeCap > 0) {
+      // Centrifuge: 5 Uranium Ore + 3 Coal -> 1 Enriched Uranium (once every 2 seconds: ticks % 20 === 0)
+      if (ticks % 20 === 0 && centrifugeCap > 0) {
         const maxConversions = Math.min(
           centrifugeCap,
           Math.floor(
@@ -363,7 +373,7 @@ export class EconomyExecution implements Execution {
         }
       }
 
-      // Fuel Drain & Starvation
+      // Fuel Drain & Starvation (smooth per-tick drain)
       let fuelDrain = 0;
       fuelDrain +=
         (econ.buildingsCount[UnitType.Warship] ?? 0) *
@@ -393,7 +403,7 @@ export class EconomyExecution implements Execution {
         econ.refined.fuel = 0;
       }
 
-      econ.fuelStarved = econ.refined.fuel <= 0.05;
+      econ.fuelStarved = econ.refined.fuel <= 0.05 && fuelDrain > 0;
 
       // 5% hull attrition on ships if fuel starved (paced to once every 10 ticks to avoid spamming unit updates).
       // Fuel starvation damage cannot sink ships directly; minimum health floor is 1 HP.

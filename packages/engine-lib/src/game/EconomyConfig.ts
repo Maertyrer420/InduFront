@@ -6,7 +6,7 @@ import {
 import { pow as detPow } from "../DetMath";
 
 // Economy balancing parameters
-export const DEMOGRAPHIC_GROWTH_RATE = 0.05; // r = 0.05
+export const DEMOGRAPHIC_GROWTH_RATE = 0.02; // r = 0.02 per second
 export const GOLD_ALPHA = 0.02; // alpha * Territory
 export const GOLD_BETA = 0.1; // beta * Population
 export const BASE_POPULATION_CAP = 1000;
@@ -155,16 +155,21 @@ export function getUnitResourceCost(
   return cost;
 }
 
-// Fuel consumption rates
+// Fuel consumption rates (calibrated per second at 10 ticks/s)
 export const FUEL_CONSUMPTION = {
   tankPerMove: 0.5,
-  landingCraftPerTick: 0.15,
-  warshipPerTick: 0.4,
-  destroyerPerTick: 1.2,
-  submarinePerTick: 0.5,
-  battleshipPerTick: 2.0,
+  landingCraftPerSecond: 0.02,
+  warshipPerSecond: 0.04,
+  destroyerPerSecond: 0.08,
+  submarinePerSecond: 0.05,
+  battleshipPerSecond: 0.15,
   fighterPerMission: 1.5,
   bomberPerMission: 3.0,
+  landingCraftPerTick: 0.002,
+  warshipPerTick: 0.004,
+  destroyerPerTick: 0.008,
+  submarinePerTick: 0.005,
+  battleshipPerTick: 0.015,
 };
 
 // Mine Base Yields (per tick at H = 1.0) - reduced by 25% from baseline (Industrialist restores to base)

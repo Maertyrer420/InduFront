@@ -775,6 +775,12 @@ export class WarshipExecution implements Execution {
     const pClass = owner.playerClass?.();
     const ticks = this.mg.ticks();
 
+    // Fuel Starvation penalty: 0 fuel drops fleet speed by 80% (only moves every 5th tick)
+    const econ = this.mg.economyExecution()?.getEconomy(owner.smallID());
+    if (econ?.fuelStarved && ticks % 5 !== 0) {
+      return;
+    }
+
     // Infantry penalty: -20% fleet movement speed (skip step every 5th tick)
     if (pClass === PlayerClass.Infantry && ticks % 5 === 0) {
       return;

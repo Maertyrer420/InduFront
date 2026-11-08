@@ -1612,6 +1612,44 @@ export class PlayerImpl implements Player {
   upgradeUnit(unit: Unit) {
     const cost = this.mg.unitInfo(unit.type()).cost(this.mg, this);
     this.removeGold(cost);
+
+    // Deduct refined resource costs when upgrading advanced structures
+    const ownedBunkers =
+      unit.type() === UnitType.Bunker
+        ? Math.max(0, this.unitsOwned(UnitType.Bunker) - 1)
+        : 0;
+    const resCost = getUnitResourceCost(
+      unit.type(),
+      ownedBunkers,
+      this.playerClass(),
+    );
+    if (
+      !this.mg.config().infiniteGold() &&
+      (resCost.enrichedUranium > 0 || resCost.steel > 0 || resCost.fuel > 0)
+    ) {
+      const econ = this.mg.economyExecution()?.getEconomy(this.smallID());
+      if (econ) {
+        if (resCost.enrichedUranium > 0) {
+          econ.refined.enrichedUranium = Math.max(
+            0,
+            (econ.refined.enrichedUranium ?? 0) - resCost.enrichedUranium,
+          );
+        }
+        if (resCost.steel > 0) {
+          econ.refined.steel = Math.max(
+            0,
+            (econ.refined.steel ?? 0) - resCost.steel,
+          );
+        }
+        if (resCost.fuel > 0) {
+          econ.refined.fuel = Math.max(
+            0,
+            (econ.refined.fuel ?? 0) - resCost.fuel,
+          );
+        }
+      }
+    }
+
     unit.increaseLevel();
     this.recordUnitConstructed(unit.type());
   }

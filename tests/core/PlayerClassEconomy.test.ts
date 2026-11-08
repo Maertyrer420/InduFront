@@ -5,6 +5,7 @@ import {
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import {
+  FUEL_CONSUMPTION,
   getUnitResourceCost,
   MINE_BASE_YIELDS,
   REFINERY_RECIPES,
@@ -98,5 +99,25 @@ describe("Player Classes & Economic Progression", () => {
 
     expect(marineBunker.gold).toBe(Math.round(normalBunker.gold * 1.3));
     expect(marineBunker.steel).toBe(Math.round(normalBunker.steel * 1.3));
+  });
+
+  it("verifies calibrated fuel consumption rates and per-tick ratios", () => {
+    expect(FUEL_CONSUMPTION.warshipPerSecond).toBe(0.04);
+    expect(FUEL_CONSUMPTION.destroyerPerSecond).toBe(0.08);
+    expect(FUEL_CONSUMPTION.battleshipPerSecond).toBe(0.15);
+    expect(FUEL_CONSUMPTION.warshipPerTick).toBeCloseTo(0.004, 3);
+    expect(FUEL_CONSUMPTION.destroyerPerTick).toBeCloseTo(0.008, 3);
+    expect(FUEL_CONSUMPTION.battleshipPerTick).toBeCloseTo(0.015, 3);
+  });
+
+  it("verifies shared coal bottleneck between Steel Mill and Centrifuge", () => {
+    // Both steel mills and centrifuges consume coal, preventing single coal mine from feeding both
+    const steelCoalDemand = REFINERY_RECIPES.steel.coal;
+    const centrifugeCoalDemand = REFINERY_RECIPES.enrichedUranium.coal;
+    expect(steelCoalDemand).toBe(2);
+    expect(centrifugeCoalDemand).toBe(3);
+    expect(steelCoalDemand + centrifugeCoalDemand).toBe(5);
+    // Combined coal demand (5) significantly exceeds 1 base coal mine yield (1.88)
+    expect(MINE_BASE_YIELDS.coal).toBeLessThan(steelCoalDemand + centrifugeCoalDemand);
   });
 });

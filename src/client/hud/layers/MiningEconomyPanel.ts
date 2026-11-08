@@ -18,7 +18,6 @@ import {
   goldCoinIcon,
   ironMineIcon,
   oilRigIcon,
-  radarIcon,
   refineryIcon,
   residentialIcon,
   steelMillIcon,
@@ -44,7 +43,7 @@ export const MINE_BUILDINGS: MineBuildingInfo[] = [
     category: "extraction",
     icon: ironMineIcon,
     description: "Fördert Eisenerz auf geologischen Fe-Clustern.",
-    yieldInfo: "+6 Fe / Sekunde (Basis)",
+    yieldInfo: "+1.9 Fe / Sekunde (Basis)",
     baseCost: 200,
   },
   {
@@ -53,7 +52,7 @@ export const MINE_BUILDINGS: MineBuildingInfo[] = [
     category: "extraction",
     icon: coalMineIcon,
     description: "Fördert Kohle auf geologischen C-Clustern.",
-    yieldInfo: "+5 Kohle / Sekunde (Basis)",
+    yieldInfo: "+1.9 Kohle / Sekunde (Basis)",
     baseCost: 150,
   },
   {
@@ -62,7 +61,7 @@ export const MINE_BUILDINGS: MineBuildingInfo[] = [
     category: "extraction",
     icon: oilRigIcon,
     description: "Fördert Rohöl auf Land- oder Offshore-Vorkommen.",
-    yieldInfo: "+4 Rohöl / Sekunde (Basis)",
+    yieldInfo: "+1.7 Rohöl / Sekunde (Basis)",
     baseCost: 350,
   },
   {
@@ -71,7 +70,7 @@ export const MINE_BUILDINGS: MineBuildingInfo[] = [
     category: "extraction",
     icon: uraniumMineIcon,
     description: "Fördert seltenes Uranerz auf Hochenergie-Vorkommen.",
-    yieldInfo: "+1.5 Uran / Sekunde (Basis)",
+    yieldInfo: "+0.45 Uran / Sekunde (Basis)",
     baseCost: 800,
   },
   // Tier 2 Refinement
@@ -81,7 +80,7 @@ export const MINE_BUILDINGS: MineBuildingInfo[] = [
     category: "refinement",
     icon: steelMillIcon,
     description: "Schmilzt Eisenerz und Kohle zu Panzer- und Rumpfstahl.",
-    yieldInfo: "Rezept: 2 Fe + 1 Kohle ➔ 1 Stahl",
+    yieldInfo: "Rezept: 3 Fe + 2 Kohle ➔ 1 Stahl (1/s)",
     baseCost: 400,
   },
   {
@@ -90,8 +89,8 @@ export const MINE_BUILDINGS: MineBuildingInfo[] = [
     category: "refinement",
     icon: refineryIcon,
     description:
-      "Destilliert Rohöl zu Treibstoff für Panzer, Schiffe & Flotte.",
-    yieldInfo: "Rezept: 2 Rohöl ➔ 1 Treibstoff (Fuel)",
+      "Destilliert Rohöl zu Treibstoff für Schiffe, Flotte & Raketen.",
+    yieldInfo: "Rezept: 3 Rohöl ➔ 1 Treibstoff (1/s)",
     baseCost: 500,
   },
   {
@@ -100,7 +99,7 @@ export const MINE_BUILDINGS: MineBuildingInfo[] = [
     category: "refinement",
     icon: centrifugeIcon,
     description: "Reichert Uranerz für nukleare Waffen & Hochtechnologie an.",
-    yieldInfo: "Rezept: 4 Uran + 2 Kohle ➔ 1 Spaltmaterial (U_ref)",
+    yieldInfo: "Rezept: 5 Uran + 3 Kohle ➔ 1 Spaltmaterial (0.5/s)",
     baseCost: 1200,
   },
   // Civilian & Defense
@@ -110,7 +109,7 @@ export const MINE_BUILDINGS: MineBuildingInfo[] = [
     category: "civil",
     icon: residentialIcon,
     description: "Erhöht das demografische Bevölkerungslimit der Nation.",
-    yieldInfo: "+500 Bevölkerungskapazität (Kp)",
+    yieldInfo: "+500 Bevölkerungskapazität (skaliert mit Level)",
     baseCost: 100,
   },
   {
@@ -119,20 +118,9 @@ export const MINE_BUILDINGS: MineBuildingInfo[] = [
     category: "defense",
     icon: bunkerIcon,
     description: "Schwer befestigte Verteidigungsposition.",
-    yieldInfo: "Verteidigungsbonus 1.8x (Lanchester)",
-    baseCost: 150,
-    refinedCost: { steel: 10 },
-  },
-  {
-    type: UnitType.Radar,
-    title: "Radarstation (Early Warning)",
-    category: "defense",
-    icon: radarIcon,
-    description:
-      "Frühwarnung (R=30), Sonar gegen U-Boote, +50% SAM-Reichweite.",
-    yieldInfo: "Sensor-Netzwerk & SAM-Kopplung (12➔18)",
-    baseCost: 800,
-    refinedCost: { steel: 40, enrichedUranium: 5 },
+    yieldInfo: "Verteidigungsbonus 1.8x, +800 Schutzraum",
+    baseCost: 500,
+    refinedCost: { steel: 100 },
   },
 ];
 
@@ -559,7 +547,7 @@ export class MiningEconomyPanel extends LitElement implements Controller {
                 this._activeTab = "defense";
               }}
             >
-              Verteidigung & Radar
+              Verteidigung & Zivil
             </button>
           </div>
 

@@ -224,7 +224,8 @@ export class UnitDisplay extends LitElement implements Controller {
       return BigInt(calculateBuildingCost(item, count).gold);
     }
     const count = this.unitCount(item);
-    const mil = getUnitResourceCost(item, count);
+    const playerClass = this.game?.myPlayer()?.playerClass?.();
+    const mil = getUnitResourceCost(item, count, playerClass);
     if (mil && mil.gold > 0) {
       return BigInt(mil.gold);
     }
@@ -247,7 +248,8 @@ export class UnitDisplay extends LitElement implements Controller {
       };
     }
     const count = this.unitCount(item);
-    const mil = getUnitResourceCost(item, count);
+    const playerClass = this.game?.myPlayer()?.playerClass?.();
+    const mil = getUnitResourceCost(item, count, playerClass);
     return {
       steel: mil.steel,
       fuel: mil.fuel,
