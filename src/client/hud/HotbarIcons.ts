@@ -1,14 +1,16 @@
 import { assetUrl } from "@openfront/shared/AssetUrls";
 
-export const warshipIcon = assetUrl("images/BattleshipIconWhite.svg");
+export const warshipIcon = assetUrl("images/BoatIconWhite.svg");
 export const destroyerIcon = assetUrl("images/DestroyerIconWhite.svg");
 export const submarineIcon = assetUrl("images/RepairShipIconWhite.svg");
 export const repairShipIcon = assetUrl("images/RepairShipIconWhite.svg");
+export const battleshipIcon = assetUrl("images/BattleshipIconWhite.svg");
 export const cruiseMissileIcon = assetUrl("images/CruiseMissileIconWhite.svg");
 export const cityIcon = assetUrl("images/CityIconWhite.svg");
 export const factoryIcon = assetUrl("images/FactoryIconWhite.svg");
 export const goldCoinIcon = assetUrl("images/GoldCoinIcon.svg");
 export const mirvIcon = assetUrl("images/MIRVIcon.svg");
+export const icbmIcon = assetUrl("images/NukeIconRed.svg");
 export const missileSiloIcon = assetUrl("images/MissileSiloIconWhite.svg");
 export const hydrogenBombIcon = assetUrl("images/MushroomCloudIconWhite.svg");
 export const atomBombIcon = assetUrl("images/NukeIconWhite.svg");

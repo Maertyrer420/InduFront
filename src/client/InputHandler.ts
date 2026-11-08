@@ -534,10 +534,24 @@ export class InputHandler {
       "buildDefensePost",
       "buildMissileSilo",
       "buildSamLauncher",
+      "buildBunker",
+      "buildResidential",
+      "buildIronMine",
+      "buildCoalMine",
+      "buildSteelMill",
+      "buildOilRig",
+      "buildRefinery",
+      "buildUraniumMine",
+      "buildCentrifuge",
+      "buildWarship",
+      "buildDestroyer",
+      "buildSubmarine",
+      "buildBattleship",
+      "buildCruiseMissile",
       "buildAtomBomb",
       "buildHydrogenBomb",
-      "buildWarship",
       "buildMIRV",
+      "buildICBM",
     ];
     buildKeybinds = buildKeybinds.map((i: string): string => {
       return this.keybinds[i];
@@ -1494,7 +1508,7 @@ export class InputHandler {
     code: string,
     shiftKey: boolean,
   ): PlayerBuildableUnitType | null {
-    // When active hotbar tab is explicitly set to "actives", digits 1..7 map to the actives hotbar row
+    // When active hotbar tab is explicitly set to "actives", digits 1..9 map to the actives hotbar row
     if (!shiftKey && this.uiState?.activeHotbarTab === "actives") {
       let digit: number | null = null;
       if (code.startsWith("Digit")) {
@@ -1511,13 +1525,17 @@ export class InputHandler {
           case 3:
             return UnitType.Submarine;
           case 4:
-            return UnitType.CruiseMissile;
+            return UnitType.Battleship;
           case 5:
-            return UnitType.AtomBomb;
+            return UnitType.CruiseMissile;
           case 6:
-            return UnitType.HydrogenBomb;
+            return UnitType.AtomBomb;
           case 7:
+            return UnitType.HydrogenBomb;
+          case 8:
             return UnitType.MIRV;
+          case 9:
+            return UnitType.ICBM;
           default:
             break;
         }
@@ -1528,16 +1546,34 @@ export class InputHandler {
       key: string;
       type: PlayerBuildableUnitType;
     }> = [
+      // Infrastructure & Defense
       { key: "buildCity", type: UnitType.City },
       { key: "buildFactory", type: UnitType.Factory },
       { key: "buildPort", type: UnitType.Port },
       { key: "buildDefensePost", type: UnitType.DefensePost },
       { key: "buildMissileSilo", type: UnitType.MissileSilo },
       { key: "buildSamLauncher", type: UnitType.SAMLauncher },
+      { key: "buildBunker", type: UnitType.Bunker },
+      { key: "buildResidential", type: UnitType.Residential },
+      // Resources & Industry
+      { key: "buildIronMine", type: UnitType.IronMine },
+      { key: "buildCoalMine", type: UnitType.CoalMine },
+      { key: "buildSteelMill", type: UnitType.SteelMill },
+      { key: "buildOilRig", type: UnitType.OilRig },
+      { key: "buildRefinery", type: UnitType.Refinery },
+      { key: "buildUraniumMine", type: UnitType.UraniumMine },
+      { key: "buildCentrifuge", type: UnitType.Centrifuge },
+      // Fleet & Navy
+      { key: "buildWarship", type: UnitType.Warship },
+      { key: "buildDestroyer", type: UnitType.Destroyer },
+      { key: "buildSubmarine", type: UnitType.Submarine },
+      { key: "buildBattleship", type: UnitType.Battleship },
+      // Missiles & Strategic Weapons
+      { key: "buildCruiseMissile", type: UnitType.CruiseMissile },
       { key: "buildAtomBomb", type: UnitType.AtomBomb },
       { key: "buildHydrogenBomb", type: UnitType.HydrogenBomb },
-      { key: "buildWarship", type: UnitType.Warship },
       { key: "buildMIRV", type: UnitType.MIRV },
+      { key: "buildICBM", type: UnitType.ICBM },
     ];
 
     // Phase 1: Exact code match
@@ -1582,8 +1618,20 @@ export class InputHandler {
             break;
         }
       } else {
-        // Buildings tab extra structures (Bunker & Residential)
+        // Buildings tab structures
         switch (digit) {
+          case 1:
+            return UnitType.City;
+          case 2:
+            return UnitType.Factory;
+          case 3:
+            return UnitType.Port;
+          case 4:
+            return UnitType.DefensePost;
+          case 5:
+            return UnitType.MissileSilo;
+          case 6:
+            return UnitType.SAMLauncher;
           case 7:
             return UnitType.Bunker;
           case 8:

@@ -20,11 +20,16 @@ import {
   ToggleStructureEvent,
 } from "../../InputHandler";
 import { UIState } from "../../UIState";
-import { UserSettings } from "../../UserSettings";
-import { translateText } from "../../Utils";
+import {
+  KEYBINDS_KEY,
+  USER_SETTINGS_CHANGED_EVENT,
+  UserSettings,
+} from "../../UserSettings";
+import { formatKeyForDisplay, translateText } from "../../Utils";
 import { GameView } from "../../view";
 import {
   atomBombIcon,
+  battleshipIcon,
   bunkerIcon,
   centrifugeIcon,
   cityIcon,
@@ -35,6 +40,7 @@ import {
   factoryIcon,
   goldCoinIcon,
   hydrogenBombIcon,
+  icbmIcon,
   ironMineIcon,
   mirvIcon,
   missileSiloIcon,
@@ -139,6 +145,13 @@ export class UnitDisplay extends LitElement implements Controller {
     const userSettings = new UserSettings();
 
     this.keybinds = userSettings.parsedUserKeybinds();
+    window.addEventListener(
+      `${USER_SETTINGS_CHANGED_EVENT}:${KEYBINDS_KEY}`,
+      () => {
+        this.keybinds = userSettings.parsedUserKeybinds();
+        this.requestUpdate();
+      },
+    );
     this.allDisabled = BuildMenus.types.every((u) => config.isUnitDisabled(u));
 
     if (this.uiState) {
@@ -499,13 +512,23 @@ export class UnitDisplay extends LitElement implements Controller {
         structureKey: "submarine",
       },
       {
+        type: UnitType.Battleship,
+        icon: battleshipIcon,
+        name: "Schlachtschiff",
+        description:
+          "Schwerstes Kriegsschiff mit massiver Panzerung und verheerender Feuerkraft.",
+        yieldInfo: "Kosten: 150 Stahl, 200 Treibstoff",
+        defaultHotkey: "4",
+        structureKey: "battleship",
+      },
+      {
         type: UnitType.CruiseMissile,
         icon: cruiseMissileIcon,
         name: "Marschflugkörper / Rakete",
         description:
           "Konventioneller taktischer Präzisionsschlag mit kleinem Radius (R=3). Kein Uran erforderlich!",
         yieldInfo: "Kosten: 40 Stahl, 120 Treibstoff (0 Uran)",
-        defaultHotkey: "4",
+        defaultHotkey: "5",
         structureKey: "cruise_missile",
       },
       {
@@ -514,7 +537,7 @@ export class UnitDisplay extends LitElement implements Controller {
         name: "Atombombe (A-Bombe)",
         description: "Nuklearschlag mittlerer Reichweite. Verwüstet Provinzen.",
         yieldInfo: "Kosten: 200 Uran, 200 Stahl, 150 Treibstoff",
-        defaultHotkey: "5",
+        defaultHotkey: "6",
         structureKey: "atom_bomb",
       },
       {
@@ -524,7 +547,7 @@ export class UnitDisplay extends LitElement implements Controller {
         description:
           "Thermonukleare Vernichtungswaffe mit großem Explosionsradius.",
         yieldInfo: "Kosten: 450 Uran, 400 Stahl, 300 Treibstoff",
-        defaultHotkey: "6",
+        defaultHotkey: "7",
         structureKey: "hydrogen_bomb",
       },
       {
@@ -534,10 +557,30 @@ export class UnitDisplay extends LitElement implements Controller {
         description:
           "Strategische Interkontinentalrakete mit bis zu 8 Sprengköpfen.",
         yieldInfo: "Kosten: 1000 Uran, 800 Stahl, 500 Treibstoff",
-        defaultHotkey: "7",
+        defaultHotkey: "8",
         structureKey: "mirv",
       },
+      {
+        type: UnitType.ICBM,
+        icon: icbmIcon,
+        name: "Strategische ICBM",
+        description:
+          "Schwerste Interkontinentalrakete mit verheerendem Einschlagradius (R=12) und 120s Fallout.",
+        yieldInfo: "Kosten: 1500 Uran, 1200 Stahl, 800 Treibstoff",
+        defaultHotkey: "9",
+        structureKey: "icbm",
+      },
     ];
+  }
+
+  private getHotkeyForUnit(u: UnitConfigItem): string {
+    const bind = this.keybinds[`build${u.type.replace(/\s+/g, "")}`];
+    if (bind) {
+      if (typeof bind === "string") return formatKeyForDisplay(bind);
+      if (bind.key) return bind.key;
+      if (bind.value) return formatKeyForDisplay(bind.value);
+    }
+    return u.defaultHotkey;
   }
 
   private getUnitCount(type: UnitType): number | null {
@@ -715,9 +758,7 @@ export class UnitDisplay extends LitElement implements Controller {
                   class="flex items-center justify-center gap-1 w-full overflow-visible py-0.5"
                 >
                   ${this.infrastructureUnits.map((u) => {
-                    const hotkey =
-                      this.keybinds[`build${u.type.replace(/\s+/g, "")}`]
-                        ?.key ?? u.defaultHotkey;
+                    const hotkey = this.getHotkeyForUnit(u);
                     return this.renderUnitItem(
                       u.icon,
                       this.getUnitCount(u.type),
@@ -735,9 +776,7 @@ export class UnitDisplay extends LitElement implements Controller {
                   class="flex items-center justify-center gap-1 w-full overflow-visible py-0.5"
                 >
                   ${this.economyUnits.map((u) => {
-                    const hotkey =
-                      this.keybinds[`build${u.type.replace(/\s+/g, "")}`]
-                        ?.key ?? u.defaultHotkey;
+                    const hotkey = this.getHotkeyForUnit(u);
                     return this.renderUnitItem(
                       u.icon,
                       this.getUnitCount(u.type),
@@ -757,9 +796,7 @@ export class UnitDisplay extends LitElement implements Controller {
                   class="flex items-center justify-center gap-1 w-full overflow-visible py-0.5"
                 >
                   ${this.activeUnits.map((u) => {
-                    const hotkey =
-                      this.keybinds[`build${u.type.replace(/\s+/g, "")}`]
-                        ?.key ?? u.defaultHotkey;
+                    const hotkey = this.getHotkeyForUnit(u);
                     return this.renderUnitItem(
                       u.icon,
                       this.getUnitCount(u.type),

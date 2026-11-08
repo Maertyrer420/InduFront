@@ -1289,7 +1289,7 @@ export class UserSettingModal extends BaseModal {
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
-        ${translateText("user_setting.build_controls")}
+        ${translateText("user_setting.build_controls")} — ${translateText("user_setting.build_controls_infrastructure")}
       </h2>
 
       <setting-keybind
@@ -1353,12 +1353,160 @@ export class UserSettingModal extends BaseModal {
       ></setting-keybind>
 
       <setting-keybind
+        action="buildBunker"
+        label=${translateText("user_setting.build_bunker")}
+        description=${translateText("user_setting.build_bunker_desc")}
+        defaultKey=${this.defaultKeybinds.buildBunker}
+        .value=${this.getKeyValue("buildBunker")}
+        .display=${this.getKeyChar("buildBunker")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildResidential"
+        label=${translateText("user_setting.build_residential")}
+        description=${translateText("user_setting.build_residential_desc")}
+        defaultKey=${this.defaultKeybinds.buildResidential}
+        .value=${this.getKeyValue("buildResidential")}
+        .display=${this.getKeyChar("buildResidential")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <h2
+        class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
+      >
+        ${translateText("user_setting.build_controls")} — ${translateText("user_setting.build_controls_economy")}
+      </h2>
+
+      <setting-keybind
+        action="buildIronMine"
+        label=${translateText("user_setting.build_iron_mine")}
+        description=${translateText("user_setting.build_iron_mine_desc")}
+        defaultKey=${this.defaultKeybinds.buildIronMine}
+        .value=${this.getKeyValue("buildIronMine")}
+        .display=${this.getKeyChar("buildIronMine")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildCoalMine"
+        label=${translateText("user_setting.build_coal_mine")}
+        description=${translateText("user_setting.build_coal_mine_desc")}
+        defaultKey=${this.defaultKeybinds.buildCoalMine}
+        .value=${this.getKeyValue("buildCoalMine")}
+        .display=${this.getKeyChar("buildCoalMine")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildSteelMill"
+        label=${translateText("user_setting.build_steel_mill")}
+        description=${translateText("user_setting.build_steel_mill_desc")}
+        defaultKey=${this.defaultKeybinds.buildSteelMill}
+        .value=${this.getKeyValue("buildSteelMill")}
+        .display=${this.getKeyChar("buildSteelMill")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildOilRig"
+        label=${translateText("user_setting.build_oil_rig")}
+        description=${translateText("user_setting.build_oil_rig_desc")}
+        defaultKey=${this.defaultKeybinds.buildOilRig}
+        .value=${this.getKeyValue("buildOilRig")}
+        .display=${this.getKeyChar("buildOilRig")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildRefinery"
+        label=${translateText("user_setting.build_refinery")}
+        description=${translateText("user_setting.build_refinery_desc")}
+        defaultKey=${this.defaultKeybinds.buildRefinery}
+        .value=${this.getKeyValue("buildRefinery")}
+        .display=${this.getKeyChar("buildRefinery")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildUraniumMine"
+        label=${translateText("user_setting.build_uranium_mine")}
+        description=${translateText("user_setting.build_uranium_mine_desc")}
+        defaultKey=${this.defaultKeybinds.buildUraniumMine}
+        .value=${this.getKeyValue("buildUraniumMine")}
+        .display=${this.getKeyChar("buildUraniumMine")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildCentrifuge"
+        label=${translateText("user_setting.build_centrifuge")}
+        description=${translateText("user_setting.build_centrifuge_desc")}
+        defaultKey=${this.defaultKeybinds.buildCentrifuge}
+        .value=${this.getKeyValue("buildCentrifuge")}
+        .display=${this.getKeyChar("buildCentrifuge")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <h2
+        class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
+      >
+        ${translateText("user_setting.build_controls")} — ${translateText("user_setting.build_controls_fleet")}
+      </h2>
+
+      <setting-keybind
         action="buildWarship"
         label=${translateText("user_setting.build_warship")}
         description=${translateText("user_setting.build_warship_desc")}
         defaultKey=${this.defaultKeybinds.buildWarship}
         .value=${this.getKeyValue("buildWarship")}
         .display=${this.getKeyChar("buildWarship")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildDestroyer"
+        label=${translateText("user_setting.build_destroyer")}
+        description=${translateText("user_setting.build_destroyer_desc")}
+        defaultKey=${this.defaultKeybinds.buildDestroyer}
+        .value=${this.getKeyValue("buildDestroyer")}
+        .display=${this.getKeyChar("buildDestroyer")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildSubmarine"
+        label=${translateText("user_setting.build_submarine")}
+        description=${translateText("user_setting.build_submarine_desc")}
+        defaultKey=${this.defaultKeybinds.buildSubmarine}
+        .value=${this.getKeyValue("buildSubmarine")}
+        .display=${this.getKeyChar("buildSubmarine")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildBattleship"
+        label=${translateText("user_setting.build_battleship")}
+        description=${translateText("user_setting.build_battleship_desc")}
+        defaultKey=${this.defaultKeybinds.buildBattleship}
+        .value=${this.getKeyValue("buildBattleship")}
+        .display=${this.getKeyChar("buildBattleship")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <h2
+        class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
+      >
+        ${translateText("user_setting.build_controls")} — ${translateText("user_setting.build_controls_missiles")}
+      </h2>
+
+      <setting-keybind
+        action="buildCruiseMissile"
+        label=${translateText("user_setting.build_cruise_missile")}
+        description=${translateText("user_setting.build_cruise_missile_desc")}
+        defaultKey=${this.defaultKeybinds.buildCruiseMissile}
+        .value=${this.getKeyValue("buildCruiseMissile")}
+        .display=${this.getKeyChar("buildCruiseMissile")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
@@ -1389,6 +1537,16 @@ export class UserSettingModal extends BaseModal {
         defaultKey=${this.defaultKeybinds.buildMIRV}
         .value=${this.getKeyValue("buildMIRV")}
         .display=${this.getKeyChar("buildMIRV")}
+        @change=${this.handleKeybindChange}
+      ></setting-keybind>
+
+      <setting-keybind
+        action="buildICBM"
+        label=${translateText("user_setting.build_icbm")}
+        description=${translateText("user_setting.build_icbm_desc")}
+        defaultKey=${this.defaultKeybinds.buildICBM}
+        .value=${this.getKeyValue("buildICBM")}
+        .display=${this.getKeyChar("buildICBM")}
         @change=${this.handleKeybindChange}
       ></setting-keybind>
 
