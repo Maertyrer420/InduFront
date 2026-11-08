@@ -2,6 +2,7 @@ import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   MessageType,
   NukeState,
+  PlayerClass,
   SamLauncherState,
   TerraNullius,
   Tick,
@@ -565,7 +566,11 @@ export class UnitImpl implements Unit {
   }
 
   isInCooldown(): boolean {
-    return this._missileTimerQueue.length === this._level;
+    const isIronDome =
+      this._type === UnitType.SAMLauncher &&
+      this._owner.playerClass?.() === PlayerClass.IronDome;
+    const maxCapacity = isIronDome ? this._level + 2 : this._level;
+    return this._missileTimerQueue.length >= maxCapacity;
   }
 
   missileTimerQueue(): number[] {

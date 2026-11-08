@@ -1,5 +1,5 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { UnitType } from "@openfront/engine-api/game/GameTypes";
+import { PlayerClass, UnitType } from "@openfront/engine-api/game/GameTypes";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   zInt,
@@ -164,9 +164,11 @@ export class WarshipExecution implements Execution {
   private performRepairPulse(): void {
     const tile = this.warship.tile();
     const owner = this.warship.owner();
+    const isMarine = owner.playerClass?.() === PlayerClass.Marine;
+    const pulseRadius = isMarine ? 12 : 8; // Marine: +50% repair pulse radius (12 instead of 8)
     const targets = this.mg.nearbyUnits(
       tile,
-      8,
+      pulseRadius,
       [UnitType.Warship, UnitType.Destroyer],
       ({ unit }) =>
         unit.isActive() && (unit as Unit).owner().isFriendly(owner, true),
@@ -769,6 +771,15 @@ export class WarshipExecution implements Execution {
   }
 
   private patrol() {
+    const owner = this.warship.owner();
+    const pClass = owner.playerClass?.();
+    const ticks = this.mg.ticks();
+
+    // Infantry penalty: -20% fleet movement speed (skip step every 5th tick)
+    if (pClass === PlayerClass.Infantry && ticks % 5 === 0) {
+      return;
+    }
+
     if (this.warship.targetTile() === undefined) {
       this.warship.setTargetTile(this.randomTile());
       if (this.warship.targetTile() === undefined) {
@@ -792,6 +803,24 @@ export class WarshipExecution implements Execution {
         console.log(`path not found to target`);
         this.warship.setTargetTile(undefined);
         break;
+      }
+    }
+
+    // Marine bonus: +25% fleet movement speed (extra move step every 4th tick)
+    if (
+      pClass === PlayerClass.Marine &&
+      ticks % 4 === 0 &&
+      this.warship.targetTile() !== undefined
+    ) {
+      const extraStep = this.pathfinder.next(
+        this.warship.tile(),
+        this.warship.targetTile()!,
+      );
+      if (extraStep.status === PathStatus.NEXT) {
+        this.warship.move(extraStep.node);
+      } else if (extraStep.status === PathStatus.COMPLETE) {
+        this.warship.setTargetTile(undefined);
+        this.warship.move(extraStep.node);
       }
     }
   }

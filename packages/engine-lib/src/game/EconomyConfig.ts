@@ -1,4 +1,8 @@
-import { ResourceType, UnitType } from "@openfront/engine-api/game/GameTypes";
+import {
+  PlayerClass,
+  ResourceType,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
 import { pow as detPow } from "../DetMath";
 
 // Economy balancing parameters
@@ -51,46 +55,104 @@ export const MILITARY_UNIT_COSTS = {
 export function getUnitResourceCost(
   type: UnitType,
   existingCount: number = 0,
+  playerClass?: PlayerClass,
 ): {
   gold: number;
   steel: number;
   fuel: number;
   enrichedUranium: number;
 } {
+  let cost: { gold: number; steel: number; fuel: number; enrichedUranium: number };
   switch (type) {
     case UnitType.AtomBomb:
-      return MILITARY_UNIT_COSTS.atomBomb;
+      cost = { ...MILITARY_UNIT_COSTS.atomBomb };
+      break;
     case UnitType.HydrogenBomb:
-      return MILITARY_UNIT_COSTS.hydrogenBomb;
+      cost = { ...MILITARY_UNIT_COSTS.hydrogenBomb };
+      break;
     case UnitType.MIRV:
-      return MILITARY_UNIT_COSTS.mirv;
+      cost = { ...MILITARY_UNIT_COSTS.mirv };
+      break;
     case UnitType.ICBM:
-      return MILITARY_UNIT_COSTS.icbm;
+      cost = { ...MILITARY_UNIT_COSTS.icbm };
+      break;
     case UnitType.CruiseMissile:
-      return MILITARY_UNIT_COSTS.cruiseMissile;
+      cost = { ...MILITARY_UNIT_COSTS.cruiseMissile };
+      break;
     case UnitType.Bunker: {
       const steelCost = Math.round(
         100 * detPow(1.6, Math.min(10, existingCount)),
       );
-      return { gold: 500, steel: steelCost, fuel: 0, enrichedUranium: 0 };
+      cost = { gold: 500, steel: steelCost, fuel: 0, enrichedUranium: 0 };
+      break;
     }
     case UnitType.Radar:
-      return { gold: 1000, steel: 80, fuel: 0, enrichedUranium: 15 };
+      cost = { gold: 1000, steel: 80, fuel: 0, enrichedUranium: 15 };
+      break;
     case UnitType.SAMLauncher:
-      return { gold: 800, steel: 60, fuel: 20, enrichedUranium: 0 };
+      cost = { gold: 800, steel: 60, fuel: 20, enrichedUranium: 0 };
+      break;
     case UnitType.MissileSilo:
-      return { gold: 2000, steel: 150, fuel: 50, enrichedUranium: 0 };
+      cost = { gold: 2000, steel: 150, fuel: 50, enrichedUranium: 0 };
+      break;
     case UnitType.Warship:
-      return MILITARY_UNIT_COSTS.warship;
+      cost = { ...MILITARY_UNIT_COSTS.warship };
+      break;
     case UnitType.Destroyer:
-      return MILITARY_UNIT_COSTS.destroyer;
+      cost = { ...MILITARY_UNIT_COSTS.destroyer };
+      break;
     case UnitType.Submarine:
-      return MILITARY_UNIT_COSTS.submarine;
+      cost = { ...MILITARY_UNIT_COSTS.submarine };
+      break;
     case UnitType.Battleship:
-      return MILITARY_UNIT_COSTS.battleship;
+      cost = { ...MILITARY_UNIT_COSTS.battleship };
+      break;
     default:
-      return { gold: 0, steel: 0, fuel: 0, enrichedUranium: 0 };
+      cost = { gold: 0, steel: 0, fuel: 0, enrichedUranium: 0 };
+      break;
   }
+
+  if (playerClass === PlayerClass.Scientist) {
+    if (
+      type === UnitType.AtomBomb ||
+      type === UnitType.HydrogenBomb ||
+      type === UnitType.MIRV ||
+      type === UnitType.ICBM ||
+      type === UnitType.MissileSilo
+    ) {
+      return {
+        gold: Math.round(cost.gold * 0.8),
+        steel: Math.round(cost.steel * 0.8),
+        fuel: Math.round(cost.fuel * 0.8),
+        enrichedUranium: Math.round(cost.enrichedUranium * 0.8),
+      };
+    }
+  } else if (playerClass === PlayerClass.IronDome) {
+    if (
+      type === UnitType.AtomBomb ||
+      type === UnitType.HydrogenBomb ||
+      type === UnitType.MIRV ||
+      type === UnitType.ICBM
+    ) {
+      return {
+        gold: Math.round(cost.gold * 1.25),
+        steel: Math.round(cost.steel * 1.25),
+        fuel: Math.round(cost.fuel * 1.25),
+        enrichedUranium: Math.round(cost.enrichedUranium * 1.25),
+      };
+    }
+  } else if (playerClass === PlayerClass.Marine) {
+    if (type === UnitType.Bunker) {
+      return {
+        gold: Math.round(cost.gold * 1.3),
+        steel: Math.round(cost.steel * 1.3),
+        fuel: cost.fuel,
+        enrichedUranium: cost.enrichedUranium,
+      };
+    }
+  }
+
+  return cost;
 }
 
 // Fuel consumption rates
@@ -105,12 +167,12 @@ export const FUEL_CONSUMPTION = {
   bomberPerMission: 3.0,
 };
 
-// Mine Base Yields (per tick at H = 1.0)
+// Mine Base Yields (per tick at H = 1.0) - reduced by 25% from baseline (Industrialist restores to base)
 export const MINE_BASE_YIELDS: Record<ResourceType, number> = {
-  ironOre: 2.5,
-  coal: 2.5,
-  crudeOil: 2.2,
-  uraniumOre: 0.6,
+  ironOre: 1.88,
+  coal: 1.88,
+  crudeOil: 1.65,
+  uraniumOre: 0.45,
 };
 
 // Refinery Recipes

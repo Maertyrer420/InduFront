@@ -1,6 +1,7 @@
 import { GameMap, TileRef } from "./GameMap";
 import {
   Gold,
+  PlayerClass,
   PlayerID,
   PlayerType,
   TerraNullius,
@@ -27,6 +28,7 @@ export interface PlayerLike {
   troops(): number;
   gold(): Gold;
   units(type: UnitType): readonly UnitLike[];
+  playerClass?(): PlayerClass;
 }
 
 export interface UnitLike {

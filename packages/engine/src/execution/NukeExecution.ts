@@ -1,6 +1,7 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   MessageType,
+  PlayerClass,
   Structures,
   TerraNullius,
   TrajectoryTile,
@@ -439,14 +440,16 @@ export class NukeExecution implements Execution {
       for (let i = 0; i < numImpactedTiles; i++) {
         // Diminishing effect as each affected tile has been nuked
         const numTilesLeft = tilesBeforeNuke - i;
-        player.removeTroops(
-          config.nukeDeathFactor(
-            this.nukeType,
-            player.troops(),
-            numTilesLeft,
-            maxTroops,
-          ),
+        let deaths = config.nukeDeathFactor(
+          this.nukeType,
+          player.troops(),
+          numTilesLeft,
+          maxTroops,
         );
+        if (player.playerClass?.() === PlayerClass.Scientist) {
+          deaths = Math.round(deaths * 0.4); // -60% fallout damage for Scientist
+        }
+        player.removeTroops(deaths);
         for (const attack of outgoingAttacks) {
           const attackTroops = attack.troops();
           const deaths = config.nukeDeathFactor(

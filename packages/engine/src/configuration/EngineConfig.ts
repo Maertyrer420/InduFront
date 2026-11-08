@@ -1,6 +1,7 @@
 import {
   Difficulty,
   Gold,
+  PlayerClass,
   PlayerInfo,
   PlayerType,
   TerrainType,
@@ -851,7 +852,13 @@ export class EngineConfig extends Config {
       }
     }
     // Master Prompt: Radar coupling increases SAM interception radius by +50%
-    return hasRadar ? range * 1.5 : range;
+    if (hasRadar) {
+      range *= 1.5;
+    }
+    if (sam.owner().playerClass?.() === PlayerClass.IronDome) {
+      range *= 1.35; // +35% SAM interception range for Iron Dome
+    }
+    return range;
   }
 
   defaultSamMissileSpeed(): number {

@@ -2,6 +2,7 @@ import { GameMap, TileRef } from "@openfront/engine-api/game/GameMap";
 import {
   Difficulty,
   MessageType,
+  PlayerClass,
   PlayerID,
   PlayerType,
   Relation,
@@ -340,11 +341,41 @@ export class AttackExecution implements Execution {
         continue;
       }
       this.addNeighbors(tileToConquer);
-      const { attackerTroopLoss, defenderTroopLoss, tickFraction } = this.mg
+      let { attackerTroopLoss, defenderTroopLoss, tickFraction } = this.mg
         .config()
         .attackLogic(
           this.attackLogicInput(troopCount, tileToConquer, borderSize),
         );
+
+      const attackerClass = this._owner.playerClass();
+      if (attackerClass === PlayerClass.Infantry) {
+        attackerTroopLoss = Math.round(attackerTroopLoss * 0.80); // -20% land casualties
+      } else if (attackerClass === PlayerClass.Industrialist) {
+        attackerTroopLoss = Math.round(attackerTroopLoss * 1.18); // -15% land attack efficacy
+      } else if (attackerClass === PlayerClass.IronDome) {
+        tickFraction *= 1.25; // -20% conquest speed
+      }
+
+      if (targetPlayer && targetPlayer.playerClass() === PlayerClass.IronDome) {
+        const searchRange = this.mg.config().defensePostRange();
+        const hasBunker = this.mg.hasUnitNearby(
+          tileToConquer,
+          searchRange,
+          UnitType.Bunker,
+          targetPlayer.id(),
+        );
+        const hasDefensePost = this.mg.hasUnitNearby(
+          tileToConquer,
+          searchRange,
+          UnitType.DefensePost,
+          targetPlayer.id(),
+        );
+        if (hasBunker || hasDefensePost) {
+          defenderTroopLoss = Math.round(defenderTroopLoss * 0.7); // Stronger bunker/post defense
+          attackerTroopLoss = Math.round(attackerTroopLoss * 1.3);
+        }
+      }
+
       tickBudget -= tickFraction;
       troopCount -= attackerTroopLoss;
       this.attack.setTroops(troopCount);

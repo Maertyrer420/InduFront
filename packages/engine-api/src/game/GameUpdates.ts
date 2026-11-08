@@ -9,6 +9,7 @@ import {
   NukeState,
   PlayerEconomyState,
   PlayerID,
+  PlayerClass,
   PlayerType,
   SamLauncherState,
   Team,
@@ -247,6 +248,7 @@ export interface PlayerUpdate {
   team?: Team;
   smallID?: number;
   playerType?: PlayerType;
+  playerClass?: PlayerClass;
   isAlive?: boolean;
   isDisconnected?: boolean;
   killedBy?: ClientID | null;

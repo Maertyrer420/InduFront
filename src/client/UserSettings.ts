@@ -1,3 +1,4 @@
+import { PlayerClass } from "@openfront/engine-api/game/GameTypes";
 import { Emoji, flattenedEmojiTable } from "@openfront/engine-api/Schemas";
 import { Cosmetics } from "@openfront/shared/CosmeticSchemas";
 import { PlayerPattern } from "@openfront/shared/WireSchemas";
@@ -215,6 +216,7 @@ const AUDIO_LEGACY_KEY: Partial<Record<AudioCategory, string>> = {
 export const PATTERN_KEY = "territoryPattern";
 export const FLAG_KEY = "flag";
 export const CROWN_KEY = "crown";
+export const PLAYER_CLASS_KEY = "settings.playerClass";
 export const COLOR_KEY = "settings.territoryColor";
 export const PERFORMANCE_OVERLAY_KEY = "settings.performanceOverlay";
 export const KEYBINDS_KEY = "settings.keybinds";
@@ -849,6 +851,21 @@ export class UserSettings {
       this.setCached(COLOR_KEY, color);
     }
     this.syncActiveLoadout();
+  }
+
+  getPlayerClass(): PlayerClass {
+    const val = this.getCached(PLAYER_CLASS_KEY);
+    if (val && Object.values(PlayerClass).includes(val as PlayerClass)) {
+      return val as PlayerClass;
+    }
+    return PlayerClass.Industrialist;
+  }
+
+  setPlayerClass(playerClass: PlayerClass): void {
+    this.setCached(PLAYER_CLASS_KEY, playerClass);
+    document.dispatchEvent(
+      new CustomEvent("player-class-changed", { detail: playerClass }),
+    );
   }
 
   // For development only. Crown image URL for testing, set in the console

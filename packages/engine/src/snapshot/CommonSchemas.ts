@@ -1,6 +1,7 @@
 import {
   Cell,
   Nation,
+  PlayerClass,
   PlayerInfo,
   PlayerType,
   UnitType,
@@ -18,6 +19,7 @@ export const PlayerInfoSchema = z.object({
   friends: z.array(z.string()),
   teamIndex: z.number().int().nullable(),
   nationFlag: z.string().nullable(),
+  playerClass: z.nativeEnum(PlayerClass).optional(),
 });
 export type PlayerInfoData = z.infer<typeof PlayerInfoSchema>;
 
@@ -32,6 +34,7 @@ export function playerInfoData(info: PlayerInfo): PlayerInfoData {
     friends: [...info.friends],
     teamIndex: info.teamIndex,
     nationFlag: info.nationFlag,
+    playerClass: info.playerClass,
   };
 }
 
@@ -46,6 +49,7 @@ export function newPlayerInfo(d: PlayerInfoData): PlayerInfo {
     d.friends,
     d.teamIndex,
     d.nationFlag,
+    d.playerClass ?? PlayerClass.Industrialist,
   );
 }
 

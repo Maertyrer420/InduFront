@@ -11,6 +11,7 @@ import {
   Nation,
   NukeState,
   PlayerBuildableUnitType,
+  PlayerClass,
   PlayerEconomyState,
   PlayerID,
   PlayerInfo,
@@ -342,6 +343,7 @@ export interface Player extends PlayerLike {
   clientID(): ClientID | null;
   id(): PlayerID;
   type(): PlayerType;
+  playerClass(): PlayerClass;
   isPlayer(): this is Player;
   toString(): string;
   isLobbyCreator(): boolean;

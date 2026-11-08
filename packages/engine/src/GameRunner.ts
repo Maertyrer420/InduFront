@@ -9,6 +9,7 @@ import {
   PlayerActions,
   PlayerBorderTiles,
   PlayerBuildableUnitType,
+  PlayerClass,
   PlayerID,
   PlayerInfo,
   PlayerProfile,
@@ -62,6 +63,8 @@ export async function createGameRunner(
       p.clanTag,
       p.friends ?? [],
       p.teamIndex ?? null,
+      null,
+      (p.playerClass as PlayerClass) ?? PlayerClass.Industrialist,
     );
   });
 

@@ -1,5 +1,5 @@
 import type { TileRef } from "@openfront/engine-api/game/GameMap";
-import type { PlayerEconomyState } from "@openfront/engine-api/game/GameTypes";
+import type { PlayerClass, PlayerEconomyState } from "@openfront/engine-api/game/GameTypes";
 
 /** TrainType enum — numeric values matching UnitState.trainType. */
 export enum TrainType {
@@ -26,6 +26,7 @@ export interface PlayerStatic {
   playerType: PlayerTypeEnum;
   team: string | null;
   isLobbyCreator: boolean;
+  playerClass?: PlayerClass;
   /** Resolved flag image URL, or undefined for no flag. */
   flag?: string;
   /** Resolved crown-cosmetic image URL, or undefined for no crown. */

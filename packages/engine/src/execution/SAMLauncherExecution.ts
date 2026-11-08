@@ -1,5 +1,9 @@
 import { TileRef } from "@openfront/engine-api/game/GameMap";
-import { GameType, UnitType } from "@openfront/engine-api/game/GameTypes";
+import {
+  GameType,
+  PlayerClass,
+  UnitType,
+} from "@openfront/engine-api/game/GameTypes";
 import { PseudoRandom } from "@openfront/engine-lib/PseudoRandom";
 import {
   zInt,
@@ -374,8 +378,13 @@ export class SAMLauncherExecution implements Execution {
 
     while (this.sam.missileTimerQueue().length > 0) {
       const frontTime = this.sam.missileTimerQueue()[0];
-      const cooldown =
-        this.mg.config().SAMCooldown() - (this.mg.ticks() - frontTime);
+      const isIronDome =
+        this.sam.owner().playerClass?.() === PlayerClass.IronDome;
+      const baseCooldown = this.mg.config().SAMCooldown();
+      const cooldownTicks = isIronDome
+        ? Math.round(baseCooldown * 0.7)
+        : baseCooldown;
+      const cooldown = cooldownTicks - (this.mg.ticks() - frontTime);
 
       if (cooldown > 0) {
         break;

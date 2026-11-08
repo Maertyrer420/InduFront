@@ -7,6 +7,7 @@
  * the live client.
  */
 import {
+  PlayerClass,
   PlayerID,
   PlayerType,
   TrainType,
@@ -148,6 +149,7 @@ export function playerStaticFromUpdate(pu: PlayerUpdate): PlayerStatic {
     playerType: gamePlayerTypeToEnum(pu.playerType!),
     team: pu.team ?? null,
     isLobbyCreator: pu.isLobbyCreator!,
+    playerClass: pu.playerClass ?? PlayerClass.Industrialist,
   };
 }
 

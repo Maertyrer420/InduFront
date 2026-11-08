@@ -8,6 +8,7 @@ import {
   PlayerActions,
   PlayerBorderTiles,
   PlayerBuildableUnitType,
+  PlayerClass,
   PlayerEconomyState,
   PlayerID,
   PlayerProfile,
@@ -423,6 +424,9 @@ export class PlayerView implements PlayerLike {
       default:
         return PlayerType.Bot;
     }
+  }
+  playerClass(): PlayerClass {
+    return this.static.playerClass ?? PlayerClass.Industrialist;
   }
   isAlive(): boolean {
     return this.state.isAlive;

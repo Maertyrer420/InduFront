@@ -1,3 +1,4 @@
+import { PlayerClass } from "@openfront/engine-api/game/GameTypes";
 import type { MapLayer } from "@openfront/engine-api/game/MapFiles";
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
@@ -1996,6 +1997,39 @@ export class UserSettingModal extends BaseModal {
 
   private renderGameplaySettings() {
     return html`
+      <!-- Class Specialization -->
+      <setting-select
+        label="${translateText("player_classes.title")}"
+        description="${translateText("player_classes.subtitle")}"
+        id="player-class-select"
+        .value=${this.userSettings.getPlayerClass()}
+        .options=${[
+          {
+            label: translateText("player_classes.industrialist_name"),
+            value: PlayerClass.Industrialist,
+          },
+          {
+            label: translateText("player_classes.infantry_name"),
+            value: PlayerClass.Infantry,
+          },
+          {
+            label: translateText("player_classes.marine_name"),
+            value: PlayerClass.Marine,
+          },
+          {
+            label: translateText("player_classes.iron_dome_name"),
+            value: PlayerClass.IronDome,
+          },
+          {
+            label: translateText("player_classes.scientist_name"),
+            value: PlayerClass.Scientist,
+          },
+        ]}
+        @change=${(e: CustomEvent<{ value: string }>) => {
+          this.userSettings.setPlayerClass(e.detail.value as PlayerClass);
+        }}
+      ></setting-select>
+
       <!-- 🚨 Alert frame -->
       <setting-toggle
         label="${translateText("user_setting.alert_frame_label")}"

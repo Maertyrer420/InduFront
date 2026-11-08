@@ -350,6 +350,14 @@ export enum PlayerType {
   Nation = "NATION",
 }
 
+export enum PlayerClass {
+  Industrialist = "industrialist",
+  Infantry = "infantry",
+  Marine = "marine",
+  IronDome = "iron_dome",
+  Scientist = "scientist",
+}
+
 export class PlayerInfo {
   public readonly displayName: string;
 
@@ -371,6 +379,7 @@ export class PlayerInfo {
     // the correct flag even when multiple nations on a map share a display
     // name (e.g. India's and Pakistan's "Punjab").
     public readonly nationFlag: string | null = null,
+    public readonly playerClass: PlayerClass = PlayerClass.Industrialist,
   ) {
     this.displayName = formatPlayerDisplayName(this.name, this.clanTag);
   }

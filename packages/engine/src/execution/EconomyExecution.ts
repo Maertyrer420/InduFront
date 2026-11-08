@@ -1,4 +1,5 @@
 import {
+  PlayerClass,
   PlayerEconomyState,
   RefinedType,
   ResourceCluster,
@@ -154,13 +155,35 @@ export class EconomyExecution implements Execution {
       if (!player.isAlive()) continue;
       const econ = this.initPlayerEconomy(player);
       econ.buildingsCount = {};
+      const pClass = player.playerClass();
 
       const ships: Unit[] = [];
+      let residentialCapBonus = 0;
+      let bunkerCapBonus = 0;
+      let steelMillCap = 0;
+      let refineryCap = 0;
+      let centrifugeCap = 0;
 
       // Single pass over units for building counts, mines, and ship tracking
       for (const unit of player.units()) {
         const type = unit.type();
         econ.buildingsCount[type] = (econ.buildingsCount[type] ?? 0) + 1;
+        const level = unit.level();
+        const isActive = unit.isActive() && !unit.isUnderConstruction();
+
+        if (type === UnitType.Residential) {
+          residentialCapBonus += Math.round(
+            RESIDENTIAL_POP_BOOST * (1 + (level - 1) * 0.8),
+          );
+        } else if (type === UnitType.Bunker) {
+          bunkerCapBonus += 800 * level;
+        } else if (type === UnitType.SteelMill && isActive) {
+          steelMillCap += 1 + (level - 1);
+        } else if (type === UnitType.Refinery && isActive) {
+          refineryCap += 1 + (level - 1);
+        } else if (type === UnitType.Centrifuge && isActive) {
+          centrifugeCap += 1 + (level - 1);
+        }
 
         let minedRes: ResourceType | null = null;
         if (type === UnitType.IronMine) minedRes = "ironOre";
@@ -168,7 +191,7 @@ export class EconomyExecution implements Execution {
         else if (type === UnitType.OilRig) minedRes = "crudeOil";
         else if (type === UnitType.UraniumMine) minedRes = "uraniumOre";
 
-        if (minedRes) {
+        if (minedRes && isActive) {
           const tile = unit.tile();
           const depMap = this.tileDeposits.get(tile);
           const deposit = depMap ? depMap[minedRes] : null;
@@ -193,6 +216,17 @@ export class EconomyExecution implements Execution {
               deposit.clusterId,
               (clusterDrains.get(deposit.clusterId) ?? 0) + minedAmount,
             );
+          }
+
+          // Building level multiplier: Upgrading mines significantly boosts extraction
+          const levelMultiplier = 1.0 + (level - 1) * 1.2;
+          minedAmount *= levelMultiplier;
+
+          // Player class modifiers for resource extraction
+          if (pClass === PlayerClass.Industrialist) {
+            minedAmount *= 1.25; // +25% Resource Yield for Industrialist
+          } else if (pClass === PlayerClass.Marine) {
+            minedAmount *= 0.80; // -20% inland mining for Marine
           }
 
           const latency = this.getLogisticsLatency(player, unit, minedRes);
@@ -232,20 +266,22 @@ export class EconomyExecution implements Execution {
         }
       }
 
-      // Demographic cap K_P = base (1000) + residential * 500 + bunker * 800
-      const residentialCount = econ.buildingsCount[UnitType.Residential] ?? 0;
-      const bunkerCount = econ.buildingsCount[UnitType.Bunker] ?? 0;
+      // Demographic cap K_P = base (1000) + residential bonus + bunker bonus
       econ.maxPopulation =
-        BASE_POPULATION_CAP +
-        residentialCount * RESIDENTIAL_POP_BOOST +
-        bunkerCount * 800;
+        BASE_POPULATION_CAP + residentialCapBonus + bunkerCapBonus;
+      if (pClass === PlayerClass.Scientist) {
+        econ.maxPopulation = Math.round(econ.maxPopulation * 0.85); // -15% max population for Scientist
+      }
 
       // Demographic Growth: P_{t+1} = P + r * P * (1 - P / K_P)
       if (econ.population < econ.maxPopulation) {
-        const growth =
+        let growth =
           DEMOGRAPHIC_GROWTH_RATE *
           econ.population *
           (1.0 - econ.population / econ.maxPopulation);
+        if (pClass === PlayerClass.Infantry) {
+          growth *= 1.20; // +20% demographic growth for Infantry
+        }
         econ.population = Math.min(
           econ.maxPopulation,
           Math.max(10, Math.round(econ.population + Math.max(1, growth))),
@@ -261,12 +297,21 @@ export class EconomyExecution implements Execution {
         player.addGold(BigInt(goldIncome));
       }
 
-      // Process Refineries (O(1) direct multiplication instead of unneeded for-loop iterations)
-      // Steel Mill: 2 Fe + 1 C -> 1 Steel
-      const steelMills = econ.buildingsCount[UnitType.SteelMill] ?? 0;
-      if (steelMills > 0) {
+      // Apply class bonuses to refining throughput
+      if (pClass === PlayerClass.Industrialist) {
+        steelMillCap = Math.ceil(steelMillCap * 1.20); // +20% smelting throughput
+        refineryCap = Math.ceil(refineryCap * 1.20);
+      } else if (pClass === PlayerClass.Infantry) {
+        centrifugeCap = Math.max(1, Math.floor(centrifugeCap * 0.75)); // -25% enrichment throughput
+      } else if (pClass === PlayerClass.Scientist) {
+        centrifugeCap = Math.ceil(centrifugeCap * 1.40); // +40% enrichment throughput
+      }
+
+      // Process Refineries (Level-scaled parallel batch conversions)
+      // Steel Mill: 3 Fe + 2 C -> 1 Steel
+      if (steelMillCap > 0) {
         const maxConversions = Math.min(
-          steelMills,
+          steelMillCap,
           Math.floor(econ.resources.ironOre / REFINERY_RECIPES.steel.ironOre),
           Math.floor(econ.resources.coal / REFINERY_RECIPES.steel.coal),
         );
@@ -280,11 +325,10 @@ export class EconomyExecution implements Execution {
         }
       }
 
-      // Refinery: 2 Crude Oil -> 1 Fuel
-      const refineries = econ.buildingsCount[UnitType.Refinery] ?? 0;
-      if (refineries > 0) {
+      // Refinery: 3 Crude Oil -> 1 Fuel
+      if (refineryCap > 0) {
         const maxConversions = Math.min(
-          refineries,
+          refineryCap,
           Math.floor(econ.resources.crudeOil / REFINERY_RECIPES.fuel.crudeOil),
         );
         if (maxConversions > 0) {
@@ -296,11 +340,10 @@ export class EconomyExecution implements Execution {
         }
       }
 
-      // Centrifuge: 4 Uranium Ore + 2 Coal -> 1 Enriched Uranium
-      const centrifuges = econ.buildingsCount[UnitType.Centrifuge] ?? 0;
-      if (centrifuges > 0) {
+      // Centrifuge: 5 Uranium Ore + 3 Coal -> 1 Enriched Uranium
+      if (centrifugeCap > 0) {
         const maxConversions = Math.min(
-          centrifuges,
+          centrifugeCap,
           Math.floor(
             econ.resources.uraniumOre /
               REFINERY_RECIPES.enrichedUranium.uraniumOre,
@@ -337,6 +380,12 @@ export class EconomyExecution implements Execution {
       fuelDrain +=
         (econ.buildingsCount[UnitType.TransportShip] ?? 0) *
         FUEL_CONSUMPTION.landingCraftPerTick;
+
+      if (pClass === PlayerClass.Industrialist) {
+        fuelDrain *= 1.15; // +15% ship fuel cost for Industrialist
+      } else if (pClass === PlayerClass.Marine) {
+        fuelDrain *= 0.75; // -25% ship fuel cost for Marine
+      }
 
       if (econ.refined.fuel >= fuelDrain) {
         econ.refined.fuel -= fuelDrain;

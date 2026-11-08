@@ -107,7 +107,11 @@ export class MirvExecution implements Execution {
       this.mg.stats().bombLaunch(this.player, this.targetPlayer, UnitType.MIRV);
 
       // Master Prompt: Deduct enriched Uranium, Steel, and Fuel
-      const resCost = getUnitResourceCost(UnitType.MIRV);
+      const resCost = getUnitResourceCost(
+        UnitType.MIRV,
+        0,
+        this.player.playerClass(),
+      );
       if (resCost.enrichedUranium > 0) {
         const econ = this.mg
           .economyExecution()

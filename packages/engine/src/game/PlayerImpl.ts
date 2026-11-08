@@ -13,6 +13,7 @@ import {
   MAX_UPGRADE_AMOUNT,
   PlayerBuildable,
   PlayerBuildableUnitType,
+  PlayerClass,
   PlayerID,
   PlayerInfo,
   PlayerProfile,
@@ -389,6 +390,7 @@ export class PlayerImpl implements Player {
       team: this.team() ?? undefined,
       smallID: this.smallID(),
       playerType: this.type(),
+      playerClass: this.playerClass(),
       isAlive: this.isAlive(),
       isDisconnected: this.isDisconnected(),
       killedBy: deathStats?.killedBy ?? null,
@@ -460,6 +462,10 @@ export class PlayerImpl implements Player {
 
   type(): PlayerType {
     return this.playerInfo.playerType;
+  }
+
+  playerClass(): PlayerClass {
+    return this.playerInfo.playerClass ?? PlayerClass.Industrialist;
   }
 
   units(): Unit[];
@@ -1448,7 +1454,11 @@ export class PlayerImpl implements Player {
       type === UnitType.Bunker
         ? Math.max(0, this.unitsOwned(UnitType.Bunker) - 1)
         : 0;
-    const buildResCost = getUnitResourceCost(type, ownedBunkers);
+    const buildResCost = getUnitResourceCost(
+      type,
+      ownedBunkers,
+      this.playerClass(),
+    );
     if (
       !this.mg.config().infiniteGold() &&
       (buildResCost.enrichedUranium > 0 ||
@@ -1533,7 +1543,11 @@ export class PlayerImpl implements Player {
     // Master Prompt: Units & structures strictly require their required refined resources
     const ownedBunkers =
       unitType === UnitType.Bunker ? this.unitsOwned(UnitType.Bunker) : 0;
-    const resCost = getUnitResourceCost(unitType, ownedBunkers);
+    const resCost = getUnitResourceCost(
+      unitType,
+      ownedBunkers,
+      this.playerClass(),
+    );
     if (
       !this.mg.config().infiniteGold() &&
       (resCost.enrichedUranium > 0 || resCost.steel > 0 || resCost.fuel > 0)

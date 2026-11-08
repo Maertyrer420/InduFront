@@ -677,6 +677,7 @@ export const PlayerSchema = z.object({
   // game's team list). Feeds deterministic team assignment, so it must be
   // identical for every client (like clanTag/friends).
   teamIndex: zb.uint().optional(),
+  playerClass: z.string().optional(),
 });
 
 // A purchased bot tribe name in use this game (active names are globally

@@ -5,6 +5,7 @@ import {
   GameMode,
   GameType,
   maps,
+  PlayerClass,
   UnitType,
 } from "@openfront/engine-api/game/GameTypes";
 import { TeamCountConfig } from "@openfront/engine-api/Schemas";
@@ -213,6 +214,9 @@ export class SinglePlayerModal extends BaseModal {
   @state() private overtime: boolean = DEFAULT_OPTIONS.overtime;
   @state() private overtimeStartMinutes: number | undefined =
     DEFAULT_OPTIONS.overtimeStartMinutes;
+  private userSettings = new UserSettings();
+  @state() private selectedClass: PlayerClass =
+    this.userSettings.getPlayerClass();
   // Drives the Start Game button's busy state. Without it the click produces
   // nothing visible until every await in startGame() settles, which reads as
   // a hang rather than as loading whenever the network is slow or absent.
@@ -228,6 +232,7 @@ export class SinglePlayerModal extends BaseModal {
 
   connectedCallback() {
     super.connectedCallback();
+    this.selectedClass = this.userSettings.getPlayerClass();
     document.addEventListener(
       "userMeResponse",
       this.handleUserMeResponse as EventListener,
@@ -406,6 +411,286 @@ export class SinglePlayerModal extends BaseModal {
     </div>`;
   }
 
+  private handleSelectClass(cls: PlayerClass): void {
+    this.selectedClass = cls;
+    this.userSettings.setPlayerClass(cls);
+  }
+
+  private renderClassSelection(): TemplateResult {
+    const classes = [
+      {
+        id: PlayerClass.Industrialist,
+        name: translateText("player_classes.industrialist_name"),
+        role: translateText("player_classes.industrialist_role"),
+        buffs: [
+          translateText("player_classes.industrialist_buff_1"),
+          translateText("player_classes.industrialist_buff_2"),
+        ],
+        debuffs: [
+          translateText("player_classes.industrialist_debuff_1"),
+          translateText("player_classes.industrialist_debuff_2"),
+        ],
+        icon: html`<svg
+          class="w-5 h-5 shrink-0"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"
+          />
+          <path d="M17 18h1" />
+          <path d="M12 18h1" />
+          <path d="M7 18h1" />
+        </svg>`,
+      },
+      {
+        id: PlayerClass.Infantry,
+        name: translateText("player_classes.infantry_name"),
+        role: translateText("player_classes.infantry_role"),
+        buffs: [
+          translateText("player_classes.infantry_buff_1"),
+          translateText("player_classes.infantry_buff_2"),
+        ],
+        debuffs: [
+          translateText("player_classes.infantry_debuff_1"),
+          translateText("player_classes.infantry_debuff_2"),
+        ],
+        icon: html`<svg
+          class="w-5 h-5 shrink-0"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5" />
+          <line x1="13" y1="19" x2="19" y2="13" />
+          <line x1="16" y1="16" x2="20" y2="20" />
+          <line x1="19" y1="21" x2="21" y2="19" />
+          <polyline points="14.5 6.5 18 3 21 3 21 6 17.5 9.5" />
+          <line x1="5" y1="14" x2="9" y2="18" />
+          <line x1="7" y1="17" x2="4" y2="20" />
+          <line x1="3" y1="19" x2="5" y2="21" />
+        </svg>`,
+      },
+      {
+        id: PlayerClass.Marine,
+        name: translateText("player_classes.marine_name"),
+        role: translateText("player_classes.marine_role"),
+        buffs: [
+          translateText("player_classes.marine_buff_1"),
+          translateText("player_classes.marine_buff_2"),
+          translateText("player_classes.marine_buff_3"),
+        ],
+        debuffs: [
+          translateText("player_classes.marine_debuff_1"),
+          translateText("player_classes.marine_debuff_2"),
+        ],
+        icon: html`<svg
+          class="w-5 h-5 shrink-0"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="5" r="3" />
+          <line x1="12" y1="22" x2="12" y2="8" />
+          <path d="M5 12H2a10 10 0 0 0 20 0h-3" />
+        </svg>`,
+      },
+      {
+        id: PlayerClass.IronDome,
+        name: translateText("player_classes.iron_dome_name"),
+        role: translateText("player_classes.iron_dome_role"),
+        buffs: [
+          translateText("player_classes.iron_dome_buff_1"),
+          translateText("player_classes.iron_dome_buff_2"),
+          translateText("player_classes.iron_dome_buff_3"),
+        ],
+        debuffs: [
+          translateText("player_classes.iron_dome_debuff_1"),
+          translateText("player_classes.iron_dome_debuff_2"),
+        ],
+        icon: html`<svg
+          class="w-5 h-5 shrink-0"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>`,
+      },
+      {
+        id: PlayerClass.Scientist,
+        name: translateText("player_classes.scientist_name"),
+        role: translateText("player_classes.scientist_role"),
+        buffs: [
+          translateText("player_classes.scientist_buff_1"),
+          translateText("player_classes.scientist_buff_2"),
+          translateText("player_classes.scientist_buff_3"),
+        ],
+        debuffs: [
+          translateText("player_classes.scientist_debuff_1"),
+          translateText("player_classes.scientist_debuff_2"),
+        ],
+        icon: html`<svg
+          class="w-5 h-5 shrink-0"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="3" />
+          <path
+            d="M3.5 12a8.5 8.5 0 0 1 17 0c0 4.69-3.81 8.5-8.5 8.5a8.5 8.5 0 0 1-8.5-8.5"
+          />
+          <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(30 12 12)" />
+          <ellipse
+            cx="12"
+            cy="12"
+            rx="10"
+            ry="4"
+            transform="rotate(-30 12 12)"
+          />
+        </svg>`,
+      },
+    ];
+
+    return html`
+      <div class="mb-6 p-4 rounded-2xl bg-black/30 border border-white/10">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 class="text-base font-bold text-white tracking-wide">
+              ${translateText("player_classes.title")}
+            </h2>
+            <p class="text-xs text-white/60">
+              ${translateText("player_classes.subtitle")}
+            </p>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          ${classes.map((cls) => {
+            const isSelected = this.selectedClass === cls.id;
+            return html`
+              <div
+                @click=${() => this.handleSelectClass(cls.id)}
+                class="relative flex flex-col p-3 rounded-xl border cursor-pointer transition-all duration-200 select-none ${
+                  isSelected
+                    ? "bg-amber-500/15 border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.25)] ring-1 ring-amber-400/50"
+                    : "bg-surface/80 border-white/10 hover:border-white/30 hover:bg-surface"
+                }"
+              >
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <div
+                      class="p-1.5 rounded-lg ${
+                        isSelected
+                          ? "bg-amber-500/20 text-amber-300"
+                          : "bg-white/5 text-white/70"
+                      }"
+                    >
+                      ${cls.icon}
+                    </div>
+                    <div class="min-w-0">
+                      <div class="text-sm font-bold text-white truncate">
+                        ${cls.name}
+                      </div>
+                      <div class="text-[10px] text-white/50 truncate">
+                        ${cls.role}
+                      </div>
+                    </div>
+                  </div>
+                  ${isSelected
+                    ? html`<span
+                        class="px-2 py-0.5 text-[9px] font-bold uppercase rounded bg-amber-400 text-black tracking-wider shrink-0"
+                      >
+                        ${translateText("player_classes.selected")}
+                      </span>`
+                    : html`<span
+                        class="px-2 py-0.5 text-[9px] font-semibold uppercase rounded bg-white/10 text-white/60 tracking-wider shrink-0"
+                      >
+                        ${translateText("player_classes.select")}
+                      </span>`}
+                </div>
+                <div class="space-y-0.5 mt-1 text-[11px]">
+                  ${cls.buffs.map(
+                    (b) =>
+                      html`<div class="flex items-center gap-1.5 text-emerald-400">
+                        <span class="font-bold shrink-0">+</span>
+                        <span class="leading-tight">${b}</span>
+                      </div>`,
+                  )}
+                  ${cls.debuffs.map(
+                    (d) =>
+                      html`<div class="flex items-center gap-1.5 text-rose-400">
+                        <span class="font-bold shrink-0">-</span>
+                        <span class="leading-tight">${d}</span>
+                      </div>`,
+                  )}
+                </div>
+              </div>
+            `;
+          })}
+
+          <!-- Shop Teaser Card -->
+          <div
+            class="relative flex flex-col p-3 rounded-xl border border-dashed border-white/15 bg-white/[0.02] opacity-75 justify-between"
+          >
+            <div>
+              <div class="flex items-center gap-2 mb-2">
+                <div class="p-1.5 rounded-lg bg-white/5 text-white/40">
+                  <svg
+                    class="w-5 h-5 shrink-0"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                </div>
+                <div class="min-w-0">
+                  <div class="text-sm font-bold text-white/70 truncate">
+                    ${translateText("player_classes.shop_soon")}
+                  </div>
+                  <div class="text-[10px] text-white/40 truncate">
+                    ${translateText("player_classes.locked")}
+                  </div>
+                </div>
+              </div>
+              <p class="text-[11px] text-white/50 leading-relaxed">
+                ${translateText("player_classes.shop_soon_desc")}
+              </p>
+            </div>
+            <div class="mt-2 text-right">
+              <span
+                class="text-[10px] font-semibold text-amber-400/80 uppercase tracking-wider"
+              >
+                Stahl-Shop
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   protected renderBody() {
     const inputCards = [
       html`<toggle-input-card
@@ -493,6 +778,7 @@ export class SinglePlayerModal extends BaseModal {
         <div
           class="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-6 pt-4 pb-6 mr-1 mx-auto w-full max-w-5xl"
         >
+          ${this.renderClassSelection()}
           <game-config-settings
             class="block"
             .sectionGapClass=${"space-y-6"}
@@ -703,6 +989,7 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   protected onOpen(): void {
+    this.selectedClass = this.userSettings.getPlayerClass();
     void this.loadNationCount();
     // Spend the cosmetics round trip while the player is picking a map, not
     // after they commit. startGame() still resolves cosmetics properly; this
@@ -1138,6 +1425,7 @@ export class SinglePlayerModal extends BaseModal {
                   username: resolvedName.name,
                   clanTag: usernameInput?.getClanTag() ?? null,
                   cosmetics,
+                  playerClass: this.selectedClass,
                 },
               ],
               tribes: getStoredCommunityTribes().map((t) => ({
