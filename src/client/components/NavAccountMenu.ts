@@ -280,6 +280,14 @@ export class NavAccountMenu extends LitElement {
   }
 
   protected updated(): void {
+    const signInText = this.querySelector<HTMLElement>(
+      "#nav-account-signin-text",
+    );
+    if (signInText && !signInText.textContent?.trim()) {
+      const label = translateText("main.sign_in");
+      signInText.textContent =
+        label && label !== "main.sign_in" ? label : "Anmelden";
+    }
     if (!this.menuOpen) {
       this.removePanel();
       return;
@@ -838,8 +846,7 @@ export class NavAccountMenu extends LitElement {
           data-account-signin-text
           class="hidden text-xs font-bold tracking-widest"
           data-i18n="main.sign_in"
-        >
-        </span>
+        ></span>
         ${this.renderChevron()}
       </button>
     `;

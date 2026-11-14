@@ -36,6 +36,7 @@ async function friendsFetch(
 }
 
 export type FriendActionError =
+  | "unauthorized"
   | "not_found"
   | "conflict"
   | "bad_request"
@@ -88,6 +89,7 @@ export async function sendFriendRequest(
       `/friends/requests/${encodeURIComponent(publicId)}`,
       { method: "POST" },
     );
+    if (res.status === 401 || res.status === 403) return "unauthorized";
     if (res.status === 404) return "not_found";
     if (res.status === 409) return "conflict";
     if (res.status === 400) return "bad_request";
@@ -109,6 +111,7 @@ export async function acceptFriendRequest(
       `/friends/requests/${encodeURIComponent(publicId)}/accept`,
       { method: "POST" },
     );
+    if (res.status === 401 || res.status === 403) return "unauthorized";
     if (res.status === 404) return "not_found";
     if (!res.ok) return "request_failed";
     return true;
@@ -126,6 +129,7 @@ export async function deleteFriendRequest(
       `/friends/requests/${encodeURIComponent(publicId)}`,
       { method: "DELETE" },
     );
+    if (res.status === 401 || res.status === 403) return "unauthorized";
     if (res.status === 404) return "not_found";
     if (!res.ok) return "request_failed";
     return true;
@@ -142,6 +146,7 @@ export async function removeFriend(
     const res = await friendsFetch(`/friends/${encodeURIComponent(publicId)}`, {
       method: "DELETE",
     });
+    if (res.status === 401 || res.status === 403) return "unauthorized";
     if (res.status === 404) return "not_found";
     if (!res.ok) return "request_failed";
     return true;

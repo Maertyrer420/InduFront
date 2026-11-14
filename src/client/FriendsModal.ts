@@ -85,6 +85,7 @@ export class FriendsModal extends BaseModal {
   @state() private chatSending = false;
   @state() private addInput = "";
   @state() private adding = false;
+  @state() private signedOut = false;
 
   private pollInterval: any = null;
   private bgWatcherInterval: any = null;
@@ -92,8 +93,15 @@ export class FriendsModal extends BaseModal {
   private seenRequestIds = new Set<string>();
   private watcherSeeded = false;
 
+  private onUserMe = () => {
+    if (this.isModalOpen) {
+      void this.loadData();
+    }
+  };
+
   connectedCallback() {
     super.connectedCallback();
+    document.addEventListener("userMeResponse", this.onUserMe);
     if (!this.bgWatcherInterval) {
       this.bgWatcherInterval = setInterval(() => {
         if (!this.isModalOpen) {
@@ -106,6 +114,7 @@ export class FriendsModal extends BaseModal {
 
   disconnectedCallback() {
     super.disconnectedCallback();
+    document.removeEventListener("userMeResponse", this.onUserMe);
     if (this.bgWatcherInterval) {
       clearInterval(this.bgWatcherInterval);
       this.bgWatcherInterval = null;
@@ -146,6 +155,16 @@ export class FriendsModal extends BaseModal {
   private async loadData() {
     this.loading = true;
     try {
+      const authHeader = await getAuthHeader();
+      const vault =
+        typeof getLocalVaultToken === "function" ? getLocalVaultToken() : null;
+      this.signedOut = !authHeader && !vault;
+      if (this.signedOut) {
+        this.friends = [];
+        this.incoming = [];
+        this.outgoing = [];
+        return;
+      }
       const [friendsRes, reqRes] = await Promise.all([
         fetchFriends(1, 100),
         fetchFriendRequests(),
@@ -418,8 +437,20 @@ export class FriendsModal extends BaseModal {
         this.addInput = "";
         await this.loadData();
         this.activeTab = "friends";
+      } else if (res === "unauthorized") {
+        this.signedOut = true;
+        showToast("Bitte zuerst anmelden oder ein Konto erstellen!", "red");
+      } else if (res === "not_found") {
+        showToast("Spieler nicht gefunden", "red");
+      } else if (res === "conflict") {
+        showToast(
+          "Anfrage bereits gesendet oder schon befreundet",
+          "red",
+        );
+      } else if (res === "bad_request") {
+        showToast("Ungültiger Spielername oder eigene ID", "red");
       } else {
-        showToast("Spieler nicht gefunden oder bereits angefragt", "red");
+        showToast("Freundschaftsanfrage fehlgeschlagen", "red");
       }
     } finally {
       this.adding = false;
@@ -528,6 +559,42 @@ export class FriendsModal extends BaseModal {
 
     return html`
       <div class="p-4 lg:p-6 space-y-4">
+        ${this.signedOut
+          ? html`
+              <div
+                class="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-surface/90 border border-malibu-blue/40"
+              >
+                <div class="flex items-center gap-3 text-sm text-white/80">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    class="w-5 h-5 shrink-0 text-malibu-blue"
+                  >
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                    <polyline points="10 17 15 12 10 7" />
+                    <line x1="15" y1="12" x2="3" y2="12" />
+                  </svg>
+                  <span>
+                    Für die Freundesliste und Direkt-Chats ist ein InduFront-Konto
+                    erforderlich.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  @click=${() => {
+                    this.close();
+                    window.showPage?.("page-account");
+                  }}
+                  class="shrink-0 px-4 py-2 rounded-lg bg-malibu-blue hover:bg-malibu-blue/90 text-xs font-bold uppercase tracking-wider text-slate-950 transition-colors cursor-pointer"
+                >
+                  Anmelden / Konto erstellen
+                </button>
+              </div>
+            `
+          : null}
         ${this.loading && this.friends.length === 0
           ? html`<div class="text-center p-8 text-white/40">
               Lade Freundesliste...

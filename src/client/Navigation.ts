@@ -21,21 +21,22 @@ export function initNavigation() {
     // Close mobile sidebar if a nav item was clicked
     closeMobileSidebar();
 
-    // Close the currently visible modal properly
-    const visibleModal = document.querySelector(".page-content:not(.hidden)");
-    if (visibleModal) {
-      // If it's an open modal component, call close() for proper cleanup (onClose callback, etc.)
-      if (
-        typeof (visibleModal as any).isOpen === "function" &&
-        (visibleModal as any).isOpen() &&
-        typeof (visibleModal as any).close === "function"
-      ) {
-        (visibleModal as any).close();
-      } else {
+    // Close any currently visible modals other than the target page properly
+    document
+      .querySelectorAll(".page-content:not(.hidden)")
+      .forEach((visibleModal) => {
+        if (visibleModal.id === pageId) return;
+        // If it's an open modal component, call close() for proper cleanup (onClose callback, etc.)
+        if (
+          typeof (visibleModal as any).isOpen === "function" &&
+          (visibleModal as any).isOpen() &&
+          typeof (visibleModal as any).close === "function"
+        ) {
+          (visibleModal as any).close({ skipShowPlay: true });
+        }
         visibleModal.classList.add("hidden");
         visibleModal.classList.remove("block");
-      }
-    }
+      });
 
     // Inline pages scroll inside their modal, not the document (see
     // styles.css). Set after closing the previous modal: an inline modal's

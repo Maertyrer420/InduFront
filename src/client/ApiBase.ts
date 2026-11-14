@@ -29,16 +29,17 @@ export function getApiBase() {
     // No bootstrap config (yet): the page's own origin is the only answer.
     domainname = null;
   }
-  // Single-service hosting (Render, local dev, tunnels): the page's own
-  // hostname IS the JWT audience and no api.<domain> subdomain exists, so the
-  // auth server is reached through the page's own /idp path.
+  // Single-service hosting (Render, local dev, tunnels, LAN IPs): the auth
+  // server is reached through the page's own /idp path whenever running in a
+  // browser, unless configured for upstream openfront.io/openfront.dev on a
+  // different hostname.
+  const hasSeparateApiDomain =
+    domainname === "openfront.io" || domainname === "openfront.dev";
   if (
     origin !== null &&
-    (domainname === null ||
-      domainname === "localhost" ||
-      window.location.hostname === domainname)
+    (!hasSeparateApiDomain || window.location.hostname === domainname)
   ) {
-    return `${origin}/idp`;
+    return `${origin.replace(/\/$/, "")}/idp`;
   }
   if (domainname === null || domainname === "localhost") {
     return "http://localhost:8787";

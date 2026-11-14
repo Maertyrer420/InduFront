@@ -13,6 +13,10 @@ import type {
 let pool: pg.Pool | null = null;
 let dbInitialized = false;
 
+export function isDbReady(): boolean {
+  return dbInitialized && pool !== null;
+}
+
 export function getDbPool(): pg.Pool | null {
   const connStr = process.env.DATABASE_URL;
   if (!connStr) return null;
@@ -180,6 +184,35 @@ export async function dbUpsertUser(u: UserRecord): Promise<void> {
       ],
     );
   } catch (err: any) {
+    if (err?.code === "23505") {
+      try {
+        await p.query(
+          `UPDATE indufront_users SET
+             username = $2,
+             username_lower = $3,
+             email = $4,
+             password_hash = COALESCE($5, password_hash),
+             google_id = COALESCE($6, google_id),
+             data = $7
+           WHERE public_id = $1`,
+          [
+            u.publicId,
+            u.username,
+            u.usernameLower,
+            u.email,
+            u.passwordHash ?? null,
+            u.googleId ?? null,
+            JSON.stringify(u),
+          ],
+        );
+        return;
+      } catch (retryErr: any) {
+        console.warn(
+          "[db] dbUpsertUser conflict retry failed:",
+          retryErr.message,
+        );
+      }
+    }
     console.warn("[db] dbUpsertUser failed:", err.message);
   }
 }

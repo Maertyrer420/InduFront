@@ -20,7 +20,7 @@ import {
   UserRecord,
   verifyPassword,
 } from "./AuthStore";
-import { sendAuthEmail } from "./DbStorage";
+import { isDbReady, sendAuthEmail } from "./DbStorage";
 import {
   calculate1v1Elo,
   calculate2v2Elo,
@@ -129,7 +129,7 @@ const validEmail = (e: unknown): e is string =>
   e.length <= 254 &&
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 const validUsername = (u: unknown): u is string =>
-  typeof u === "string" && /^[A-Za-z0-9_]{3,20}$/.test(u);
+  typeof u === "string" && /^[A-Za-z0-9_.-]{2,24}$/.test(u.trim());
 const validPassword = (p: unknown): p is string =>
   typeof p === "string" && p.length >= 8 && p.length <= 128;
 
@@ -352,7 +352,7 @@ async function main() {
   }
 
   const app = express();
-  app.set("trust proxy", 1);
+  app.set("trust proxy", true);
   app.use(express.json({ limit: "64kb" }));
 
   // Allow direct cross-origin use (e.g. the page on :9000 talking to :8787).
@@ -376,11 +376,28 @@ async function main() {
     next();
   });
 
+  const getClientIp = (req: Request): string => {
+    const cf = req.headers["cf-connecting-ip"];
+    if (typeof cf === "string" && cf.trim()) return cf.trim();
+    const xff = req.headers["x-forwarded-for"];
+    if (typeof xff === "string" && xff.trim()) {
+      return xff.split(",")[0].trim();
+    }
+    if (Array.isArray(xff) && xff.length > 0) {
+      return xff[0].split(",")[0].trim();
+    }
+    const realIp = req.headers["x-real-ip"];
+    if (typeof realIp === "string" && realIp.trim()) return realIp.trim();
+    return req.ip || req.socket.remoteAddress || "unknown";
+  };
+
   const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    limit: 30,
+    limit: 120,
     standardHeaders: true,
     legacyHeaders: false,
+    keyGenerator: (req) => getClientIp(req),
+    validate: false,
     message: { error: "too_many_requests" },
   });
 
@@ -395,7 +412,16 @@ async function main() {
   });
 
   app.post("/auth/register", authLimiter, async (req, res) => {
-    const { email, password, username } = req.body ?? {};
+    const rawBody = req.body ?? {};
+    const username =
+      typeof rawBody.username === "string"
+        ? rawBody.username.trim()
+        : rawBody.username;
+    const email =
+      typeof rawBody.email === "string" && rawBody.email.trim()
+        ? rawBody.email.trim()
+        : undefined;
+    const password = rawBody.password;
     if (!validUsername(username))
       return void res.status(400).json({ error: "invalid_username" });
     if (!validPassword(password))
@@ -465,7 +491,8 @@ async function main() {
         socialStore.restoreUserSocialSnapshot(s),
       );
     }
-    const identifier = rawId ?? username;
+    const rawIdent = rawId ?? username;
+    const identifier = typeof rawIdent === "string" ? rawIdent.trim() : rawIdent;
     if (typeof identifier !== "string" || typeof password !== "string") {
       return void res.status(400).json({ error: "invalid_request" });
     }
@@ -965,7 +992,10 @@ async function main() {
 
   app.put("/users/@me/username", authed, (req, res) => {
     const u = (req as Request & { user: UserRecord }).user;
-    const raw = req.body?.username;
+    const raw =
+      typeof req.body?.username === "string"
+        ? req.body.username.trim()
+        : req.body?.username;
     if (!validUsername(raw)) {
       return void res.status(400).json({ reason: "invalid_username" });
     }
@@ -1818,6 +1848,7 @@ async function main() {
     res.json({
       ok: true,
       dbConnected: Boolean(process.env.DATABASE_URL),
+      dbReady: isDbReady(),
     }),
   );
   app.use((_req, res) => res.status(404).json({ error: "not_found" }));

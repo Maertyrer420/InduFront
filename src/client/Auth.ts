@@ -56,6 +56,41 @@ try {
   // Ignore malformed token
 }
 
+/**
+ * Apply an access token (and optional refresh/vault tokens) obtained from
+ * direct login, registration, or account recovery immediately to in-memory
+ * session state and localStorage, so callers do not require a full reload.
+ */
+export function applySessionToken(
+  jwt: string,
+  expiresInSeconds = 900,
+  refreshToken?: string,
+  vaultToken?: string,
+): void {
+  __jwt = jwt;
+  try {
+    const payload = decodeJwt(jwt);
+    __expiresAt =
+      payload.exp && payload.exp * 1000 > Date.now()
+        ? payload.exp * 1000
+        : Date.now() + expiresInSeconds * 1000;
+  } catch {
+    __expiresAt = Date.now() + expiresInSeconds * 1000;
+  }
+  try {
+    localStorage.setItem(INDUFRONT_JWT_KEY, jwt);
+    if (refreshToken) {
+      localStorage.setItem("indufront_refresh_token", refreshToken);
+    }
+    if (vaultToken) {
+      saveLocalVaultToken(vaultToken);
+    }
+  } catch {
+    // Ignore storage errors
+  }
+  updateUserSettingsForJwt(jwt);
+}
+
 let __sessionState: DesktopSessionState = { status: "unknown" };
 
 /**

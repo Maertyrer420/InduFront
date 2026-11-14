@@ -17,7 +17,7 @@ const externalUrl = (
 let derivedDomain = process.env.DOMAIN ?? "localhost";
 try {
   if (externalUrl.startsWith("http")) {
-    derivedDomain = new URL(externalUrl).host;
+    derivedDomain = new URL(externalUrl).hostname;
   }
 } catch {
   /* ignore url parsing error */
@@ -166,13 +166,24 @@ const server = http.createServer((req, res) => {
   const target = resolveTarget(req);
   const proto = (req.headers["x-forwarded-proto"] as string) ?? "http";
   const remoteAddr = req.socket.remoteAddress ?? "";
-  const forwardedFor = req.headers["x-forwarded-for"]
-    ? `${req.headers["x-forwarded-for"]}, ${remoteAddr}`
-    : remoteAddr;
+  const cfIp = req.headers["cf-connecting-ip"];
+  const existingXff = req.headers["x-forwarded-for"];
+  const forwardedFor =
+    typeof cfIp === "string" && cfIp.trim()
+      ? cfIp.trim()
+      : Array.isArray(existingXff)
+        ? existingXff.join(", ")
+        : typeof existingXff === "string" && existingXff.trim()
+          ? existingXff.trim()
+          : remoteAddr;
 
   const proxyHeaders: http.OutgoingHttpHeaders = {
     ...req.headers,
-    "x-real-ip": (req.headers["x-real-ip"] as string) ?? remoteAddr,
+    "x-real-ip":
+      (typeof cfIp === "string" && cfIp.trim()) ||
+      (req.headers["x-real-ip"] as string) ||
+      forwardedFor.split(",")[0].trim() ||
+      remoteAddr,
     "x-forwarded-for": forwardedFor,
     "x-forwarded-proto": proto,
   };

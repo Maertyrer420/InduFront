@@ -206,7 +206,14 @@ export abstract class BaseModal extends LitElement {
         }
       }
 
-      if (wasOpen) return;
+      if (wasOpen) {
+        if (this.inline) {
+          this.style.pointerEvents = "auto";
+        }
+        return;
+      }
+
+      if (!this.isModalOpen) return;
 
       if (this.inline) {
         const needsShow =
@@ -237,7 +244,8 @@ export abstract class BaseModal extends LitElement {
 
     if (this.inline) {
       this.style.pointerEvents = "none";
-      if (window.showPage) {
+      const skipShowPlay = Boolean(args?.skipShowPlay);
+      if (!skipShowPlay && window.showPage) {
         window.showPage?.("page-play");
       }
     } else {

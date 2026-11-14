@@ -1,6 +1,8 @@
 import { html, LitElement, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { getApiBase } from "../ApiBase";
+import { applySessionToken } from "../Auth";
+import { broadcastFreshUserMe } from "../Cosmetics";
 
 type Mode = "login" | "register" | "recover" | "recovery_key_created";
 
@@ -13,8 +15,8 @@ const ERRORS: Record<string, [string, string]> = {
     "Wrong username or password.",
   ],
   invalid_username: [
-    "Benutzername: 3–20 Zeichen, nur Buchstaben, Zahlen und _.",
-    "Username: 3–20 characters, letters, numbers and _ only.",
+    "Benutzername: 2–24 Zeichen, nur Buchstaben, Zahlen, _, - und .",
+    "Username: 2–24 characters, letters, numbers, _, - and . only.",
   ],
   weak_password: [
     "Passwort: mindestens 8 Zeichen.",
@@ -113,15 +115,21 @@ export class AuthForm extends LitElement {
       );
       if (res.ok) {
         const body = await res.json().catch(() => ({}));
-        if (body?.jwt) {
-          localStorage.setItem("indufront_jwt", body.jwt);
-        }
-        if (body?.refreshToken) {
-          localStorage.setItem("indufront_refresh_token", body.refreshToken);
-        }
         const vault = body?.vaultToken ?? body?.user?.vaultToken;
-        if (vault) {
-          localStorage.setItem("indufront_vault_token", String(vault));
+        if (body?.jwt) {
+          applySessionToken(
+            body.jwt,
+            body.expiresIn ?? 900,
+            body.refreshToken,
+            vault ? String(vault) : undefined,
+          );
+        } else {
+          if (body?.refreshToken) {
+            localStorage.setItem("indufront_refresh_token", body.refreshToken);
+          }
+          if (vault) {
+            localStorage.setItem("indufront_vault_token", String(vault));
+          }
         }
         const effectiveName = register
           ? this.username.trim()
@@ -130,6 +138,7 @@ export class AuthForm extends LitElement {
           localStorage.setItem("username", effectiveName);
         }
         localStorage.setItem("useVerifiedName", "true");
+        await broadcastFreshUserMe().catch(() => false);
 
         const recKey = body?.recoveryKey ?? body?.user?.recoveryKey;
         if (register && recKey) {
@@ -228,24 +237,31 @@ export class AuthForm extends LitElement {
         });
         const data = await res.json().catch(() => ({}));
         if (res.ok && data.session) {
-          if (data.session.jwt) {
-            localStorage.setItem("indufront_jwt", data.session.jwt);
-          }
-          if (data.session.refreshToken) {
-            localStorage.setItem(
-              "indufront_refresh_token",
-              data.session.refreshToken,
-            );
-          }
           const vault =
             data.session.vaultToken ?? data.session.user?.vaultToken;
-          if (vault) {
-            localStorage.setItem("indufront_vault_token", String(vault));
+          if (data.session.jwt) {
+            applySessionToken(
+              data.session.jwt,
+              data.session.expiresIn ?? 900,
+              data.session.refreshToken,
+              vault ? String(vault) : undefined,
+            );
+          } else {
+            if (data.session.refreshToken) {
+              localStorage.setItem(
+                "indufront_refresh_token",
+                data.session.refreshToken,
+              );
+            }
+            if (vault) {
+              localStorage.setItem("indufront_vault_token", String(vault));
+            }
           }
           if (data.session.user?.username) {
             localStorage.setItem("username", data.session.user.username);
           }
           localStorage.setItem("useVerifiedName", "true");
+          await broadcastFreshUserMe().catch(() => false);
           const recKey =
             data.recoveryKey ??
             data.session?.recoveryKey ??
@@ -549,7 +565,7 @@ export class AuthForm extends LitElement {
                 this.username,
                 (v) => (this.username = v),
                 "username",
-                "3-20 Zeichen (A-Z, 0-9, _)",
+                "2-24 Zeichen (A-Z, 0-9, _, -, .)",
               )}
               ${this.field(
                 t(

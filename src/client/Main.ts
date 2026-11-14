@@ -473,6 +473,14 @@ class Client {
       pageId: "page-leaderboard",
     });
     modalRouter.register("clan", { tag: "clan-modal", pageId: "page-clan" });
+    modalRouter.register("friends", {
+      tag: "friends-modal",
+      pageId: "page-friends",
+    });
+    modalRouter.register("global-chat", {
+      tag: "global-chat-modal",
+      pageId: "page-global-chat",
+    });
     modalRouter.register("account", {
       tag: "account-modal",
       pageId: "page-account",
