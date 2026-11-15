@@ -244,48 +244,65 @@ describe("ClanModal — player-profile handoff", () => {
     expect(getElState(modal, "activeTab")).toBe("game-history");
   });
 
-  it("offers the Map tab first on the clan list, landing on My Clans", async () => {
-    modal.open({});
-    await flushAsync(modal);
+  async function withEmptyUserClans(fn: () => Promise<void>): Promise<void> {
+    const { getUserMe } = await import("../../../src/client/Api");
+    const mock = asMock(getUserMe);
+    const prev = mock.getMockImplementation();
+    mock.mockResolvedValue({
+      player: {
+        publicId: "test-player",
+        clans: [],
+        clanRequests: [],
+        achievements: { singleplayerMap: [] },
+      },
+      user: { email: "test@test.com" },
+    });
+    try {
+      await fn();
+    } finally {
+      if (prev) mock.mockImplementation(prev);
+    }
+  }
 
-    const tabs = (
-      modal as unknown as { modalConfig(): { tabs: { key: string }[] } }
-    )
-      .modalConfig()
-      .tabs.map((t) => t.key);
-    expect(tabs).toEqual(["map", "my-clans", "browse"]);
-    expect(getElState(modal, "activeTab")).toBe("my-clans");
-    expect(modal.querySelector("clan-map-view")).toBeNull();
+  it("offers My Clan and Browse on the clan list, landing on my-clan", async () => {
+    await withEmptyUserClans(async () => {
+      modal.open({});
+      await flushAsync(modal);
+
+      const tabs = (
+        modal as unknown as { modalConfig(): { tabs: { key: string }[] } }
+      )
+        .modalConfig()
+        .tabs.map((t) => t.key);
+      expect(tabs).toEqual(["my-clan", "browse"]);
+      expect(getElState(modal, "activeTab")).toBe("my-clan");
+      expect(modal.querySelector("clan-map-view")).toBeNull();
+    });
   });
 
-  it("mounts the map only while open on the Map tab", async () => {
+  it("does not mount map view when map tab is requested in dev", async () => {
     stubGameEnv("dev");
-    // Closed: nothing is framed, so the map page isn't polling in the background.
     expect(modal.querySelector("clan-map-view")).toBeNull();
 
-    modal.open({ tab: "map" });
-    await flushAsync(modal);
-    expect(getElState(modal, "activeTab")).toBe("map");
-    expect(modal.querySelector("clan-map-view")).not.toBeNull();
-
-    modal.close();
-    await flushAsync(modal);
-    expect(modal.querySelector("clan-map-view")).toBeNull();
-    expect(getElState(modal, "activeTab")).toBe("my-clans");
+    await withEmptyUserClans(async () => {
+      modal.open({ tab: "map" });
+      await flushAsync(modal);
+      expect(getElState(modal, "activeTab")).toBe("my-clan");
+      expect(modal.querySelector("clan-map-view")).toBeNull();
+    });
   });
 
-  it("shows Coming Soon on the Map tab in prod", async () => {
+  it("does not mount map view in prod", async () => {
     stubGameEnv("prod");
-    modal.open({ tab: "map" });
-    await flushAsync(modal);
-    expect(getElState(modal, "activeTab")).toBe("map");
-    // The map hasn't shipped to prod: the iframe (and its API polling)
-    // never mounts.
-    expect(modal.querySelector("clan-map-view")).toBeNull();
-    expect(modal.textContent).toContain("clan_modal.map_coming_soon");
+    await withEmptyUserClans(async () => {
+      modal.open({ tab: "map" });
+      await flushAsync(modal);
+      expect(getElState(modal, "activeTab")).toBe("my-clan");
+      expect(modal.querySelector("clan-map-view")).toBeNull();
+    });
   });
 
-  it("offers a Donations tab on the clan detail", async () => {
+  it("offers Overview, Members, Chat, and Game History on the clan detail", async () => {
     modal.open({ clan: "AAA" });
     await waitForSubComponent(modal, "clan-detail-view");
 
@@ -294,31 +311,17 @@ describe("ClanModal — player-profile handoff", () => {
     )
       .modalConfig()
       .tabs.map((t) => t.key);
-    expect(tabs).toEqual([
-      "overview",
-      "members",
-      "chat",
-      "game-history",
-      "donations",
-    ]);
+    expect(tabs).toEqual(["overview", "members", "chat", "game-history"]);
   });
 
-  it("returns a donor's profile to the clan's Donations tab", async () => {
+  it("ignores legacy donations tab and stays on overview detail view", async () => {
     modal.open({ clan: "AAA" });
     await waitForSubComponent(modal, "clan-detail-view");
     modal.setActiveTab("donations");
-    const donations = await waitForSubComponent(modal, "clan-donations-view");
-    expect(getElState(donations, "clanTag")).toBe("AAA");
-
-    dispatchViewProfile("player-P", "clan-donations-view");
     await flushAsync(modal);
-
-    modal.returnFromPlayerProfile();
-    await flushAsync(modal);
-
-    expect(getElState(modal, "selectedClanTag")).toBe("AAA");
-    expect(getElState(modal, "activeTab")).toBe("donations");
-    expect(modal.querySelector("clan-donations-view")).not.toBeNull();
+    expect(getElState(modal, "activeTab")).toBe("overview");
+    expect(modal.querySelector("clan-donations-view")).toBeNull();
+    expect(modal.querySelector("clan-detail-view")).toBeTruthy();
   });
 
   it("lands on the clan list when a profile detoured through its own clan", async () => {
@@ -339,11 +342,13 @@ describe("ClanModal — player-profile handoff", () => {
     expect(returnedTo).toEqual(["player-P"]);
     expect(getElState(modal, "selectedClanTag")).toBe("");
 
-    modal.returnFromPlayerProfile();
-    await flushAsync(modal);
+    await withEmptyUserClans(async () => {
+      modal.returnFromPlayerProfile();
+      await flushAsync(modal);
 
-    expect(modal.isOpen()).toBe(true);
-    expect(getElState(modal, "view")).toBe("list");
-    expect(getElState(modal, "activeTab")).toBe("my-clans");
+      expect(modal.isOpen()).toBe(true);
+      expect(getElState(modal, "view")).toBe("list");
+      expect(getElState(modal, "activeTab")).toBe("my-clan");
+    });
   });
 });

@@ -135,12 +135,21 @@ export class StoreModal extends BaseModal {
       // Affiliate mode: hide tabs, show only items associated with the code.
       return {};
     }
-    return {
-      tabs: [
-        { key: "steel_shop", label: "Stahl-Shop" },
-        { key: "tribes", label: translateText("store.tribes") },
-      ],
-    };
+    const tabs = [
+      { key: "steel_shop", label: "Stahl-Shop" },
+      { key: "tribes", label: translateText("store.tribes") },
+    ];
+    if (
+      this.requestedLegacyTab &&
+      this.requestedLegacyTab !== "steel_shop" &&
+      this.requestedLegacyTab !== "tribes"
+    ) {
+      tabs.push({
+        key: this.requestedLegacyTab,
+        label: this.requestedLegacyTab,
+      });
+    }
+    return { tabs };
   }
 
   connectedCallback() {
@@ -893,7 +902,15 @@ export class StoreModal extends BaseModal {
                   ‹ Vorherige
                 </button>
                 <div class="font-bold text-cyan-300">
-                  Seite ${currentPage} von ${totalPages} <span class="hidden sm:inline text-white/50">(Zeige ${startIndex + 1}–${Math.min(startIndex + pageSize, totalCount)} von ${totalCount})</span>
+                  Seite ${currentPage} von ${totalPages}
+                  <span class="hidden sm:inline text-white/50"
+                    >(Zeige
+                    ${startIndex + 1}–${Math.min(
+                      startIndex + pageSize,
+                      totalCount,
+                    )}
+                    von ${totalCount})</span
+                  >
                 </div>
                 <button
                   type="button"
@@ -1098,6 +1115,7 @@ export class StoreModal extends BaseModal {
       inline.closeCardModal();
     }
     this.affiliateCode = null;
+    this.requestedLegacyTab = undefined;
     this.openedPack = null;
     this.previewingCosmetic = null;
     this.pages.reset();

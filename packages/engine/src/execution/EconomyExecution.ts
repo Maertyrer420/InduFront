@@ -285,7 +285,7 @@ export class EconomyExecution implements Execution {
           econ.population *
           (1.0 - econ.population / econ.maxPopulation);
         if (pClass === PlayerClass.Infantry) {
-          growth *= 1.20; // +20% demographic growth for Infantry
+          growth *= 1.2; // +20% demographic growth for Infantry
         }
         econ.population = Math.min(
           econ.maxPopulation,
@@ -297,10 +297,10 @@ export class EconomyExecution implements Execution {
       if (ticks % 10 === 0) {
         const numTiles = player.numTilesOwned();
         let goldIncome = Math.floor(
-          GOLD_ALPHA * numTiles + (GOLD_BETA * 0.1) * econ.population,
+          GOLD_ALPHA * numTiles + GOLD_BETA * 0.1 * econ.population,
         );
         if (pClass === PlayerClass.Infantry) {
-          goldIncome = Math.floor(goldIncome * 0.90); // -10% demographic gold income for Infantry
+          goldIncome = Math.floor(goldIncome * 0.9); // -10% demographic gold income for Infantry
         }
         if (goldIncome > 0) {
           player.addGold(BigInt(goldIncome));
@@ -309,12 +309,12 @@ export class EconomyExecution implements Execution {
 
       // Apply class bonuses to refining throughput
       if (pClass === PlayerClass.Industrialist) {
-        steelMillCap = Math.ceil(steelMillCap * 1.20); // +20% smelting throughput
-        refineryCap = Math.ceil(refineryCap * 1.20);
+        steelMillCap = Math.ceil(steelMillCap * 1.2); // +20% smelting throughput
+        refineryCap = Math.ceil(refineryCap * 1.2);
       } else if (pClass === PlayerClass.Infantry) {
         centrifugeCap = Math.max(1, Math.floor(centrifugeCap * 0.75)); // -25% enrichment throughput
       } else if (pClass === PlayerClass.Scientist) {
-        centrifugeCap = Math.ceil(centrifugeCap * 1.40); // +40% enrichment throughput
+        centrifugeCap = Math.ceil(centrifugeCap * 1.4); // +40% enrichment throughput
       }
 
       // Process Refineries (Level-scaled parallel batch conversions)
@@ -341,7 +341,9 @@ export class EconomyExecution implements Execution {
         if (refineryCap > 0) {
           const maxConversions = Math.min(
             refineryCap,
-            Math.floor(econ.resources.crudeOil / REFINERY_RECIPES.fuel.crudeOil),
+            Math.floor(
+              econ.resources.crudeOil / REFINERY_RECIPES.fuel.crudeOil,
+            ),
           );
           if (maxConversions > 0) {
             econ.resources.crudeOil -=
@@ -397,7 +399,7 @@ export class EconomyExecution implements Execution {
       if (pClass === PlayerClass.Industrialist) {
         fuelDrain *= 1.15; // +15% ship fuel cost for Industrialist
       } else if (pClass === PlayerClass.Marine) {
-        fuelDrain *= 0.70; // -30% ship fuel cost for Marine
+        fuelDrain *= 0.7; // -30% ship fuel cost for Marine
       }
 
       if (econ.refined.fuel >= fuelDrain) {

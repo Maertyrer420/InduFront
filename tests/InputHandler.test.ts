@@ -1071,6 +1071,23 @@ describe("InputHandler AutoUpgrade", () => {
     });
 
     test("Numpad0 sets ghost structure to MIRV when buildMIRV is Digit0", () => {
+      testSettings.setKeybinds({
+        buildMIRV: "Digit0",
+        buildICBM: "Shift+Digit0",
+      });
+      inputHandler.destroy();
+      const uiState: UIState = {
+        attackRatio: 20,
+        ghostStructure: null,
+        rocketDirectionUp: true,
+      } as UIState;
+      inputHandler = new InputHandler(
+        mockGameView,
+        uiState,
+        mockCanvas,
+        eventBus,
+      );
+      inputHandler.initialize();
       window.dispatchEvent(
         new KeyboardEvent("keyup", { code: "Numpad0", key: "0" }),
       );
@@ -1095,6 +1112,7 @@ describe("InputHandler AutoUpgrade", () => {
       testSettings.setKeybinds({
         buildCity: "Numpad1",
         buildMIRV: "Numpad0",
+        buildICBM: "Shift+Digit0",
       });
       const uiState: UIState = {
         attackRatio: 20,

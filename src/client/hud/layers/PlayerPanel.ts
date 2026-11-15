@@ -22,10 +22,9 @@ import Countries from "resources/countries.json" with { type: "json" };
 import { fetchLobbyListed, getUserMe } from "../../Api";
 import "../../components/EquippedCosmeticsRow";
 import "../../components/LevelBadge";
-import { renderPlayerClassBadge } from "../../utils/PlayerClassData";
 import { actionButton } from "../../components/ui/ActionButton";
-import "../../components/ui/Divider";
 import { Controller } from "../../Controller";
+import "../../components/ui/Divider";
 import {
   CloseViewEvent,
   MouseUpEvent,
@@ -44,6 +43,7 @@ import {
 import { UIState } from "../../UIState";
 import { UserSettings } from "../../UserSettings";
 import { renderDuration, showToast, translateText } from "../../Utils";
+import { renderPlayerClassBadge } from "../../utils/PlayerClassData";
 import { GameView, PlayerView } from "../../view";
 import { ChatModal } from "./ChatModal";
 import { EmojiTable } from "./EmojiTable";

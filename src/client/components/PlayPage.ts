@@ -223,7 +223,10 @@ export class PlayPage extends LitElement {
             <color-palette-picker class="w-full"></color-palette-picker>
 
             <!-- Player class specialization picker -->
-            <player-class-picker class="w-full" ?compact=${true}></player-class-picker>
+            <player-class-picker
+              class="w-full"
+              ?compact=${true}
+            ></player-class-picker>
           </div>
 
           <!-- Right column: Streaming Now (desktop only), stretched to the left column's

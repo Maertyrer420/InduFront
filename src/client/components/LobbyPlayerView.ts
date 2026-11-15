@@ -340,8 +340,7 @@ export class LobbyTeamView extends LitElement {
         >
           <span class="text-white flex items-center gap-1"
             >${this.renderLevelBadge(client, false)}${displayName}
-            ${this.renderClassBadge(client)}
-            ${this.renderVerifiedBadge(client)}
+            ${this.renderClassBadge(client)} ${this.renderVerifiedBadge(client)}
             ${this.renderFriendBadge(client)}</span
           >
           ${this.renderRevealToggle(client.clientID)}
@@ -490,8 +489,7 @@ export class LobbyTeamView extends LitElement {
                     <span class="flex items-center gap-1 min-w-0">
                       ${this.renderLevelBadge(p, badgeSlot)}
                       <span class="truncate text-white">${displayName}</span>
-                      ${this.renderClassBadge(p)}
-                      ${this.renderVerifiedBadge(p)}
+                      ${this.renderClassBadge(p)} ${this.renderVerifiedBadge(p)}
                       ${this.renderFriendBadge(p)}
                     </span>
                     <div class="flex items-center gap-1">

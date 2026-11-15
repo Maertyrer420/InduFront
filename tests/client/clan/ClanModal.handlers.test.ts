@@ -808,9 +808,9 @@ describe("ClanModal — handlers", () => {
 
   describe("donate", () => {
     const findDonateButton = () =>
-      Array.from(modal.querySelectorAll("button")).find(
-        (b) => b.textContent?.trim() === "clan_modal.donate",
-      );
+      Array.from(modal.querySelectorAll("[data-clan-actions] button")).find(
+        (b) => b.textContent?.trim() === "clan_modal.donate_steel",
+      ) as HTMLButtonElement | undefined;
 
     const openDetailAs = async (role: string | null) => {
       const { fetchClanDetail } = await import("../../../src/client/ClanApi");
@@ -842,65 +842,57 @@ describe("ClanModal — handlers", () => {
       expect(findDonateButton()).toBeUndefined();
     });
 
-    it("opens the donate dialog for the clan and closes it on cancel", async () => {
+    it("opens the steel donate modal for the clan and closes it on cancel", async () => {
       const detailView = await openDetailAs("member");
-      expect(modal.querySelector("clan-donate-dialog")).toBeNull();
+      expect(modal.querySelector('input[type="number"]')).toBeNull();
 
       findDonateButton()!.click();
       await flushAsync(detailView);
-      const dialog = modal.querySelector("clan-donate-dialog");
-      expect(dialog).toBeTruthy();
-      expect(getElState<string>(dialog!, "clanTag")).toBe("TST");
+      const input = modal.querySelector('input[type="number"]');
+      expect(input).toBeTruthy();
 
-      dialog!.dispatchEvent(new CustomEvent("cancel"));
+      const cancelButton = Array.from(modal.querySelectorAll("button")).find(
+        (b) => b.textContent?.trim() === "Abbrechen",
+      );
+      expect(cancelButton).toBeTruthy();
+      cancelButton!.click();
       await flushAsync(detailView);
-      expect(modal.querySelector("clan-donate-dialog")).toBeNull();
+      expect(modal.querySelector('input[type="number"]')).toBeNull();
     });
 
-    it("after a donation: closes the dialog, toasts, refreshes the clan and the wallet", async () => {
-      const { fetchClanDetail } = await import("../../../src/client/ClanApi");
-      const { invalidateUserMe } = await import("../../../src/client/Api");
-      const { showToast, translateText } =
-        await import("../../../src/client/Utils");
-      const detailView = await openDetailAs("member");
-      findDonateButton()!.click();
-      await flushAsync(detailView);
+    it("donates steel via ClanLevelService, closes the modal, and shows a toast", async () => {
+      const { ClanLevelService } =
+        await import("../../../src/client/ClanLevelService");
+      const { SteelStoreService } =
+        await import("../../../src/client/SteelStore");
+      const { showToast } = await import("../../../src/client/Utils");
 
-      (fetchClanDetail as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-        makeClan({ softBalance: "1300", hardBalance: "25" }),
-      );
-      setState(
-        modal,
-        "myClans" as keyof ClanModal,
-        [makeClan({ softBalance: "1000", hardBalance: "25" })] as never,
-      );
+      const getBalanceSpy = vi
+        .spyOn(SteelStoreService, "getBalance")
+        .mockReturnValue(1000);
+      const donateSpy = vi
+        .spyOn(ClanLevelService, "donateSteel")
+        .mockReturnValue({ success: true, newLevel: 2 });
 
-      modal.querySelector("clan-donate-dialog")!.dispatchEvent(
-        new CustomEvent("donated", {
-          detail: { currencyType: "soft", amount: "300" },
-        }),
-      );
-      await flushAsync(detailView, modal);
+      try {
+        const detailView = await openDetailAs("member");
+        findDonateButton()!.click();
+        await flushAsync(detailView);
 
-      expect(modal.querySelector("clan-donate-dialog")).toBeNull();
-      expect(invalidateUserMe).toHaveBeenCalled();
-      expect(showToast).toHaveBeenCalledWith(
-        "clan_modal.donate_success",
-        "green",
-      );
-      expect(translateText).toHaveBeenCalledWith("clan_modal.donate_success", {
-        amount: "300",
-        currency: "cosmetics.soft",
-        tag: "TST",
-      });
-      expect(fetchClanDetail).toHaveBeenLastCalledWith("TST");
+        const donateSubmit = Array.from(modal.querySelectorAll("button")).find(
+          (b) => b.textContent?.trim() === "Spenden",
+        );
+        expect(donateSubmit).toBeTruthy();
+        donateSubmit!.click();
+        await flushAsync(detailView, modal);
 
-      const m = modal as unknown as {
-        selectedClan: ClanInfo | null;
-        myClans: ClanInfo[];
-      };
-      expect(m.selectedClan?.softBalance).toBe("1300");
-      expect(m.myClans[0].softBalance).toBe("1300");
+        expect(donateSpy).toHaveBeenCalledWith("TST", 250);
+        expect(modal.querySelector('input[type="number"]')).toBeNull();
+        expect(showToast).toHaveBeenCalledWith(expect.any(String), "green");
+      } finally {
+        getBalanceSpy.mockRestore();
+        donateSpy.mockRestore();
+      }
     });
   });
 
@@ -1005,7 +997,7 @@ describe("ClanModal — handlers", () => {
       expect(
         Array.from(grid.children).map((b) => b.textContent?.trim()),
       ).toEqual([
-        "clan_modal.donate",
+        "clan_modal.donate_steel",
         "clan_modal.boost",
         "clan_modal.manage_clan",
         "clan_modal.leave_clan",

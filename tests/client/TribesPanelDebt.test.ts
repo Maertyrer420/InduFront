@@ -51,9 +51,12 @@ vi.mock("../../src/client/Utils", async (importOriginal) => ({
 
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import "../../src/client/components/TribesPanel";
-import type { TribesPanel } from "../../src/client/components/TribesPanel";
+import {
+  TRIBE_NAME_STEEL_PRICE,
+  type TribesPanel,
+} from "../../src/client/components/TribesPanel";
+import { SteelStoreService } from "../../src/client/SteelStore";
 
-const PRICE_HARD = 200;
 const BOOST_PRICE_HARD = 50;
 
 function userWithHard(hard: number): UserMeResponse {
@@ -116,12 +119,14 @@ function dialog(el: TribesPanel) {
 describe("TribesPanel when the wallet is in debt", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
+    localStorage.clear();
+    vi.restoreAllMocks();
     vi.clearAllMocks();
     getMyTribeNames.mockResolvedValue({ names: [tribe] });
     getUserMe.mockResolvedValue(userMe);
     fetchCosmetics.mockResolvedValue({
       tribeNames: {
-        priceHard: PRICE_HARD,
+        priceHard: 200,
         boostPriceHard: BOOST_PRICE_HARD,
         boostDurationDays: 30,
       },
@@ -130,108 +135,89 @@ describe("TribesPanel when the wallet is in debt", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
+    localStorage.clear();
     document.body.innerHTML = "";
   });
 
-  describe("buying a name", () => {
-    it("explains the debt and its amount", async () => {
-      purchaseTribeName.mockResolvedValue({
-        ok: false,
-        code: "debt",
-        debt: "250",
-      });
+  describe("buying a name with Steel", () => {
+    it("shows insufficient Steel error when balance is below 1,000,000", async () => {
+      vi.spyOn(SteelStoreService, "getBalance").mockReturnValue(500);
+      const setBalanceSpy = vi.spyOn(SteelStoreService, "setBalance");
       const el = await mount();
 
       await buy(el, "Ninja");
 
-      expect(el.textContent).toContain('store.pack_debt:{"debt":"250"}');
+      expect(el.textContent).toContain("Nicht genug Stahl!");
+      expect(purchaseTribeName).not.toHaveBeenCalled();
+      expect(setBalanceSpy).not.toHaveBeenCalled();
     });
 
-    // Being short is the other half of the same 400 and DOES want the
-    // top-up path, the way the boost handler has always done it.
-    it("quotes the shortfall against the refetched balance", async () => {
-      purchaseTribeName.mockResolvedValue({
-        ok: false,
-        code: "insufficient_balance",
-      });
-      // The pre-check passed on the bound balance (500) and the server
-      // refused anyway, so the real balance is whatever the refetch returns.
-      // Quoting the stale one would say "you need 1 more" when they need 180.
-      getUserMe.mockResolvedValue(userWithHard(20));
+    it("rejects names shorter than 3 characters", async () => {
+      vi.spyOn(SteelStoreService, "getBalance").mockReturnValue(
+        TRIBE_NAME_STEEL_PRICE,
+      );
+      const setBalanceSpy = vi.spyOn(SteelStoreService, "setBalance");
       const el = await mount();
 
-      await buy(el, "Ninja");
-
-      expect(dialog(el).info).toMatchObject({
-        shortfall: PRICE_HARD - 20,
-        item: "Ninja",
-        canTopUp: true,
-      });
-      expect(el.textContent).not.toContain("Insufficient balance");
-    });
-
-    // The refetch can fail (offline, a 500), which leaves the real balance
-    // unknown. Quoting the full price as the shortfall would be a guess
-    // presented as a fact, with a top-up button sized to it.
-    it("reports a generic failure rather than a guessed shortfall", async () => {
-      purchaseTribeName.mockResolvedValue({
-        ok: false,
-        code: "insufficient_balance",
-      });
-      getUserMe.mockResolvedValue(false);
-      const el = await mount();
-
-      await buy(el, "Ninja");
-
-      expect(dialog(el).info).toBeNull();
-      expect(el.textContent).toContain("store.purchase_failed");
-    });
-
-    it.each([
-      ["invalid_charset", "store.tribe_name_charset"],
-      ["invalid_no_letter", "store.tribe_name_no_letter"],
-      ["not_allowed", "store.tribe_name_not_allowed"],
-    ])("translates the %s refusal", async (code, key) => {
-      purchaseTribeName.mockResolvedValue({ ok: false, code });
-      const el = await mount();
-
-      await buy(el, "Ninja");
-
-      expect(el.textContent).toContain(key);
-      expect(dialog(el).info).toBeNull();
-    });
-
-    it("interpolates the length bounds", async () => {
-      purchaseTribeName.mockResolvedValue({
-        ok: false,
-        code: "length",
-        min: 3,
-        max: 24,
-      });
-      const el = await mount();
-
-      await buy(el, "Ninja");
+      await buy(el, "ab");
 
       expect(el.textContent).toContain(
-        'store.tribe_name_length:{"min":3,"max":24}',
+        "Der Tribe-Name muss mindestens 3 Zeichen lang sein.",
       );
+      expect(purchaseTribeName).not.toHaveBeenCalled();
+      expect(setBalanceSpy).not.toHaveBeenCalled();
+    });
+
+    it("rejects names longer than 30 characters", async () => {
+      vi.spyOn(SteelStoreService, "getBalance").mockReturnValue(
+        TRIBE_NAME_STEEL_PRICE,
+      );
+      const setBalanceSpy = vi.spyOn(SteelStoreService, "setBalance");
+      const el = await mount();
+
+      await buy(el, "a".repeat(31));
+
+      expect(el.textContent).toContain(
+        "Der Tribe-Name darf maximal 30 Zeichen lang sein.",
+      );
+      expect(purchaseTribeName).not.toHaveBeenCalled();
+      expect(setBalanceSpy).not.toHaveBeenCalled();
+    });
+
+    it("deducts Steel and registers community tribe when balance is sufficient", async () => {
+      vi.spyOn(SteelStoreService, "getBalance").mockReturnValue(
+        TRIBE_NAME_STEEL_PRICE + 250,
+      );
+      const setBalanceSpy = vi.spyOn(SteelStoreService, "setBalance");
+      purchaseTribeName.mockResolvedValue({ ok: true, id: "99" });
+      const el = await mount();
+
+      await buy(el, "Ninja");
+
+      expect(setBalanceSpy).toHaveBeenCalledWith(250);
+      expect(purchaseTribeName).toHaveBeenCalledWith("Ninja");
+      expect(el.textContent).toContain('Tribe "Ninja" erfolgreich');
+      expect(el.textContent).toContain("Ninja");
     });
   });
 
   // The API serves a charged-back wallet as a negative balance, so the panel
-  // can see the debt before it spends a request. This is the ordinary route
-  // for a player in debt; the 400 branches above only fire when the
-  // chargeback lands mid-session against a stale bound balance.
+  // can see the debt before it spends a request.
   describe("with a negative balance already bound", () => {
-    it("explains the debt instead of buying a name", async () => {
+    it("allows Steel tribe purchase regardless of negative Plutonium when Steel is sufficient", async () => {
+      vi.spyOn(SteelStoreService, "getBalance").mockReturnValue(
+        TRIBE_NAME_STEEL_PRICE,
+      );
+      purchaseTribeName.mockResolvedValue({ ok: true, id: "100" });
       const el = await mount();
       el.userMeResponse = userWithHard(-150);
       await el.updateComplete;
 
-      await buy(el, "Ninja");
+      await buy(el, "SteelClan");
 
-      expect(el.textContent).toContain('store.pack_debt:{"debt":"150"}');
-      expect(purchaseTribeName).not.toHaveBeenCalled();
+      expect(purchaseTribeName).toHaveBeenCalledWith("SteelClan");
+      expect(el.textContent).not.toContain("store.pack_debt");
       expect(dialog(el).info).toBeNull();
     });
 
@@ -250,15 +236,10 @@ describe("TribesPanel when the wallet is in debt", () => {
   });
 
   // The boundary the debt pre-check must not swallow: an empty wallet is not
-  // a debt. A `<= 0` slip here would tell every broke player they are
-  // "0 in debt" instead of offering the top-up they actually need.
+  // a debt.
   describe("with an empty wallet", () => {
-    it("offers the top-up dialog rather than a debt message when buying", async () => {
-      purchaseTribeName.mockResolvedValue({
-        ok: false,
-        code: "insufficient_balance",
-      });
-      getUserMe.mockResolvedValue(userWithHard(0));
+    it("shows insufficient Steel prompt rather than Plutonium debt when Steel is 0", async () => {
+      vi.spyOn(SteelStoreService, "getBalance").mockReturnValue(0);
       const el = await mount();
       el.userMeResponse = userWithHard(0);
       await el.updateComplete;
@@ -266,7 +247,7 @@ describe("TribesPanel when the wallet is in debt", () => {
       await buy(el, "Ninja");
 
       expect(el.textContent).not.toContain("store.pack_debt");
-      expect(dialog(el).info).toMatchObject({ shortfall: PRICE_HARD });
+      expect(el.textContent).toContain("Nicht genug Stahl!");
     });
 
     it("offers the top-up dialog rather than a debt message when boosting", async () => {
@@ -281,52 +262,13 @@ describe("TribesPanel when the wallet is in debt", () => {
     });
   });
 
-  // Item 3: "insufficient balance" means three different things once the
-  // refetched balance is known.
+  // Boost refetch outcome tests.
   describe("when the refetched balance explains the refusal differently", () => {
     beforeEach(() => {
-      purchaseTribeName.mockResolvedValue({
-        ok: false,
-        code: "insufficient_balance",
-      });
       boostTribeName.mockResolvedValue({
         ok: false,
         code: "insufficient_balance",
       });
-    });
-
-    it("explains the debt when the refetch comes back negative", async () => {
-      getUserMe.mockResolvedValue(userWithHard(-150));
-      const el = await mount();
-
-      await buy(el, "Ninja");
-
-      expect(el.textContent).toContain('store.pack_debt:{"debt":"150"}');
-      expect(dialog(el).info).toBeNull();
-    });
-
-    // Quoting "you need 1 more" here would send them to buy currency they
-    // already have, for a purchase that would now succeed.
-    it("does not invent a shortfall when the refetch covers the price", async () => {
-      getUserMe.mockResolvedValue(userWithHard(500));
-      const el = await mount();
-
-      await buy(el, "Ninja");
-
-      expect(el.textContent).toContain("store.purchase_failed");
-      expect(dialog(el).info).toBeNull();
-    });
-
-    // A failed refetch leaves the real balance unknown, so there is no
-    // honest number to put in front of the player.
-    it("reports a generic failure when the refetch fails", async () => {
-      getUserMe.mockResolvedValue(false);
-      const el = await mount();
-
-      await buy(el, "Ninja");
-
-      expect(el.textContent).toContain("store.purchase_failed");
-      expect(dialog(el).info).toBeNull();
     });
 
     it("explains the debt on the boost path too", async () => {

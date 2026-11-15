@@ -55,8 +55,10 @@ const IGNORED_UNUSED_KEY_PATTERNS: RegExp[] = [
   // and external shells/Crowdin translations.
   /^help_modal\./,
   /^google_login_modal\./,
-  /^account_modal\.(desktop_login_discord|desktop_login_google|link_discord|simple_registration)$/,
+  /^account_modal\.(desktop_login_discord|desktop_login_google|link_discord|link_steam_permanent|linked_to_google|linked_to_google_email|linked_to_steam|simple_registration|tab_friends)$/,
   /^build_menu\.warship_shift_hint$/,
+  /^clan_modal\.(map_coming_soon|steel_progress|tab_donations|tab_map|tab_steel_donations)$/,
+  /^economy\.(heatmap_title|off)$/,
   /^leaderboard_modal\.(ranked_2v2_tab|ranked_ffa_tab|ranked_tab|tribes_tab)$/,
   /^main\.(github|go_to_troubleshooting|login_discord|login_google|login_steam|troubleshooting|wiki)$/,
   /^send_(gold|troops)_modal\.title_with_name$/,

@@ -2253,39 +2253,51 @@ export class HelpModal extends BaseModal {
 
               <!-- Category Header: Gebäude & Infrastruktur -->
               <tr class="bg-white/10 text-cyan-300 font-bold">
-                <td colspan="2" class="py-1.5 ps-3 uppercase tracking-wider text-[10px]">
+                <td
+                  colspan="2"
+                  class="py-1.5 ps-3 uppercase tracking-wider text-[10px]"
+                >
                   Infrastruktur & Verteidigung (Gebäude-Tab)
                 </td>
               </tr>
               <tr class="hover:bg-white/5">
                 <td class="py-2 ps-3 font-mono">
-                  ${this.renderKey(keybinds.buildCity ?? "Digit1")} .. ${this.renderKey(keybinds.buildSamLauncher ?? "Digit6")}
+                  ${this.renderKey(keybinds.buildCity ?? "Digit1")} ..
+                  ${this.renderKey(keybinds.buildSamLauncher ?? "Digit6")}
                 </td>
                 <td class="py-2 text-gray-300">
-                  Stadt (1), Fabrik (2), Hafen (3), Verteidigung (4), Silo (5), SAM (6)
+                  Stadt (1), Fabrik (2), Hafen (3), Verteidigung (4), Silo (5),
+                  SAM (6)
                 </td>
               </tr>
               <tr class="hover:bg-white/5">
                 <td class="py-2 ps-3 font-mono">
-                  ${this.renderKey(keybinds.buildBunker ?? "Digit7")} / ${this.renderKey(keybinds.buildResidential ?? "Digit8")}
+                  ${this.renderKey(keybinds.buildBunker ?? "Digit7")} /
+                  ${this.renderKey(keybinds.buildResidential ?? "Digit8")}
                 </td>
                 <td class="py-2 text-gray-300">
-                  <strong>Stahlbunker</strong> (Panzerfestung, +80% Def) / <strong>Wohnviertel</strong> (+Bevölkerungskapazität)
+                  <strong>Stahlbunker</strong> (Panzerfestung, +80% Def) /
+                  <strong>Wohnviertel</strong> (+Bevölkerungskapazität)
                 </td>
               </tr>
 
               <!-- Category Header: Rohstoffe & Industrie -->
               <tr class="bg-white/10 text-amber-300 font-bold">
-                <td colspan="2" class="py-1.5 ps-3 uppercase tracking-wider text-[10px]">
+                <td
+                  colspan="2"
+                  class="py-1.5 ps-3 uppercase tracking-wider text-[10px]"
+                >
                   Rohstoffe & Industrie (Minen & Werke)
                 </td>
               </tr>
               <tr class="hover:bg-white/5">
                 <td class="py-2 ps-3 font-mono">
-                  ${this.renderKey(keybinds.buildIronMine ?? "Shift+Digit1")} / ${this.renderKey(keybinds.buildCoalMine ?? "Shift+Digit2")}
+                  ${this.renderKey(keybinds.buildIronMine ?? "Shift+Digit1")} /
+                  ${this.renderKey(keybinds.buildCoalMine ?? "Shift+Digit2")}
                 </td>
                 <td class="py-2 text-gray-300">
-                  <strong>Eisenmine</strong> (+2.5 Fe/s) / <strong>Kohlemine</strong> (+2.5 C/s)
+                  <strong>Eisenmine</strong> (+2.5 Fe/s) /
+                  <strong>Kohlemine</strong> (+2.5 C/s)
                 </td>
               </tr>
               <tr class="hover:bg-white/5">
@@ -2298,48 +2310,66 @@ export class HelpModal extends BaseModal {
               </tr>
               <tr class="hover:bg-white/5">
                 <td class="py-2 ps-3 font-mono">
-                  ${this.renderKey(keybinds.buildOilRig ?? "Shift+Digit4")} / ${this.renderKey(keybinds.buildRefinery ?? "Shift+Digit5")}
+                  ${this.renderKey(keybinds.buildOilRig ?? "Shift+Digit4")} /
+                  ${this.renderKey(keybinds.buildRefinery ?? "Shift+Digit5")}
                 </td>
                 <td class="py-2 text-gray-300">
-                  <strong>Bohrinsel</strong> (+1.8 Öl/s) / <strong>Raffinerie</strong> (2 Öl ➔ 1 Treibstoff)
+                  <strong>Bohrinsel</strong> (+1.8 Öl/s) /
+                  <strong>Raffinerie</strong> (2 Öl ➔ 1 Treibstoff)
                 </td>
               </tr>
               <tr class="hover:bg-white/5">
                 <td class="py-2 ps-3 font-mono">
-                  ${this.renderKey(keybinds.buildUraniumMine ?? "Shift+Digit6")} / ${this.renderKey(keybinds.buildCentrifuge ?? "Shift+Digit7")}
+                  ${this.renderKey(keybinds.buildUraniumMine ?? "Shift+Digit6")}
+                  /
+                  ${this.renderKey(keybinds.buildCentrifuge ?? "Shift+Digit7")}
                 </td>
                 <td class="py-2 text-gray-300">
-                  <strong>Uranmine</strong> (+0.6 U/s) / <strong>Zentrifuge</strong> (4 U + 2 C ➔ 1 Angereichertes Uran)
+                  <strong>Uranmine</strong> (+0.6 U/s) /
+                  <strong>Zentrifuge</strong> (4 U + 2 C ➔ 1 Angereichertes
+                  Uran)
                 </td>
               </tr>
 
               <!-- Category Header: Marine & Flotte -->
               <tr class="bg-white/10 text-blue-300 font-bold">
-                <td colspan="2" class="py-1.5 ps-3 uppercase tracking-wider text-[10px]">
+                <td
+                  colspan="2"
+                  class="py-1.5 ps-3 uppercase tracking-wider text-[10px]"
+                >
                   Marine & Schiffsflotte (Direkt oder Taste 1-4 im Actives-Tab)
                 </td>
               </tr>
               <tr class="hover:bg-white/5">
                 <td class="py-2 ps-3 font-mono">
-                  ${this.renderKey(keybinds.buildWarship ?? "Shift+KeyW")} / ${this.renderKey(keybinds.buildDestroyer ?? "Shift+KeyD")}
+                  ${this.renderKey(keybinds.buildWarship ?? "Shift+KeyW")} /
+                  ${this.renderKey(keybinds.buildDestroyer ?? "Shift+KeyD")}
                 </td>
                 <td class="py-2 text-gray-300">
-                  <strong>Kriegsschiff</strong> (Seeherrschaft) / <strong>Zerstörer</strong> (Booster-Eskorte, +10% DMG)
+                  <strong>Kriegsschiff</strong> (Seeherrschaft) /
+                  <strong>Zerstörer</strong> (Booster-Eskorte, +10% DMG)
                 </td>
               </tr>
               <tr class="hover:bg-white/5">
                 <td class="py-2 ps-3 font-mono">
-                  ${this.renderKey(keybinds.buildSubmarine ?? "Shift+KeyS")} / ${this.renderKey(keybinds.buildBattleship ?? "Shift+KeyB")}
+                  ${this.renderKey(keybinds.buildSubmarine ?? "Shift+KeyS")} /
+                  ${this.renderKey(keybinds.buildBattleship ?? "Shift+KeyB")}
                 </td>
                 <td class="py-2 text-gray-300">
-                  <strong>Reparaturschiff</strong> (+10 HP Heilung) / <strong>Schlachtschiff</strong> (Massive Panzerung & Reichweite)
+                  <strong>Reparaturschiff</strong> (+10 HP Heilung) /
+                  <strong>Schlachtschiff</strong> (Massive Panzerung &
+                  Reichweite)
                 </td>
               </tr>
 
               <!-- Category Header: Raketen & Nuklearwaffen -->
               <tr class="bg-white/10 text-rose-300 font-bold">
-                <td colspan="2" class="py-1.5 ps-3 uppercase tracking-wider text-[10px]">
-                  Raketen & Strategische Waffen (Direkt oder Taste 5-9 im Actives-Tab)
+                <td
+                  colspan="2"
+                  class="py-1.5 ps-3 uppercase tracking-wider text-[10px]"
+                >
+                  Raketen & Strategische Waffen (Direkt oder Taste 5-9 im
+                  Actives-Tab)
                 </td>
               </tr>
               <tr class="hover:bg-white/5">
@@ -2347,12 +2377,16 @@ export class HelpModal extends BaseModal {
                   ${this.renderKey(keybinds.buildCruiseMissile ?? "Shift+KeyC")}
                 </td>
                 <td class="py-2 text-gray-300">
-                  <strong>Marschflugkörper / Rakete</strong> (Präzisionsschlag R=3, kein Uran)
+                  <strong>Marschflugkörper / Rakete</strong> (Präzisionsschlag
+                  R=3, kein Uran)
                 </td>
               </tr>
               <tr class="hover:bg-white/5">
                 <td class="py-2 ps-3 font-mono">
-                  ${this.renderKey(keybinds.buildAtomBomb ?? "Shift+Digit8")} / ${this.renderKey(keybinds.buildHydrogenBomb ?? "Shift+Digit9")}
+                  ${this.renderKey(keybinds.buildAtomBomb ?? "Shift+Digit8")} /
+                  ${this.renderKey(
+                    keybinds.buildHydrogenBomb ?? "Shift+Digit9",
+                  )}
                 </td>
                 <td class="py-2 text-gray-300">
                   <strong>Atombombe</strong> / <strong>Wasserstoffbombe</strong>
@@ -2360,10 +2394,12 @@ export class HelpModal extends BaseModal {
               </tr>
               <tr class="hover:bg-white/5">
                 <td class="py-2 ps-3 font-mono">
-                  ${this.renderKey(keybinds.buildMIRV ?? "Shift+Digit0")} / ${this.renderKey(keybinds.buildICBM ?? "Digit0")}
+                  ${this.renderKey(keybinds.buildMIRV ?? "Shift+Digit0")} /
+                  ${this.renderKey(keybinds.buildICBM ?? "Digit0")}
                 </td>
                 <td class="py-2 text-gray-300">
-                  <strong>MIRV Mehrfachsprengkopf</strong> / <strong>Strategische ICBM</strong> (R=12 Fallout)
+                  <strong>MIRV Mehrfachsprengkopf</strong> /
+                  <strong>Strategische ICBM</strong> (R=12 Fallout)
                 </td>
               </tr>
             </tbody>

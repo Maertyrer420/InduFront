@@ -65,7 +65,10 @@ export function getStoredCommunityTribes(): CommunityTribe[] {
     },
   ];
   try {
-    localStorage.setItem(COMMUNITY_TRIBES_STORAGE_KEY, JSON.stringify(defaults));
+    localStorage.setItem(
+      COMMUNITY_TRIBES_STORAGE_KEY,
+      JSON.stringify(defaults),
+    );
   } catch {
     /* ignore */
   }
@@ -550,7 +553,9 @@ export class TribesPanel extends LitElement {
               >(${community.length})</span
             >
           </h3>
-          <span class="text-[11px] text-white/40">Permanent in Bot-Matches</span>
+          <span class="text-[11px] text-white/40"
+            >Permanent in Bot-Matches</span
+          >
         </div>
         <div class="space-y-2">
           ${community.map(
@@ -716,8 +721,7 @@ export class TribesPanel extends LitElement {
     return html`<div
       class="p-6 lg:p-8 flex flex-col gap-6 max-w-2xl mx-auto w-full"
     >
-      ${this.renderPurchaseCard()}
-      ${this.renderCommunityTribes()}
+      ${this.renderPurchaseCard()} ${this.renderCommunityTribes()}
       <section class="flex flex-col gap-3">
         <h3
           class="text-sm font-bold uppercase tracking-wider text-white/60 px-1"

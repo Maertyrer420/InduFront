@@ -240,7 +240,10 @@ export class JoinLobbyModal extends BaseModal {
             : html`
                 ${this.gameConfig ? this.renderGameConfig() : html``}
                 <div class="mt-4 mb-2">
-                  <player-class-picker class="w-full block" ?compact=${false}></player-class-picker>
+                  <player-class-picker
+                    class="w-full block"
+                    ?compact=${false}
+                  ></player-class-picker>
                 </div>
                 ${this.players.length > 0
                   ? html`
@@ -259,7 +262,12 @@ export class JoinLobbyModal extends BaseModal {
                           this.gameConfig?.nations ?? "default",
                           this.nationCount,
                         )}
-                        @team-selected=${(e: CustomEvent<{ clientID: string; teamIndex: number }>) => {
+                        @team-selected=${(
+                          e: CustomEvent<{
+                            clientID: string;
+                            teamIndex: number;
+                          }>,
+                        ) => {
                           const { clientID, teamIndex } = e.detail;
                           this.players = this.players.map((p) =>
                             p.clientID === clientID ? { ...p, teamIndex } : p,

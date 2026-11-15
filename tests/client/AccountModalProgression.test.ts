@@ -263,7 +263,7 @@ describe("AccountModal — Progression tab", () => {
     vi.restoreAllMocks();
   });
 
-  it("adds the tab after Games, before Friends, for a player with a level", async () => {
+  it("adds the tab after Games for a player with a level", async () => {
     modal.open();
     await settle(() => {
       expect(tabText()).toContain("account_modal.tab_progression");
@@ -271,9 +271,6 @@ describe("AccountModal — Progression tab", () => {
     const text = tabText();
     expect(text.indexOf("account_modal.tab_games")).toBeLessThan(
       text.indexOf("account_modal.tab_progression"),
-    );
-    expect(text.indexOf("account_modal.tab_progression")).toBeLessThan(
-      text.indexOf("account_modal.tab_friends"),
     );
     // Nothing read until the tab shows.
     expect(fetchPublicPlayerProgressMock).not.toHaveBeenCalled();
@@ -283,7 +280,7 @@ describe("AccountModal — Progression tab", () => {
     me = userMe(undefined);
     modal.open({ tab: "progression" });
     await settle(() => {
-      expect(tabText()).toContain("account_modal.tab_friends");
+      expect(tabText()).toContain("account_modal.tab_stats");
     });
     expect(tabText()).not.toContain("account_modal.tab_progression");
     // Asked for, it isn't there: the account shows instead.

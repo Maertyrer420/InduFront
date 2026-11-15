@@ -167,13 +167,7 @@ export function getAllPlayerClasses(): PlayerClassMeta[] {
           d="M3.5 12a8.5 8.5 0 0 1 17 0c0 4.69-3.81 8.5-8.5 8.5a8.5 8.5 0 0 1-8.5-8.5"
         />
         <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(30 12 12)" />
-        <ellipse
-          cx="12"
-          cy="12"
-          rx="10"
-          ry="4"
-          transform="rotate(-30 12 12)"
-        />
+        <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(-30 12 12)" />
       </svg>`,
     },
   ];
@@ -182,8 +176,7 @@ export function getAllPlayerClasses(): PlayerClassMeta[] {
 export function getPlayerClassMeta(cls?: PlayerClass): PlayerClassMeta {
   const classes = getAllPlayerClasses();
   return (
-    classes.find((c) => c.id === cls) ??
-    classes[0] // fallback to Industrialist
+    classes.find((c) => c.id === cls) ?? classes[0] // fallback to Industrialist
   );
 }
 
@@ -197,11 +190,7 @@ export function renderPlayerClassBadge(
   const iconSize =
     size === "xs" ? "w-3 h-3" : size === "sm" ? "w-3.5 h-3.5" : "w-4 h-4";
   const textSize =
-    size === "xs"
-      ? "text-[10px]"
-      : size === "sm"
-        ? "text-[11px]"
-        : "text-xs";
+    size === "xs" ? "text-[10px]" : size === "sm" ? "text-[11px]" : "text-xs";
   const padding = size === "xs" ? "px-1.5 py-0.5" : "px-2 py-0.5";
 
   return html`

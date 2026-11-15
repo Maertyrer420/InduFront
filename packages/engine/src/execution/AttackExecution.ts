@@ -349,7 +349,7 @@ export class AttackExecution implements Execution {
 
       const attackerClass = this._owner.playerClass();
       if (attackerClass === PlayerClass.Infantry) {
-        attackerTroopLoss = Math.round(attackerTroopLoss * 0.80); // -20% land casualties
+        attackerTroopLoss = Math.round(attackerTroopLoss * 0.8); // -20% land casualties
       } else if (attackerClass === PlayerClass.Industrialist) {
         attackerTroopLoss = Math.round(attackerTroopLoss * 1.18); // -15% land attack efficacy
       } else if (attackerClass === PlayerClass.IronDome) {

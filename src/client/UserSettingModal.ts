@@ -1290,7 +1290,8 @@ export class UserSettingModal extends BaseModal {
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
-        ${translateText("user_setting.build_controls")} — ${translateText("user_setting.build_controls_infrastructure")}
+        ${translateText("user_setting.build_controls")} —
+        ${translateText("user_setting.build_controls_infrastructure")}
       </h2>
 
       <setting-keybind
@@ -1376,7 +1377,8 @@ export class UserSettingModal extends BaseModal {
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
-        ${translateText("user_setting.build_controls")} — ${translateText("user_setting.build_controls_economy")}
+        ${translateText("user_setting.build_controls")} —
+        ${translateText("user_setting.build_controls_economy")}
       </h2>
 
       <setting-keybind
@@ -1452,7 +1454,8 @@ export class UserSettingModal extends BaseModal {
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
-        ${translateText("user_setting.build_controls")} — ${translateText("user_setting.build_controls_fleet")}
+        ${translateText("user_setting.build_controls")} —
+        ${translateText("user_setting.build_controls_fleet")}
       </h2>
 
       <setting-keybind
@@ -1498,7 +1501,8 @@ export class UserSettingModal extends BaseModal {
       <h2
         class="text-blue-200 text-xl font-bold mt-8 mb-3 border-b border-white/10 pb-2"
       >
-        ${translateText("user_setting.build_controls")} — ${translateText("user_setting.build_controls_missiles")}
+        ${translateText("user_setting.build_controls")} —
+        ${translateText("user_setting.build_controls_missiles")}
       </h2>
 
       <setting-keybind

@@ -32,12 +32,12 @@ import {
   provisionalProgress,
   scoredGames,
 } from "./ProvisionalProgress";
+import { SteelStoreService, STEEL_CATALOG } from "./SteelStore";
 import {
   parsePlayerProfilePath,
   playerProfileUrl,
 } from "./utilities/PlayerProfileUrl";
 import { currentPagePath, showToast, translateText } from "./Utils";
-import { SteelStoreService, STEEL_CATALOG } from "./SteelStore";
 
 export { playerProfileUrl };
 
@@ -482,7 +482,9 @@ export class PlayerProfileModal extends BaseModal {
                         d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
                       />
                     </svg>
-                    <span>${currentBio ? "Bearbeiten" : "+ Bio hinzufügen"}</span>
+                    <span
+                      >${currentBio ? "Bearbeiten" : "+ Bio hinzufügen"}</span
+                    >
                   </button>
                 `
               : nothing}

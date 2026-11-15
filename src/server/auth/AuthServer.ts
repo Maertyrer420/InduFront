@@ -388,7 +388,8 @@ async function main() {
     }
     const realIp = req.headers["x-real-ip"];
     if (typeof realIp === "string" && realIp.trim()) return realIp.trim();
-    return req.ip || req.socket.remoteAddress || "unknown";
+    const ip = req.ip && req.ip.length > 0 ? req.ip : req.socket.remoteAddress;
+    return ip ?? "unknown";
   };
 
   const authLimiter = rateLimit({
@@ -492,7 +493,8 @@ async function main() {
       );
     }
     const rawIdent = rawId ?? username;
-    const identifier = typeof rawIdent === "string" ? rawIdent.trim() : rawIdent;
+    const identifier =
+      typeof rawIdent === "string" ? rawIdent.trim() : rawIdent;
     if (typeof identifier !== "string" || typeof password !== "string") {
       return void res.status(400).json({ error: "invalid_request" });
     }

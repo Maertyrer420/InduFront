@@ -156,7 +156,7 @@ describe("AccountModal — rendering", () => {
   //    are negative checks against translation-key literals, which silently
   //    decay into no-ops if a key is ever renamed. Asserting the same key is
   //    present here means a rename breaks this test loudly instead.
-  it("keeps the Google-link CTA for a Discord user (unaffected by the Steam branch)", async () => {
+  it("omits the Google-link CTA for a Discord user (Account linking disabled)", async () => {
     const userMe = makeUserMe({
       discord: {
         id: "1",
@@ -173,8 +173,8 @@ describe("AccountModal — rendering", () => {
     // Discord takes the first branch of renderLoggedInAs() — no Steam header.
     expect(modal.querySelector("steam-user-header")).toBeNull();
 
-    // The linking CTA a Steam-primary user does NOT get.
-    expect(text).toContain("account_modal.link_google");
+    // Account linking CTAs are intentionally omitted.
+    expect(text).not.toContain("account_modal.link_google");
 
     // Still a logged-in view, not the login-options screen.
     expect(modal.querySelector("currency-display")).toBeTruthy();
@@ -355,7 +355,7 @@ describe("AccountModal — rendering", () => {
     // Google) goes to the website on desktop -- see linkGoogle in Auth.ts --
     // and its caption says so. Matched on the whole caption, since the web
     // key is a prefix of the desktop one.
-    it("captions the Google link button as opening the website on desktop", async () => {
+    it("does not render a Google link button on desktop either", async () => {
       (window as unknown as { openfrontDesktop: unknown }).openfrontDesktop = {
         showLinkGate: vi.fn(async () => undefined),
       };
@@ -371,20 +371,15 @@ describe("AccountModal — rendering", () => {
         }),
       );
 
-      expect(findButtonByText("account_modal.link_google_on_web")).toBeTruthy();
+      expect(
+        findButtonByText("account_modal.link_google_on_web"),
+      ).toBeUndefined();
       expect(findButtonByText("account_modal.link_google")).toBeUndefined();
-
-      findButtonByText("account_modal.link_google_on_web")!.click();
-      expect(linkGoogle).toHaveBeenCalledTimes(1);
+      expect(linkGoogle).not.toHaveBeenCalled();
     });
   });
 
-  // OPE-115. The Steam link is PERMANENT: Steam recommends that users cannot
-  // self-unlink Steam from an external account, so there is no unlink control
-  // and the warning has to be readable before the click. Both halves are
-  // asserted because a regression in either is invisible in review and
-  // irreversible for the player who hits it.
-  it("offers a Steam link with the permanence warning to a Discord user", async () => {
+  it("omits the Steam link option for a Discord user", async () => {
     await setLoggedInUser(
       makeUserMe({
         discord: {
@@ -398,12 +393,11 @@ describe("AccountModal — rendering", () => {
     );
 
     const text = modal.textContent ?? "";
-    expect(text).toContain("account_modal.link_steam");
-    // The warning, before the click — afterwards the link already exists.
-    expect(text).toContain("account_modal.link_steam_permanent");
+    expect(text).not.toContain("account_modal.link_steam");
+    expect(text).not.toContain("account_modal.link_steam_permanent");
   });
 
-  it("shows the linked Steam account and NO unlink control", async () => {
+  it("shows the linked Steam header without a Steam-link row or unlink control", async () => {
     await setLoggedInUser(
       makeUserMe({
         discord: {
@@ -422,25 +416,13 @@ describe("AccountModal — rendering", () => {
     );
 
     const text = modal.textContent ?? "";
-    // The linked state, not the CTA.
-    expect(text).toContain("account_modal.linked_to_steam");
-    // The attached account is NAMED, not just reported as linked: a wrong link
-    // cannot be undone by the player, so noticing it immediately is what makes
-    // a support fix possible.
-    //
-    // querySelectorAll with a length, NOT querySelector: the singular form is
-    // true for one header OR two, which is exactly how a duplicate render got
-    // past this test. renderAccountTab already renders the header for every
-    // branch, so the Steam row must not render its own.
+    expect(text).not.toContain("account_modal.linked_to_steam");
     expect(modal.querySelectorAll("steam-user-header")).toHaveLength(1);
-    // The explanation for why there is no unlink button stays visible.
-    expect(text).toContain("account_modal.link_steam_permanent");
-    // There is no unlink affordance anywhere, by key or by label.
     expect(text).not.toContain("unlink");
     expect(text).not.toContain("Unlink");
   });
 
-  it("starts the Steam link when the button is clicked", async () => {
+  it("does not render a Steam link button for a Discord user", async () => {
     await setLoggedInUser(
       makeUserMe({
         discord: {
@@ -456,11 +438,8 @@ describe("AccountModal — rendering", () => {
     const button = Array.from(modal.querySelectorAll("button")).find((b) =>
       (b.textContent ?? "").includes("account_modal.link_steam"),
     );
-    expect(button).toBeTruthy();
-    button!.click();
-    await modal.updateComplete;
-
-    expect(linkSteam).toHaveBeenCalledTimes(1);
+    expect(button).toBeUndefined();
+    expect(linkSteam).not.toHaveBeenCalled();
   });
 
   it("offers no Steam sign-in or link inside the desktop shell", async () => {

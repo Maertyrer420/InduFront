@@ -127,6 +127,7 @@ describe("nav-account-menu", () => {
     await el.updateComplete;
     await click(trigger());
     expect(itemKeys()).toEqual([
+      "view-profile",
       "copy-profile-url",
       "view-account",
       "account-settings",

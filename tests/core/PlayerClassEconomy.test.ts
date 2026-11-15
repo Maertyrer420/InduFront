@@ -14,7 +14,12 @@ import { describe, expect, it } from "vitest";
 
 describe("Player Classes & Economic Progression", () => {
   it("defaults PlayerInfo to Industrialist when no class is specified", () => {
-    const info = new PlayerInfo("TestPlayer", PlayerType.Human, "client-1", "p1");
+    const info = new PlayerInfo(
+      "TestPlayer",
+      PlayerType.Human,
+      "client-1",
+      "p1",
+    );
     expect(info.playerClass).toBe(PlayerClass.Industrialist);
   });
 
@@ -72,30 +77,60 @@ describe("Player Classes & Economic Progression", () => {
     expect(REFINERY_RECIPES.steel.ironOre).toBe(3);
     expect(REFINERY_RECIPES.steel.coal).toBe(2);
     // Base iron mine yield (1.88) is below 1 steel mill requirement (3.0), requiring 2 mines or upgrades
-    expect(MINE_BASE_YIELDS.ironOre).toBeLessThan(REFINERY_RECIPES.steel.ironOre);
+    expect(MINE_BASE_YIELDS.ironOre).toBeLessThan(
+      REFINERY_RECIPES.steel.ironOre,
+    );
   });
 
   it("verifies Scientist gets -20% discount on nuclear unit costs", () => {
-    const normalNuke = getUnitResourceCost(UnitType.AtomBomb, 0, PlayerClass.Industrialist);
-    const scientistNuke = getUnitResourceCost(UnitType.AtomBomb, 0, PlayerClass.Scientist);
+    const normalNuke = getUnitResourceCost(
+      UnitType.AtomBomb,
+      0,
+      PlayerClass.Industrialist,
+    );
+    const scientistNuke = getUnitResourceCost(
+      UnitType.AtomBomb,
+      0,
+      PlayerClass.Scientist,
+    );
 
     expect(scientistNuke.gold).toBe(Math.round(normalNuke.gold * 0.8));
     expect(scientistNuke.steel).toBe(Math.round(normalNuke.steel * 0.8));
-    expect(scientistNuke.enrichedUranium).toBe(Math.round(normalNuke.enrichedUranium * 0.8));
+    expect(scientistNuke.enrichedUranium).toBe(
+      Math.round(normalNuke.enrichedUranium * 0.8),
+    );
   });
 
   it("verifies Iron Dome incurs +25% surcharge on nuclear unit costs", () => {
-    const normalNuke = getUnitResourceCost(UnitType.AtomBomb, 0, PlayerClass.Industrialist);
-    const domeNuke = getUnitResourceCost(UnitType.AtomBomb, 0, PlayerClass.IronDome);
+    const normalNuke = getUnitResourceCost(
+      UnitType.AtomBomb,
+      0,
+      PlayerClass.Industrialist,
+    );
+    const domeNuke = getUnitResourceCost(
+      UnitType.AtomBomb,
+      0,
+      PlayerClass.IronDome,
+    );
 
     expect(domeNuke.gold).toBe(Math.round(normalNuke.gold * 1.25));
     expect(domeNuke.steel).toBe(Math.round(normalNuke.steel * 1.25));
-    expect(domeNuke.enrichedUranium).toBe(Math.round(normalNuke.enrichedUranium * 1.25));
+    expect(domeNuke.enrichedUranium).toBe(
+      Math.round(normalNuke.enrichedUranium * 1.25),
+    );
   });
 
   it("verifies Marine incurs +30% surcharge on bunker defense structures", () => {
-    const normalBunker = getUnitResourceCost(UnitType.Bunker, 0, PlayerClass.Industrialist);
-    const marineBunker = getUnitResourceCost(UnitType.Bunker, 0, PlayerClass.Marine);
+    const normalBunker = getUnitResourceCost(
+      UnitType.Bunker,
+      0,
+      PlayerClass.Industrialist,
+    );
+    const marineBunker = getUnitResourceCost(
+      UnitType.Bunker,
+      0,
+      PlayerClass.Marine,
+    );
 
     expect(marineBunker.gold).toBe(Math.round(normalBunker.gold * 1.3));
     expect(marineBunker.steel).toBe(Math.round(normalBunker.steel * 1.3));
@@ -118,26 +153,28 @@ describe("Player Classes & Economic Progression", () => {
     expect(centrifugeCoalDemand).toBe(3);
     expect(steelCoalDemand + centrifugeCoalDemand).toBe(5);
     // Combined coal demand (5) significantly exceeds 1 base coal mine yield (1.88)
-    expect(MINE_BASE_YIELDS.coal).toBeLessThan(steelCoalDemand + centrifugeCoalDemand);
+    expect(MINE_BASE_YIELDS.coal).toBeLessThan(
+      steelCoalDemand + centrifugeCoalDemand,
+    );
   });
 
   it("verifies calibrated Marine bonuses (-15% inland mining, -30% fuel drain)", () => {
     const marineMiningYield = MINE_BASE_YIELDS.ironOre * 0.85; // -15% mining yield
     expect(marineMiningYield).toBeCloseTo(1.88 * 0.85, 2);
 
-    const marineFuelRatio = 1 - 0.30; // -30% fuel consumption
-    expect(marineFuelRatio).toBeCloseTo(0.70, 2);
+    const marineFuelRatio = 1 - 0.3; // -30% fuel consumption
+    expect(marineFuelRatio).toBeCloseTo(0.7, 2);
   });
 
   it("verifies Infantry -10% gold income penalty", () => {
     const normalGoldIncome = 1000;
-    const infantryGoldIncome = Math.floor(normalGoldIncome * 0.90);
+    const infantryGoldIncome = Math.floor(normalGoldIncome * 0.9);
     expect(infantryGoldIncome).toBe(900);
   });
 
   it("verifies Iron Dome +20% SAM range bonus", () => {
     const baseRange = 250;
-    const ironDomeRange = baseRange * 1.20;
+    const ironDomeRange = baseRange * 1.2;
     expect(ironDomeRange).toBe(300);
   });
 });

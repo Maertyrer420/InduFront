@@ -82,7 +82,7 @@ export class MatchmakingServer {
           if (msg.type === "join") {
             const { jwt, clanTag } = msg;
             if (!jwt) {
-              ws.close(1008, "missing_token");
+              ws.close(CloseCode.Unauthorized, "missing_token");
               return;
             }
 
@@ -110,7 +110,7 @@ export class MatchmakingServer {
                 publicId = jwt;
                 username = "Commander";
               } else {
-                ws.close(1008, "invalid_jwt");
+                ws.close(CloseCode.Unauthorized, "invalid_jwt");
                 return;
               }
             }

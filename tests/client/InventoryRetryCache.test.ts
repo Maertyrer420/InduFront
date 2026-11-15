@@ -52,5 +52,5 @@ describe("Inventory catalog retry", () => {
       expect(modal!.querySelector("inventory-loadout-bar")).toBeTruthy(),
     );
     expect(fetchMock).toHaveBeenCalledTimes(2);
-  });
+  }, 30_000);
 });

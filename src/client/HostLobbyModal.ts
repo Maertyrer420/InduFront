@@ -768,7 +768,10 @@ export class HostLobbyModal extends BaseModal {
           ></game-config-settings>
 
           <div class="mt-8 mb-2">
-            <player-class-picker class="w-full block" ?compact=${false}></player-class-picker>
+            <player-class-picker
+              class="w-full block"
+              ?compact=${false}
+            ></player-class-picker>
           </div>
 
           <lobby-player-view
@@ -787,7 +790,9 @@ export class HostLobbyModal extends BaseModal {
               : (clientID: string) => this.toggleNameReveal(clientID)}
             .nameReveals=${this.nameReveals}
             .anonymizeNames=${this.anonymizeNames}
-            @team-selected=${(e: CustomEvent<{ clientID: string; teamIndex: number }>) => {
+            @team-selected=${(
+              e: CustomEvent<{ clientID: string; teamIndex: number }>,
+            ) => {
               const { clientID, teamIndex } = e.detail;
               this.clients = this.clients.map((c) =>
                 c.clientID === clientID ? { ...c, teamIndex } : c,

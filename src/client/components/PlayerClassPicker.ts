@@ -1,8 +1,8 @@
 import { PlayerClass } from "@openfront/engine-api/game/GameTypes";
 import { html, LitElement } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { translateText } from "../Utils";
 import { UserSettings } from "../UserSettings";
+import { translateText } from "../Utils";
 import {
   getAllPlayerClasses,
   getPlayerClassMeta,
@@ -75,7 +75,9 @@ export class PlayerClassPicker extends LitElement {
               ${currentMeta.icon("w-4 h-4")}
             </div>
             <div class="min-w-0">
-              <div class="font-bold text-gray-200 truncate flex items-center gap-2">
+              <div
+                class="font-bold text-gray-200 truncate flex items-center gap-2"
+              >
                 <span>${translateText("player_classes.title")}</span>
                 <span
                   class="px-2 py-0.5 rounded text-[11px] font-semibold border ${currentMeta.badgeClasses}"
@@ -96,7 +98,9 @@ export class PlayerClassPicker extends LitElement {
           >
             <span>${this.isExpanded ? "Schließen" : "Ändern"}</span>
             <svg
-              class="w-3 h-3 transition-transform ${this.isExpanded ? "rotate-180" : ""}"
+              class="w-3 h-3 transition-transform ${this.isExpanded
+                ? "rotate-180"
+                : ""}"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -120,12 +124,16 @@ export class PlayerClassPicker extends LitElement {
             `
           : html`
               <!-- Full perks preview of selected class -->
-              <div class="flex flex-col gap-1 pt-1.5 border-t border-white/10 text-[11px]">
+              <div
+                class="flex flex-col gap-1 pt-1.5 border-t border-white/10 text-[11px]"
+              >
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   <div class="flex flex-col gap-0.5">
                     ${currentMeta.buffs.map(
                       (buff) => html`
-                        <div class="flex items-start gap-1.5 text-emerald-400 leading-snug">
+                        <div
+                          class="flex items-start gap-1.5 text-emerald-400 leading-snug"
+                        >
                           <span class="font-bold shrink-0">+</span>
                           <span>${buff}</span>
                         </div>
@@ -135,7 +143,9 @@ export class PlayerClassPicker extends LitElement {
                   <div class="flex flex-col gap-0.5">
                     ${currentMeta.debuffs.map(
                       (debuff) => html`
-                        <div class="flex items-start gap-1.5 text-red-400 leading-snug">
+                        <div
+                          class="flex items-start gap-1.5 text-red-400 leading-snug"
+                        >
                           <span class="font-bold shrink-0">-</span>
                           <span>${debuff}</span>
                         </div>
@@ -155,18 +165,16 @@ export class PlayerClassPicker extends LitElement {
     return html`
       <div
         @click=${() => this.pickClass(cls.id)}
-        class="relative flex flex-col p-2.5 rounded-lg border cursor-pointer transition-all duration-200 select-none ${
-          isSelected
-            ? "bg-amber-500/15 border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.2)] ring-1 ring-amber-400/50"
-            : "bg-black/30 border-white/10 hover:border-white/30 hover:bg-white/5"
-        }"
+        class="relative flex flex-col p-2.5 rounded-lg border cursor-pointer transition-all duration-200 select-none ${isSelected
+          ? "bg-amber-500/15 border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.2)] ring-1 ring-amber-400/50"
+          : "bg-black/30 border-white/10 hover:border-white/30 hover:bg-white/5"}"
       >
         <div class="flex items-center justify-between gap-1.5 mb-1.5">
           <div class="flex items-center gap-2 min-w-0">
             <div
-              class="p-1 rounded-md shrink-0 ${
-                isSelected ? "bg-amber-400/20 text-amber-300" : "bg-white/5 text-white/60"
-              }"
+              class="p-1 rounded-md shrink-0 ${isSelected
+                ? "bg-amber-400/20 text-amber-300"
+                : "bg-white/5 text-white/60"}"
             >
               ${cls.icon("w-3.5 h-3.5")}
             </div>
@@ -174,9 +182,7 @@ export class PlayerClassPicker extends LitElement {
               <div class="text-xs font-bold text-white truncate">
                 ${cls.name}
               </div>
-              <div class="text-[9px] text-white/50 truncate">
-                ${cls.role}
-              </div>
+              <div class="text-[9px] text-white/50 truncate">${cls.role}</div>
             </div>
           </div>
           ${isSelected
@@ -190,21 +196,29 @@ export class PlayerClassPicker extends LitElement {
 
         ${this.showPerks
           ? html`
-              <div class="flex flex-col gap-1 mt-1.5 pt-1.5 border-t border-white/10 text-[10px]">
+              <div
+                class="flex flex-col gap-1 mt-1.5 pt-1.5 border-t border-white/10 text-[10px]"
+              >
                 <div class="flex flex-col gap-0.5">
                   ${cls.buffs.map(
                     (buff) => html`
-                      <div class="flex items-start gap-1 text-emerald-400 leading-snug">
+                      <div
+                        class="flex items-start gap-1 text-emerald-400 leading-snug"
+                      >
                         <span class="font-bold shrink-0">+</span>
                         <span>${buff}</span>
                       </div>
                     `,
                   )}
                 </div>
-                <div class="flex flex-col gap-0.5 mt-0.5 pt-0.5 border-t border-white/5">
+                <div
+                  class="flex flex-col gap-0.5 mt-0.5 pt-0.5 border-t border-white/5"
+                >
                   ${cls.debuffs.map(
                     (debuff) => html`
-                      <div class="flex items-start gap-1 text-red-400 leading-snug">
+                      <div
+                        class="flex items-start gap-1 text-red-400 leading-snug"
+                      >
                         <span class="font-bold shrink-0">-</span>
                         <span>${debuff}</span>
                       </div>

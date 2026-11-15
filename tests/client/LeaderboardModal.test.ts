@@ -1010,7 +1010,7 @@ describe("LeaderboardModal", () => {
           (tr) =>
             [...tr.querySelectorAll("td")].map((td) => td.textContent!.trim()),
         );
-      expect(rows().map((r) => [r[1], r[2]])).toEqual([
+      expect(rows().map((r) => [r[1], r[3]])).toEqual([
         ["NONE", "—"],
         ["LOW", "1490"],
         ["HIGH", "1530"],

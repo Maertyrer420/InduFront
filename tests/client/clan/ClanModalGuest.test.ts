@@ -68,7 +68,7 @@ describe("ClanModal — signed out", () => {
     await flushAsync(modal);
 
     expect(modal.isOpen()).toBe(true);
-    expect(getElState(modal, "activeTab")).toBe("my-clans");
+    expect(getElState(modal, "activeTab")).toBe("my-clan");
     expect(modal.textContent).toContain("clan_modal.sign_in_for_clans");
     expect(showPage).not.toHaveBeenCalled();
 
@@ -79,29 +79,24 @@ describe("ClanModal — signed out", () => {
     expect(showPage).toHaveBeenCalledWith("page-account");
   });
 
-  it("lets a signed-out viewer deep-link to the map", async () => {
+  it("falls back to my-clan when deep-linking to removed map tab", async () => {
     stubGameEnv("dev");
-    // The router's sequence for `#modal=clan&tab=map`: showPage() opens the
-    // inline modal without args, then the URL's args arrive.
     modal.open();
     modal.open({ tab: "map" });
     await flushAsync(modal);
 
     expect(modal.isOpen()).toBe(true);
-    expect(getElState(modal, "activeTab")).toBe("map");
-    expect(modal.querySelector("clan-map-view")).not.toBeNull();
+    expect(getElState(modal, "activeTab")).toBe("my-clan");
+    expect(modal.querySelector("clan-map-view")).toBeNull();
   });
 
-  it("shows Coming Soon instead of the map in prod", async () => {
+  it("does not mount map view or fullscreen button in prod either", async () => {
     stubGameEnv("prod");
     modal.open({ tab: "map" });
     await flushAsync(modal);
 
-    expect(getElState(modal, "activeTab")).toBe("map");
-    // The map hasn't shipped to prod: the iframe never mounts, and neither
-    // does the fullscreen button that targets it.
+    expect(getElState(modal, "activeTab")).toBe("my-clan");
     expect(modal.querySelector("clan-map-view")).toBeNull();
-    expect(modal.textContent).toContain("clan_modal.map_coming_soon");
     expect(modal.querySelector('[data-testid="map-fullscreen"]')).toBeNull();
   });
 
@@ -152,19 +147,14 @@ describe("ClanModal — map fullscreen button", () => {
   const fullscreenButton = () =>
     modal.querySelector<HTMLButtonElement>('[data-testid="map-fullscreen"]');
 
-  it("shows only on the Map tab and fullscreens the map frame", async () => {
+  it("never renders map fullscreen button because map tab was removed", async () => {
     modal.open();
     await flushAsync(modal);
     expect(fullscreenButton()).toBeNull();
 
     modal.setActiveTab("map");
     await flushAsync(modal);
-    const mapView = await waitForSubComponent(modal, "clan-map-view");
-    const request = vi.fn(() => Promise.resolve());
-    mapView.querySelector("iframe")!.requestFullscreen = request as never;
-
-    fullscreenButton()!.click();
-
-    expect(request).toHaveBeenCalledTimes(1);
+    expect(modal.querySelector("clan-map-view")).toBeNull();
+    expect(fullscreenButton()).toBeNull();
   });
 });

@@ -1588,60 +1588,6 @@ export class InputHandler {
         return type;
     }
 
-    // Secondary hotbar fallbacks (Mining/Refining row and un-keyed structures)
-    let digit: number | null = null;
-    if (code.startsWith("Digit")) {
-      digit = parseInt(code.slice(5), 10);
-    } else if (code.startsWith("Numpad")) {
-      digit = parseInt(code.slice(6), 10);
-    }
-
-    if (digit !== null) {
-      // Shift+1..7: Mining & Refining row
-      if (shiftKey) {
-        switch (digit) {
-          case 1:
-            return UnitType.IronMine;
-          case 2:
-            return UnitType.CoalMine;
-          case 3:
-            return UnitType.SteelMill;
-          case 4:
-            return UnitType.OilRig;
-          case 5:
-            return UnitType.Refinery;
-          case 6:
-            return UnitType.UraniumMine;
-          case 7:
-            return UnitType.Centrifuge;
-          default:
-            break;
-        }
-      } else {
-        // Buildings tab structures
-        switch (digit) {
-          case 1:
-            return UnitType.City;
-          case 2:
-            return UnitType.Factory;
-          case 3:
-            return UnitType.Port;
-          case 4:
-            return UnitType.DefensePost;
-          case 5:
-            return UnitType.MissileSilo;
-          case 6:
-            return UnitType.SAMLauncher;
-          case 7:
-            return UnitType.Bunker;
-          case 8:
-            return UnitType.Residential;
-          default:
-            break;
-        }
-      }
-    }
-
     return null;
   }
 

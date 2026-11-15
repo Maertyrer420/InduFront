@@ -13,7 +13,6 @@ import { assetUrl } from "@openfront/shared/AssetUrls";
 import { EventBus } from "@openfront/shared/EventBus";
 import { html, LitElement, TemplateResult } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { renderPlayerClassBadge } from "../../utils/PlayerClassData";
 import { Controller } from "../../Controller";
 import {
   ContextMenuEvent,
@@ -34,6 +33,7 @@ import {
   renderDuration,
   translateText,
 } from "../../Utils";
+import { renderPlayerClassBadge } from "../../utils/PlayerClassData";
 import { GameView, PlayerView, UnitView } from "../../view";
 import {
   bunkerIcon,
@@ -739,8 +739,7 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
             ${player.type() !== PlayerType.Bot
               ? this.renderClassBadge(player.playerClass?.())
               : ""}
-            ${betrayalHtml ?? ""}
-            ${allianceHtml ?? ""}
+            ${betrayalHtml ?? ""} ${allianceHtml ?? ""}
           </div>
           <div class="flex flex-wrap gap-1 items-center mt-1">
             ${this.displayUnitCount(
@@ -981,7 +980,11 @@ export class PlayerInfoOverlay extends LitElement implements Controller {
 
     return html`
       <div class="p-2">
-        <div class="font-bold mb-1 ${isAlly ? "text-green-500" : "text-white"} flex items-center justify-between gap-2">
+        <div
+          class="font-bold mb-1 ${isAlly
+            ? "text-green-500"
+            : "text-white"} flex items-center justify-between gap-2"
+        >
           <span>${unit.owner().displayName()}</span>
           ${unit.owner().type() !== PlayerType.Bot
             ? this.renderClassBadge(unit.owner().playerClass?.())

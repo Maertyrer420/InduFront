@@ -20,24 +20,22 @@ import { generateID } from "@openfront/shared/SharedUtil";
 import { PlayerCosmetics } from "@openfront/shared/WireSchemas";
 import { html, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { themeProvider } from "./theme/ThemeProvider";
-import { getTranslatedPlayerTeamLabel, translateText } from "./Utils";
-import { getAllPlayerClasses } from "./utils/PlayerClassData";
 import { responseHasLinkedIdentity } from "./AccountIdentity";
+import { BaseModal } from "./components/BaseModal";
+import { MEDAL_ORDER, medalIcon } from "./components/map/Medals";
+import { getStoredCommunityTribes } from "./components/TribesPanel";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/Modal";
-import { BaseModal } from "./components/BaseModal";
-import "./components/GameConfigSettings";
-import { MEDAL_ORDER, medalIcon } from "./components/map/Medals";
-import "./components/ToggleInputCard";
 import { modalHeader } from "./components/ui/ModalHeader";
-import { getStoredCommunityTribes } from "./components/TribesPanel";
+import "./components/GameConfigSettings";
 import { getPlayerCosmetics, prewarmCosmetics } from "./Cosmetics";
+import "./components/ToggleInputCard";
 import { gamePortal } from "./GamePortal";
 import { GameStartingModal } from "./GameStartingModal";
 import { showInGameAlert } from "./InGameModal";
 import { JoinLobbyEvent } from "./Main";
 import { fallbackPlayerName, ResolvedPlayerName } from "./PlayerName";
+import { themeProvider } from "./theme/ThemeProvider";
 import { lastUserMeResponse } from "./UserMeBroadcast";
 import { UsernameInput } from "./UsernameInput";
 import { UserSettings } from "./UserSettings";
@@ -52,6 +50,8 @@ import {
   sliderToNationsConfig,
   toOptionalNumber,
 } from "./utilities/GameConfigHelpers";
+import { getTranslatedPlayerTeamLabel, translateText } from "./Utils";
+import { getAllPlayerClasses } from "./utils/PlayerClassData";
 
 import { terrainMapFileLoader } from "./TerrainMapFileLoader";
 
@@ -444,20 +444,16 @@ export class SinglePlayerModal extends BaseModal {
             return html`
               <div
                 @click=${() => this.handleSelectClass(cls.id)}
-                class="relative flex flex-col p-3 rounded-xl border cursor-pointer transition-all duration-200 select-none ${
-                  isSelected
-                    ? "bg-amber-500/15 border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.25)] ring-1 ring-amber-400/50"
-                    : "bg-surface/80 border-white/10 hover:border-white/30 hover:bg-surface"
-                }"
+                class="relative flex flex-col p-3 rounded-xl border cursor-pointer transition-all duration-200 select-none ${isSelected
+                  ? "bg-amber-500/15 border-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.25)] ring-1 ring-amber-400/50"
+                  : "bg-surface/80 border-white/10 hover:border-white/30 hover:bg-surface"}"
               >
                 <div class="flex items-center justify-between gap-2 mb-2">
                   <div class="flex items-center gap-2 min-w-0">
                     <div
-                      class="p-1.5 rounded-lg ${
-                        isSelected
-                          ? "bg-amber-500/20 text-amber-300"
-                          : "bg-white/5 text-white/70"
-                      }"
+                      class="p-1.5 rounded-lg ${isSelected
+                        ? "bg-amber-500/20 text-amber-300"
+                        : "bg-white/5 text-white/70"}"
                     >
                       ${cls.icon("w-5 h-5")}
                     </div>
@@ -485,7 +481,9 @@ export class SinglePlayerModal extends BaseModal {
                 <div class="space-y-0.5 mt-1 text-[11px]">
                   ${cls.buffs.map(
                     (b) =>
-                      html`<div class="flex items-center gap-1.5 text-emerald-400">
+                      html`<div
+                        class="flex items-center gap-1.5 text-emerald-400"
+                      >
                         <span class="font-bold shrink-0">+</span>
                         <span class="leading-tight">${b}</span>
                       </div>`,
@@ -593,11 +591,9 @@ export class SinglePlayerModal extends BaseModal {
                 @click=${() => {
                   this.selectedTeamIndex = idx;
                 }}
-                class="flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all duration-150 select-none cursor-pointer ${
-                  isSelected
-                    ? "bg-white/15 border-sky-400 ring-1 ring-sky-400/50 shadow-[0_0_12px_rgba(56,189,248,0.25)]"
-                    : "bg-surface/80 border-white/10 hover:border-white/30 hover:bg-surface"
-                }"
+                class="flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all duration-150 select-none cursor-pointer ${isSelected
+                  ? "bg-white/15 border-sky-400 ring-1 ring-sky-400/50 shadow-[0_0_12px_rgba(56,189,248,0.25)]"
+                  : "bg-surface/80 border-white/10 hover:border-white/30 hover:bg-surface"}"
               >
                 <span
                   class="w-3.5 h-3.5 rounded-full border-2 border-white/90 shadow-inner shrink-0"
@@ -607,8 +603,14 @@ export class SinglePlayerModal extends BaseModal {
                   <div class="text-xs font-bold text-white truncate">
                     ${teamLabel}
                   </div>
-                  <div class="text-[10px] ${isSelected ? "text-sky-300 font-semibold" : "text-white/40"}">
-                    ${isSelected ? translateText("host_modal.your_team") : `Team ${idx + 1}`}
+                  <div
+                    class="text-[10px] ${isSelected
+                      ? "text-sky-300 font-semibold"
+                      : "text-white/40"}"
+                  >
+                    ${isSelected
+                      ? translateText("host_modal.your_team")
+                      : `Team ${idx + 1}`}
                   </div>
                 </div>
               </button>

@@ -89,7 +89,8 @@ export class ClanCard extends LitElement {
               <span
                 >${translateText("clan_modal.member_count", {
                   count: clan.memberCount ?? 0,
-                })} / ${levelData.maxMembers}</span
+                })}
+                / ${levelData.maxMembers}</span
               >
               <span
                 class="inline-flex items-center gap-1 px-2 py-0.2 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30"

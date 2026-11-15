@@ -1,5 +1,8 @@
 import type { TileRef } from "@openfront/engine-api/game/GameMap";
-import type { PlayerClass, PlayerEconomyState } from "@openfront/engine-api/game/GameTypes";
+import type {
+  PlayerClass,
+  PlayerEconomyState,
+} from "@openfront/engine-api/game/GameTypes";
 
 /** TrainType enum — numeric values matching UnitState.trainType. */
 export enum TrainType {

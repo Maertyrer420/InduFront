@@ -443,10 +443,7 @@ export class FriendsModal extends BaseModal {
       } else if (res === "not_found") {
         showToast("Spieler nicht gefunden", "red");
       } else if (res === "conflict") {
-        showToast(
-          "Anfrage bereits gesendet oder schon befreundet",
-          "red",
-        );
+        showToast("Anfrage bereits gesendet oder schon befreundet", "red");
       } else if (res === "bad_request") {
         showToast("Ungültiger Spielername oder eigene ID", "red");
       } else {
@@ -578,8 +575,8 @@ export class FriendsModal extends BaseModal {
                     <line x1="15" y1="12" x2="3" y2="12" />
                   </svg>
                   <span>
-                    Für die Freundesliste und Direkt-Chats ist ein InduFront-Konto
-                    erforderlich.
+                    Für die Freundesliste und Direkt-Chats ist ein
+                    InduFront-Konto erforderlich.
                   </span>
                 </div>
                 <button

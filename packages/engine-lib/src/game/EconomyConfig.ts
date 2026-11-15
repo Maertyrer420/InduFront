@@ -62,7 +62,12 @@ export function getUnitResourceCost(
   fuel: number;
   enrichedUranium: number;
 } {
-  let cost: { gold: number; steel: number; fuel: number; enrichedUranium: number };
+  let cost: {
+    gold: number;
+    steel: number;
+    fuel: number;
+    enrichedUranium: number;
+  };
   switch (type) {
     case UnitType.AtomBomb:
       cost = { ...MILITARY_UNIT_COSTS.atomBomb };
