@@ -246,24 +246,18 @@ export class ClientEnv {
   }
   static jwtIssuer(): string {
     const audience = ClientEnv.jwtAudience();
-    if (audience === "localhost") {
-      return "http://localhost:8787";
-    }
     // Single-service hosting (Render, local dev, tunnels, LAN IPs): use the
-    // page's own /idp issuer whenever running in a browser, unless configured
-    // for upstream openfront.io/openfront.dev on a different hostname.
+    // page's own /idp issuer whenever running on a real remote hostname.
     const hasOrigin =
       typeof window !== "undefined" &&
       window.location &&
       typeof window.location.origin === "string" &&
       window.location.origin.startsWith("http");
-    const hasSeparateApiDomain =
-      audience === "openfront.io" || audience === "openfront.dev";
-    if (
-      hasOrigin &&
-      (!hasSeparateApiDomain || window.location.hostname === audience)
-    ) {
+    if (hasOrigin && window.location.hostname !== "localhost") {
       return `${window.location.origin.replace(/\/$/, "")}/idp`;
+    }
+    if (audience === "localhost") {
+      return "http://localhost:8787";
     }
     return `https://api.${audience}`;
   }

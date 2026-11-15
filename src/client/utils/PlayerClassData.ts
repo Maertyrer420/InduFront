@@ -13,21 +13,153 @@ export interface PlayerClassMeta {
   icon: (cssClass?: string) => TemplateResult;
 }
 
+const FALLBACK_CLASS_TEXT_DE: Record<string, string> = {
+  "player_classes.title": "Klassenspezialisierung",
+  "player_classes.selected": "Ausgewählt",
+  "player_classes.industrialist_name": "Industrieller",
+  "player_classes.industrialist_role": "Standard • Wirtschaft & Produktion",
+  "player_classes.industrialist_buff_1": "+25% Minen-Rohstoffförderung",
+  "player_classes.industrialist_buff_2":
+    "+20% Schmelz- und Raffinerie-Durchsatz",
+  "player_classes.industrialist_debuff_1": "-15% Landangriffs-Effektivität",
+  "player_classes.industrialist_debuff_2": "+15% Flotten-Treibstoffverbrauch",
+  "player_classes.infantry_name": "Infanterie",
+  "player_classes.infantry_role": "Masse • Offensive & Truppen",
+  "player_classes.infantry_buff_1": "+20% Bevölkerungswachstum",
+  "player_classes.infantry_buff_2": "-20% Verluste bei Landangriffen",
+  "player_classes.infantry_debuff_1": "-10% Goldeinkommen",
+  "player_classes.infantry_debuff_2": "-20% Flottengeschwindigkeit",
+  "player_classes.infantry_debuff_3": "-25% Urananreicherungs-Durchsatz",
+  "player_classes.marine_name": "Marine",
+  "player_classes.marine_role": "Seeherrschaft • Flotte & Reparatur",
+  "player_classes.marine_buff_1": "+30% Flottengeschwindigkeit",
+  "player_classes.marine_buff_2": "-30% Flotten-Treibstoffverbrauch",
+  "player_classes.marine_buff_3": "+50% Werft- & Schiff-Reparaturradius",
+  "player_classes.marine_debuff_1": "-15% Minenförderung auf Land",
+  "player_classes.marine_debuff_2": "+30% Baukosten für Bunker & Festungen",
+  "player_classes.iron_dome_name": "Eiserne Kuppel",
+  "player_classes.iron_dome_role": "Verteidigung • Flugabwehr & Festungen",
+  "player_classes.iron_dome_buff_1": "+20% SAM-Abfangreichweite",
+  "player_classes.iron_dome_buff_2": "+30% SAM-Nachladen (6 Raketen Magazin)",
+  "player_classes.iron_dome_buff_3": "+50% stärkere Bunker- & Festungsabwehr",
+  "player_classes.iron_dome_debuff_1": "-20% Land-Eroberungsgeschwindigkeit",
+  "player_classes.iron_dome_debuff_2": "-15% Flottengeschwindigkeit",
+  "player_classes.iron_dome_debuff_3": "+25% Baukosten für Atomwaffen",
+  "player_classes.scientist_name": "Wissenschaftler",
+  "player_classes.scientist_role": "Hochtechnologie • Nuklear & Strahlenschutz",
+  "player_classes.scientist_buff_1": "+40% Zentrifugen-Anreicherungstempo",
+  "player_classes.scientist_buff_2":
+    "-20% Ressourcenkosten für Silos & Nuklearwaffen",
+  "player_classes.scientist_buff_3": "-60% Verstrahlungs- & Fallout-Verluste",
+  "player_classes.scientist_debuff_1": "-15% Bevölkerungskapazität",
+  "player_classes.scientist_debuff_2": "-20% Gebäude-Haltbarkeit gegen Treffer",
+};
+
+const FALLBACK_CLASS_TEXT_EN: Record<string, string> = {
+  "player_classes.title": "Class Specialization",
+  "player_classes.selected": "Selected",
+  "player_classes.industrialist_name": "Industrialist",
+  "player_classes.industrialist_role": "Default • Economy & Industry",
+  "player_classes.industrialist_buff_1": "+25% Mine Resource Yield",
+  "player_classes.industrialist_buff_2": "+20% Smelting & Refining Throughput",
+  "player_classes.industrialist_debuff_1": "-15% Land Attack Efficacy",
+  "player_classes.industrialist_debuff_2": "+15% Ship Fuel Consumption",
+  "player_classes.infantry_name": "Infantry",
+  "player_classes.infantry_role": "Manpower • Land Offense",
+  "player_classes.infantry_buff_1": "+20% Population Growth",
+  "player_classes.infantry_buff_2": "-20% Land Assault Casualties",
+  "player_classes.infantry_debuff_1": "-10% Gold Income",
+  "player_classes.infantry_debuff_2": "-20% Fleet Movement Speed",
+  "player_classes.infantry_debuff_3": "-25% Uranium Enrichment Throughput",
+  "player_classes.marine_name": "Marine",
+  "player_classes.marine_role": "Naval Dominance • Fleet & Repair",
+  "player_classes.marine_buff_1": "+30% Fleet Movement Speed",
+  "player_classes.marine_buff_2": "-30% Fleet Fuel Consumption",
+  "player_classes.marine_buff_3": "+50% Ship Repair Pulse Radius",
+  "player_classes.marine_debuff_1": "-15% Inland Mining Yield",
+  "player_classes.marine_debuff_2": "+30% Bunker Construction Cost",
+  "player_classes.iron_dome_name": "Iron Dome",
+  "player_classes.iron_dome_role": "Defense • Air Defense & Fortresses",
+  "player_classes.iron_dome_buff_1": "+20% SAM Interception Range",
+  "player_classes.iron_dome_buff_2": "+30% SAM Reload Speed (6 Missiles Cap)",
+  "player_classes.iron_dome_buff_3": "+50% Stronger Bunker & Outpost Defense",
+  "player_classes.iron_dome_debuff_1": "-20% Land Conquest Speed",
+  "player_classes.iron_dome_debuff_2": "-15% Fleet Movement Speed",
+  "player_classes.iron_dome_debuff_3": "+25% Nuclear Weapon Resource Cost",
+  "player_classes.scientist_name": "Scientist",
+  "player_classes.scientist_role": "High-Tech • Nuclear & Radiation Defense",
+  "player_classes.scientist_buff_1": "+40% Centrifuge Enrichment Speed",
+  "player_classes.scientist_buff_2": "-20% Resource Cost for Nukes & Silos",
+  "player_classes.scientist_buff_3": "-60% Fallout & Radiation Casualties",
+  "player_classes.scientist_debuff_1": "-15% Population Capacity",
+  "player_classes.scientist_debuff_2":
+    "-20% Structure Durability against Strikes",
+};
+
+function isGermanLocale(): boolean {
+  try {
+    const saved =
+      typeof localStorage !== "undefined" ? localStorage.getItem("lang") : null;
+    if (saved) return saved.toLowerCase().startsWith("de");
+    if (typeof navigator !== "undefined" && navigator.language) {
+      return navigator.language.toLowerCase().startsWith("de");
+    }
+  } catch {
+    /* ignore storage/navigator errors */
+  }
+  return false;
+}
+
+export function resolvePlayerClassText(
+  key: string,
+  translated: string,
+): string {
+  if (
+    translated &&
+    translated !== key &&
+    !translated.startsWith("player_classes.")
+  ) {
+    return translated;
+  }
+  const map = isGermanLocale()
+    ? FALLBACK_CLASS_TEXT_DE
+    : FALLBACK_CLASS_TEXT_EN;
+  return map[key] ?? FALLBACK_CLASS_TEXT_EN[key] ?? translated;
+}
+
 export function getAllPlayerClasses(): PlayerClassMeta[] {
   return [
     {
       id: PlayerClass.Industrialist,
-      name: translateText("player_classes.industrialist_name"),
-      role: translateText("player_classes.industrialist_role"),
+      name: resolvePlayerClassText(
+        "player_classes.industrialist_name",
+        translateText("player_classes.industrialist_name"),
+      ),
+      role: resolvePlayerClassText(
+        "player_classes.industrialist_role",
+        translateText("player_classes.industrialist_role"),
+      ),
       color: "#f59e0b",
       badgeClasses: "bg-amber-500/15 text-amber-300 border-amber-500/30",
       buffs: [
-        translateText("player_classes.industrialist_buff_1"),
-        translateText("player_classes.industrialist_buff_2"),
+        resolvePlayerClassText(
+          "player_classes.industrialist_buff_1",
+          translateText("player_classes.industrialist_buff_1"),
+        ),
+        resolvePlayerClassText(
+          "player_classes.industrialist_buff_2",
+          translateText("player_classes.industrialist_buff_2"),
+        ),
       ],
       debuffs: [
-        translateText("player_classes.industrialist_debuff_1"),
-        translateText("player_classes.industrialist_debuff_2"),
+        resolvePlayerClassText(
+          "player_classes.industrialist_debuff_1",
+          translateText("player_classes.industrialist_debuff_1"),
+        ),
+        resolvePlayerClassText(
+          "player_classes.industrialist_debuff_2",
+          translateText("player_classes.industrialist_debuff_2"),
+        ),
       ],
       icon: (css = "w-4 h-4") => html`<svg
         class="${css} shrink-0"
@@ -48,18 +180,39 @@ export function getAllPlayerClasses(): PlayerClassMeta[] {
     },
     {
       id: PlayerClass.Infantry,
-      name: translateText("player_classes.infantry_name"),
-      role: translateText("player_classes.infantry_role"),
+      name: resolvePlayerClassText(
+        "player_classes.infantry_name",
+        translateText("player_classes.infantry_name"),
+      ),
+      role: resolvePlayerClassText(
+        "player_classes.infantry_role",
+        translateText("player_classes.infantry_role"),
+      ),
       color: "#ef4444",
       badgeClasses: "bg-red-500/15 text-red-300 border-red-500/30",
       buffs: [
-        translateText("player_classes.infantry_buff_1"),
-        translateText("player_classes.infantry_buff_2"),
+        resolvePlayerClassText(
+          "player_classes.infantry_buff_1",
+          translateText("player_classes.infantry_buff_1"),
+        ),
+        resolvePlayerClassText(
+          "player_classes.infantry_buff_2",
+          translateText("player_classes.infantry_buff_2"),
+        ),
       ],
       debuffs: [
-        translateText("player_classes.infantry_debuff_1"),
-        translateText("player_classes.infantry_debuff_2"),
-        translateText("player_classes.infantry_debuff_3"),
+        resolvePlayerClassText(
+          "player_classes.infantry_debuff_1",
+          translateText("player_classes.infantry_debuff_1"),
+        ),
+        resolvePlayerClassText(
+          "player_classes.infantry_debuff_2",
+          translateText("player_classes.infantry_debuff_2"),
+        ),
+        resolvePlayerClassText(
+          "player_classes.infantry_debuff_3",
+          translateText("player_classes.infantry_debuff_3"),
+        ),
       ],
       icon: (css = "w-4 h-4") => html`<svg
         class="${css} shrink-0"
@@ -82,18 +235,39 @@ export function getAllPlayerClasses(): PlayerClassMeta[] {
     },
     {
       id: PlayerClass.Marine,
-      name: translateText("player_classes.marine_name"),
-      role: translateText("player_classes.marine_role"),
+      name: resolvePlayerClassText(
+        "player_classes.marine_name",
+        translateText("player_classes.marine_name"),
+      ),
+      role: resolvePlayerClassText(
+        "player_classes.marine_role",
+        translateText("player_classes.marine_role"),
+      ),
       color: "#0ea5e9",
       badgeClasses: "bg-sky-500/15 text-sky-300 border-sky-500/30",
       buffs: [
-        translateText("player_classes.marine_buff_1"),
-        translateText("player_classes.marine_buff_2"),
-        translateText("player_classes.marine_buff_3"),
+        resolvePlayerClassText(
+          "player_classes.marine_buff_1",
+          translateText("player_classes.marine_buff_1"),
+        ),
+        resolvePlayerClassText(
+          "player_classes.marine_buff_2",
+          translateText("player_classes.marine_buff_2"),
+        ),
+        resolvePlayerClassText(
+          "player_classes.marine_buff_3",
+          translateText("player_classes.marine_buff_3"),
+        ),
       ],
       debuffs: [
-        translateText("player_classes.marine_debuff_1"),
-        translateText("player_classes.marine_debuff_2"),
+        resolvePlayerClassText(
+          "player_classes.marine_debuff_1",
+          translateText("player_classes.marine_debuff_1"),
+        ),
+        resolvePlayerClassText(
+          "player_classes.marine_debuff_2",
+          translateText("player_classes.marine_debuff_2"),
+        ),
       ],
       icon: (css = "w-4 h-4") => html`<svg
         class="${css} shrink-0"
@@ -111,19 +285,43 @@ export function getAllPlayerClasses(): PlayerClassMeta[] {
     },
     {
       id: PlayerClass.IronDome,
-      name: translateText("player_classes.iron_dome_name"),
-      role: translateText("player_classes.iron_dome_role"),
+      name: resolvePlayerClassText(
+        "player_classes.iron_dome_name",
+        translateText("player_classes.iron_dome_name"),
+      ),
+      role: resolvePlayerClassText(
+        "player_classes.iron_dome_role",
+        translateText("player_classes.iron_dome_role"),
+      ),
       color: "#10b981",
       badgeClasses: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
       buffs: [
-        translateText("player_classes.iron_dome_buff_1"),
-        translateText("player_classes.iron_dome_buff_2"),
-        translateText("player_classes.iron_dome_buff_3"),
+        resolvePlayerClassText(
+          "player_classes.iron_dome_buff_1",
+          translateText("player_classes.iron_dome_buff_1"),
+        ),
+        resolvePlayerClassText(
+          "player_classes.iron_dome_buff_2",
+          translateText("player_classes.iron_dome_buff_2"),
+        ),
+        resolvePlayerClassText(
+          "player_classes.iron_dome_buff_3",
+          translateText("player_classes.iron_dome_buff_3"),
+        ),
       ],
       debuffs: [
-        translateText("player_classes.iron_dome_debuff_1"),
-        translateText("player_classes.iron_dome_debuff_2"),
-        translateText("player_classes.iron_dome_debuff_3"),
+        resolvePlayerClassText(
+          "player_classes.iron_dome_debuff_1",
+          translateText("player_classes.iron_dome_debuff_1"),
+        ),
+        resolvePlayerClassText(
+          "player_classes.iron_dome_debuff_2",
+          translateText("player_classes.iron_dome_debuff_2"),
+        ),
+        resolvePlayerClassText(
+          "player_classes.iron_dome_debuff_3",
+          translateText("player_classes.iron_dome_debuff_3"),
+        ),
       ],
       icon: (css = "w-4 h-4") => html`<svg
         class="${css} shrink-0"
@@ -140,18 +338,39 @@ export function getAllPlayerClasses(): PlayerClassMeta[] {
     },
     {
       id: PlayerClass.Scientist,
-      name: translateText("player_classes.scientist_name"),
-      role: translateText("player_classes.scientist_role"),
+      name: resolvePlayerClassText(
+        "player_classes.scientist_name",
+        translateText("player_classes.scientist_name"),
+      ),
+      role: resolvePlayerClassText(
+        "player_classes.scientist_role",
+        translateText("player_classes.scientist_role"),
+      ),
       color: "#a855f7",
       badgeClasses: "bg-purple-500/15 text-purple-300 border-purple-500/30",
       buffs: [
-        translateText("player_classes.scientist_buff_1"),
-        translateText("player_classes.scientist_buff_2"),
-        translateText("player_classes.scientist_buff_3"),
+        resolvePlayerClassText(
+          "player_classes.scientist_buff_1",
+          translateText("player_classes.scientist_buff_1"),
+        ),
+        resolvePlayerClassText(
+          "player_classes.scientist_buff_2",
+          translateText("player_classes.scientist_buff_2"),
+        ),
+        resolvePlayerClassText(
+          "player_classes.scientist_buff_3",
+          translateText("player_classes.scientist_buff_3"),
+        ),
       ],
       debuffs: [
-        translateText("player_classes.scientist_debuff_1"),
-        translateText("player_classes.scientist_debuff_2"),
+        resolvePlayerClassText(
+          "player_classes.scientist_debuff_1",
+          translateText("player_classes.scientist_debuff_1"),
+        ),
+        resolvePlayerClassText(
+          "player_classes.scientist_debuff_2",
+          translateText("player_classes.scientist_debuff_2"),
+        ),
       ],
       icon: (css = "w-4 h-4") => html`<svg
         class="${css} shrink-0"

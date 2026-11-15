@@ -15,6 +15,9 @@ const externalUrl = (
 ).replace(/\/$/, "");
 
 let derivedDomain = process.env.DOMAIN ?? "localhost";
+if (derivedDomain === "openfront.io" || derivedDomain === "openfront.dev") {
+  derivedDomain = "localhost";
+}
 try {
   if (externalUrl.startsWith("http")) {
     derivedDomain = new URL(externalUrl).hostname;
@@ -30,9 +33,7 @@ const env: NodeJS.ProcessEnv = {
   GIT_COMMIT: process.env.GIT_COMMIT ?? "DEV",
   NUM_WORKERS: String(NUM_WORKERS),
   AUTH_PORT: String(AUTH_PORT),
-  AUTH_ISSUER: externalUrl
-    ? `${externalUrl}/idp`
-    : `http://localhost:${AUTH_PORT}`,
+  AUTH_ISSUER: process.env.AUTH_ISSUER ?? `http://localhost:${AUTH_PORT}`,
   PUBLIC_URL: externalUrl || "http://localhost:9000",
   TURNSTILE_SITE_KEY:
     process.env.TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA",
@@ -92,7 +93,16 @@ function resolveTarget(req: http.IncomingMessage): {
     pathname.startsWith("/game/") ||
     pathname.startsWith("/matchmaking/") ||
     pathname.startsWith("/.well-known/") ||
-    pathname === "/api/online_count"
+    pathname === "/api/online_count" ||
+    pathname === "/cluster/checkin" ||
+    pathname === "/map_weights" ||
+    pathname === "/custom_tribes" ||
+    pathname === "/join_verify" ||
+    pathname === "/reserved_clan_tags" ||
+    pathname === "/cluster.json" ||
+    pathname === "/cosmetics.json" ||
+    pathname === "/news.json" ||
+    pathname === "/streams.json"
   ) {
     const stripped = pathname.startsWith("/idp/")
       ? pathname.slice(4)

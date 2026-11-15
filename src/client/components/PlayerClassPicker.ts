@@ -7,6 +7,7 @@ import {
   getAllPlayerClasses,
   getPlayerClassMeta,
   PlayerClassMeta,
+  resolvePlayerClassText,
 } from "../utils/PlayerClassData";
 
 @customElement("player-class-picker")
@@ -41,6 +42,16 @@ export class PlayerClassPicker extends LitElement {
       signal: this.abortController.signal,
     });
     window.addEventListener("player-class-changed", handleClassChanged, {
+      signal: this.abortController.signal,
+    });
+
+    const handleTranslationsUpdated = () => {
+      this.requestUpdate();
+    };
+    window.addEventListener("translations-loaded", handleTranslationsUpdated, {
+      signal: this.abortController.signal,
+    });
+    window.addEventListener("language-selected", handleTranslationsUpdated, {
       signal: this.abortController.signal,
     });
   }
@@ -78,7 +89,12 @@ export class PlayerClassPicker extends LitElement {
               <div
                 class="font-bold text-gray-200 truncate flex items-center gap-2"
               >
-                <span>${translateText("player_classes.title")}</span>
+                <span
+                  >${resolvePlayerClassText(
+                    "player_classes.title",
+                    translateText("player_classes.title"),
+                  )}</span
+                >
                 <span
                   class="px-2 py-0.5 rounded text-[11px] font-semibold border ${currentMeta.badgeClasses}"
                 >
@@ -189,7 +205,10 @@ export class PlayerClassPicker extends LitElement {
             ? html`<span
                 class="px-1.5 py-0.5 text-[8px] font-bold uppercase rounded bg-amber-400 text-black tracking-wider shrink-0"
               >
-                ${translateText("player_classes.selected")}
+                ${resolvePlayerClassText(
+                  "player_classes.selected",
+                  translateText("player_classes.selected"),
+                )}
               </span>`
             : null}
         </div>

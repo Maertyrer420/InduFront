@@ -1,6 +1,6 @@
 # InduFront Release Notes & Updates
 
-Willkommen bei **InduFront** - der industriellen und taktischen Evolution von OpenFront!
+Willkommen bei **InduFront** - dem taktischen Industrie- und Echtzeit-Strategiespiel!
 
 ---
 

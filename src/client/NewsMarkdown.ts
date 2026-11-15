@@ -1,7 +1,7 @@
 const GITHUB_PR_URL_REGEX =
-  /(?<!\()\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/pull\/(\d+)\b/g;
+  /(?<!\()\bhttps:\/\/github\.com\/(Maertyrer420\/InduFront|openfrontio\/OpenFrontIO)\/pull\/(\d+)\b/g;
 const GITHUB_COMPARE_URL_REGEX =
-  /(?<!\()\bhttps:\/\/github\.com\/openfrontio\/OpenFrontIO\/compare\/([\w.-]+)\b/g;
+  /(?<!\()\bhttps:\/\/github\.com\/(Maertyrer420\/InduFront|openfrontio\/OpenFrontIO)\/compare\/([\w.-]+)\b/g;
 const GITHUB_MENTION_REGEX =
   /(^|[^\w/[`])@([a-z\d](?:[a-z\d-]{0,37}[a-z\d])?)(?![\w-])/gim;
 
@@ -13,13 +13,13 @@ export function normalizeNewsMarkdown(markdown: string): string {
       .replace(/^([^\-*\s].*?) \*\*(.+?)\*\*$/gm, "## $1 $2")
       .replace(
         GITHUB_PR_URL_REGEX,
-        (_match, prNumber) =>
-          `[#${prNumber}](https://github.com/openfrontio/OpenFrontIO/pull/${prNumber})`,
+        (_match, repo, prNumber) =>
+          `[#${prNumber}](https://github.com/${repo}/pull/${prNumber})`,
       )
       .replace(
         GITHUB_COMPARE_URL_REGEX,
-        (_match, comparison) =>
-          `[${comparison}](https://github.com/openfrontio/OpenFrontIO/compare/${comparison})`,
+        (_match, repo, comparison) =>
+          `[${comparison}](https://github.com/${repo}/compare/${comparison})`,
       )
       .replace(
         GITHUB_MENTION_REGEX,

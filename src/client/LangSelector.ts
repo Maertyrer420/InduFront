@@ -19,7 +19,8 @@ type LanguageMetadata = {
 @customElement("lang-selector")
 export class LangSelector extends LitElement {
   @state() public translations: Record<string, string> | undefined;
-  @state() public defaultTranslations: Record<string, string> | undefined;
+  @state() public defaultTranslations: Record<string, string> | undefined =
+    flattenTranslations(en);
   @state() public currentLang: string = "en";
   @state() private languageList: any[] = [];
   @state() private debugMode: boolean = false;
@@ -295,6 +296,12 @@ export class LangSelector extends LitElement {
       "steam-wishlist-button",
       "streaming-now",
       "tutorial-panel",
+      "player-class-picker",
+      "play-page",
+      "lobby-player-view",
+      "mining-economy-panel",
+      "player-info-overlay",
+      "unit-display",
     ];
 
     document.title = this.translateText("main.title") ?? document.title;
@@ -338,6 +345,8 @@ export class LangSelector extends LitElement {
         }
       });
     });
+
+    window.dispatchEvent(new CustomEvent("translations-loaded"));
   }
 
   public translateText(

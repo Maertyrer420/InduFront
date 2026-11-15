@@ -31,13 +31,12 @@ export function getApiBase() {
   }
   // Single-service hosting (Render, local dev, tunnels, LAN IPs): the auth
   // server is reached through the page's own /idp path whenever running in a
-  // browser, unless configured for upstream openfront.io/openfront.dev on a
-  // different hostname.
-  const hasSeparateApiDomain =
-    domainname === "openfront.io" || domainname === "openfront.dev";
+  // deployed browser origin or on local InduFront dev.
   if (
     origin !== null &&
-    (!hasSeparateApiDomain || window.location.hostname === domainname)
+    (domainname === null ||
+      domainname === "localhost" ||
+      window.location.hostname !== "localhost")
   ) {
     return `${origin.replace(/\/$/, "")}/idp`;
   }

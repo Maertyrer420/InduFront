@@ -1829,6 +1829,101 @@ async function main() {
     res.json({ verifiedAt: new Date().toISOString(), featured: [], live: [] });
   });
 
+  app.post("/cluster/checkin", (_req, res) => {
+    res.json({ state: "open" });
+  });
+
+  app.get("/map_weights", (_req, res) => {
+    res.json({ maps: {} });
+  });
+
+  app.post("/custom_tribes", (_req, res) => {
+    res.json({ tribes: [] });
+  });
+
+  app.post("/join_verify", (req, res) => {
+    const rawUsername = req.body?.username;
+    const rawClanTag = req.body?.clanTag;
+    const username =
+      typeof rawUsername === "string" && rawUsername.trim().length > 0
+        ? rawUsername.trim()
+        : "Player";
+    const clanTag =
+      typeof rawClanTag === "string" && rawClanTag.trim().length > 0
+        ? rawClanTag.trim().toUpperCase()
+        : null;
+    res.json({ status: "approved", username, clanTag });
+  });
+
+  app.get("/users/@me/tribe_names", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    let names: Array<{
+      id: string;
+      displayName: string;
+      status: "pending" | "live" | "rejected" | "revoked";
+      reviewReason: string | null;
+    }> = [];
+    const raw = u.settings?.tribeNames;
+    if (typeof raw === "string") {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          names = parsed;
+        }
+      } catch {
+        /* ignore malformed local tribeNames */
+      }
+    }
+    res.json({ names });
+  });
+
+  app.post("/users/@me/tribe_names", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const displayName =
+      typeof req.body?.name === "string" ? req.body.name.trim() : "";
+    if (displayName.length < 2 || displayName.length > 32) {
+      return void res.status(400).json({ code: "invalid_name" });
+    }
+    let existing: Array<{
+      id: string;
+      displayName: string;
+      status: "pending" | "live" | "rejected" | "revoked";
+      reviewReason: string | null;
+    }> = [];
+    const raw = u.settings?.tribeNames;
+    if (typeof raw === "string") {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          existing = parsed;
+        }
+      } catch {
+        /* ignore malformed local tribeNames */
+      }
+    }
+    if (
+      existing.some(
+        (t) => t.displayName.toLowerCase() === displayName.toLowerCase(),
+      )
+    ) {
+      return void res.status(409).json({ code: "duplicate" });
+    }
+    const entry = {
+      id: randomUUID(),
+      displayName,
+      status: "live" as const,
+      reviewReason: null,
+    };
+    const next = [...existing, entry];
+    store.updateUserSettings(u.id, { tribeNames: JSON.stringify(next) });
+    res.status(201).json({
+      id: entry.id,
+      displayName: entry.displayName,
+      status: entry.status,
+      pricePaid: "0",
+    });
+  });
+
   app.post("/matchmaking/checkin", (req, res) => {
     const { mode, gameId, id } = req.body ?? {};
     if (!mode || !gameId) {
