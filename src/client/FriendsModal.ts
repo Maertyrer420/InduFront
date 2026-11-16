@@ -355,6 +355,23 @@ export class FriendsModal extends BaseModal {
     }
   }
 
+  private openFriendProfile(publicId: string): void {
+    if (!publicId) return;
+    const profileModal = document.querySelector<
+      HTMLElement & {
+        openFromFriends?(publicId: string): void;
+        open(args?: Record<string, unknown>): void;
+      }
+    >("player-profile-modal");
+    if (profileModal) {
+      if (typeof profileModal.openFromFriends === "function") {
+        profileModal.openFromFriends(publicId);
+      } else {
+        profileModal.open({ publicID: publicId });
+      }
+    }
+  }
+
   private openChatWithFriend(friend: { publicId: string; username: string }) {
     this.activeFriendChat = friend;
     this.chatMessages = [];
@@ -641,10 +658,14 @@ export class FriendsModal extends BaseModal {
             <div
               class="flex items-center justify-between p-3.5 bg-white/5 hover:bg-white/[0.08] rounded-xl border border-white/10 transition-all gap-3 flex-wrap"
             >
-              <div class="flex items-center gap-3 min-w-0">
+              <div
+                class="flex items-center gap-3 min-w-0 cursor-pointer group"
+                @click=${() => this.openFriendProfile(friend.publicId)}
+                title="Profil ansehen"
+              >
                 <div class="relative shrink-0">
                   <div
-                    class="w-10 h-10 rounded-full bg-slate-800 border border-white/20 flex items-center justify-center font-bold text-white text-sm"
+                    class="w-10 h-10 rounded-full bg-slate-800 border border-white/20 group-hover:border-blue-400 flex items-center justify-center font-bold text-white text-sm transition-colors"
                   >
                     ${(friend.username ?? "?").charAt(0).toUpperCase()}
                   </div>
@@ -657,9 +678,11 @@ export class FriendsModal extends BaseModal {
                 </div>
                 <div class="min-w-0">
                   <div
-                    class="font-bold text-white text-sm truncate flex items-center gap-2 flex-wrap"
+                    class="font-bold text-white text-sm truncate flex items-center gap-2 flex-wrap group-hover:text-blue-300 transition-colors"
                   >
-                    <span>${friend.username ?? friend.publicId}</span>
+                    <span class="hover:underline"
+                      >${friend.username ?? friend.publicId}</span
+                    >
                     <span
                       class="text-[10px] font-mono px-1.5 py-0.2 rounded ${isOnline
                         ? "bg-green-500/20 text-green-300 border border-green-500/30"
@@ -677,7 +700,9 @@ export class FriendsModal extends BaseModal {
                         `
                       : null}
                   </div>
-                  <div class="text-[11px] text-white/40 font-mono">
+                  <div
+                    class="text-[11px] text-white/40 font-mono group-hover:text-white/60 transition-colors"
+                  >
                     ID: ${friend.publicId}
                   </div>
                 </div>
@@ -868,8 +893,14 @@ export class FriendsModal extends BaseModal {
                       <div
                         class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10"
                       >
-                        <div>
-                          <div class="font-bold text-white text-sm">
+                        <div
+                          class="cursor-pointer group"
+                          @click=${() => this.openFriendProfile(req.publicId)}
+                          title="Profil ansehen"
+                        >
+                          <div
+                            class="font-bold text-white text-sm group-hover:text-blue-300 group-hover:underline transition-colors"
+                          >
                             ${req.username ?? req.publicId}
                           </div>
                           <div class="text-[10px] text-white/40 font-mono">
@@ -917,8 +948,14 @@ export class FriendsModal extends BaseModal {
                       <div
                         class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/10"
                       >
-                        <div>
-                          <div class="font-bold text-white text-sm">
+                        <div
+                          class="cursor-pointer group"
+                          @click=${() => this.openFriendProfile(req.publicId)}
+                          title="Profil ansehen"
+                        >
+                          <div
+                            class="font-bold text-white text-sm group-hover:text-blue-300 group-hover:underline transition-colors"
+                          >
                             ${req.username ?? req.publicId}
                           </div>
                           <div class="text-[10px] text-white/40 font-mono">

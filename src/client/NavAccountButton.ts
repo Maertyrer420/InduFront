@@ -194,9 +194,7 @@ function updateInstance(
   // session with no linked identity at all gets the sign-in prompt.
   if (
     responseHasLinkedIdentity(userMeResponse) ||
-    (userMeResponse !== false &&
-      (Boolean(userMeResponse?.player?.publicId) ||
-        Boolean(userMeResponse?.user?.publicId)))
+    (userMeResponse !== false && Boolean(userMeResponse?.user?.publicId))
   ) {
     showLoggedInPlain();
     return;

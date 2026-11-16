@@ -354,7 +354,6 @@ export class NavAccountMenu extends LitElement {
     if (this.userMeResponse === false) return false;
     return (
       hasLinkedIdentity(this.userMeResponse.user) ||
-      Boolean(this.userMeResponse.player?.publicId) ||
       Boolean(this.userMeResponse.user?.publicId) ||
       this.portalUser !== null
     );
@@ -426,6 +425,15 @@ export class NavAccountMenu extends LitElement {
             ?.open({ publicID: publicId });
         },
       });
+    } else {
+      items.push({
+        key: "view-account",
+        labelKey: "nav_account_menu.view_account",
+        icon: iconUser,
+        onSelect: () => {
+          window.showPage?.("page-account");
+        },
+      });
     }
 
     // Nothing to share without a publicId (older backend, or a session whose
@@ -441,14 +449,6 @@ export class NavAccountMenu extends LitElement {
     }
 
     items.push(
-      {
-        key: "view-account",
-        labelKey: "nav_account_menu.view_account",
-        icon: iconUser,
-        onSelect: () => {
-          window.showPage?.("page-account");
-        },
-      },
       {
         key: "account-settings",
         labelKey: "nav_account_menu.account_settings",

@@ -29,6 +29,27 @@ export interface ClanJoinRequestRecord {
   createdAt: string;
 }
 
+export function createEmptyClanMemberStats() {
+  const empty = { wins: 0, losses: 0 };
+  return {
+    total: { ...empty },
+    ffa: { ...empty },
+    team: { ...empty },
+    hvn: { ...empty },
+    duos: { ...empty },
+    trios: { ...empty },
+    quads: { ...empty },
+    "2": { ...empty },
+    "3": { ...empty },
+    "4": { ...empty },
+    "5": { ...empty },
+    "6": { ...empty },
+    "7": { ...empty },
+    ranked: { ...empty },
+    "1v1": { ...empty },
+  };
+}
+
 export interface ClanBanRecord {
   publicId: string;
   username: string;
@@ -512,7 +533,7 @@ export class GameSocialStore {
           username: user.username,
           role: "Owner",
           joinedAt: new Date().toISOString(),
-          stats: { total: { wins: 0, losses: 0 } },
+          stats: createEmptyClanMemberStats(),
           eloContributed: 0,
         },
       ],
@@ -696,7 +717,7 @@ export class GameSocialStore {
         username: user.username,
         role: "Mitglied",
         joinedAt: new Date().toISOString(),
-        stats: { total: { wins: 0, losses: 0 } },
+        stats: createEmptyClanMemberStats(),
         eloContributed: 0,
       });
       clan.requests = clan.requests.filter(
@@ -782,7 +803,7 @@ export class GameSocialStore {
         username: req.username,
         role: "Mitglied",
         joinedAt: new Date().toISOString(),
-        stats: { total: { wins: 0, losses: 0 } },
+        stats: createEmptyClanMemberStats(),
         eloContributed: 0,
       });
     }
@@ -962,6 +983,10 @@ export class GameSocialStore {
   }
 
   // ---- PLAYER STATS, MATCH HISTORY & LEADERBOARDS ----
+  public getPlayerStats(publicId: string): PlayerStatsRecord | undefined {
+    return this.data.playerStats[publicId.toLowerCase()];
+  }
+
   public getOrCreatePlayerStats(
     publicId: string,
     username: string,

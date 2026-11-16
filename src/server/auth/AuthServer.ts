@@ -272,26 +272,28 @@ function buildPlayerStatsTree(
 function playerProfile(u: UserRecord) {
   const stats = socialStore.getOrCreatePlayerStats(u.publicId, u.username);
   const clans = socialStore.getClansForUser(u.publicId).map((c) => {
-    const rawRole =
-      c.members.find(
-        (m) => m.publicId.toLowerCase() === u.publicId.toLowerCase(),
-      )?.role ?? "Mitglied";
+    const member = c.members.find(
+      (m) => m.publicId.toLowerCase() === u.publicId.toLowerCase(),
+    );
+    const rawRole = member?.role ?? "Mitglied";
     const mappedRole: "leader" | "officer" | "member" =
       rawRole === "Owner"
         ? "leader"
         : rawRole === "Admin"
           ? "officer"
           : "member";
+    const joinedAt =
+      member?.joinedAt ?? u.createdAt ?? new Date().toISOString();
     return {
       tag: c.tag,
       name: c.name,
       role: mappedRole,
-      joinedAt: new Date(u.createdAt).toISOString(),
+      joinedAt: new Date(joinedAt).toISOString(),
       memberCount: Math.max(1, c.members.length),
     };
   });
   return {
-    createdAt: new Date(u.createdAt).toISOString(),
+    createdAt: new Date(u.createdAt ? u.createdAt : Date.now()).toISOString(),
     username: u.username,
     publicId: u.publicId,
     stats: buildPlayerStatsTree(stats),
@@ -1195,7 +1197,27 @@ async function main() {
   });
 
   app.get("/public/player/:publicId", (req, res) => {
-    const u = store.byPublicId(String(req.params.publicId));
+    const rawId = String(req.params.publicId).trim();
+    let u = store.byPublicIdOrUsername(rawId);
+    if (!u) {
+      const stats = socialStore.getPlayerStats(rawId);
+      const clans = socialStore.getClansForUser(rawId);
+      if (stats || clans.length > 0) {
+        u = {
+          id: rawId,
+          publicId: rawId,
+          username: stats?.username ?? rawId,
+          usernameLower: (stats?.username ?? rawId).toLowerCase(),
+          email: `${rawId}@indufront.local`,
+          emailVerified: false,
+          createdAt: Date.now(),
+          bio: "",
+          featuredRankMode: "ffa",
+          showcasedBadges: ["starter:pionier"],
+          singleplayerMapAchievements: [],
+        } as UserRecord;
+      }
+    }
     if (!u) return void res.status(404).json({ error: "not_found" });
     res.json(playerProfile(u));
   });
@@ -1502,6 +1524,31 @@ async function main() {
     res.sendStatus(200);
   });
 
+  function formatClanMemberStats(s?: any) {
+    const empty = { wins: 0, losses: 0 };
+    const total = s?.total ?? empty;
+    return {
+      total: {
+        wins: Number(total.wins ?? 0),
+        losses: Number(total.losses ?? 0),
+      },
+      ffa: s?.ffa ?? empty,
+      team: s?.team ?? empty,
+      hvn: s?.hvn ?? empty,
+      duos: s?.duos ?? empty,
+      trios: s?.trios ?? empty,
+      quads: s?.quads ?? empty,
+      "2": s?.["2"] ?? empty,
+      "3": s?.["3"] ?? empty,
+      "4": s?.["4"] ?? empty,
+      "5": s?.["5"] ?? empty,
+      "6": s?.["6"] ?? empty,
+      "7": s?.["7"] ?? empty,
+      ranked: s?.ranked ?? empty,
+      "1v1": s?.["1v1"] ?? empty,
+    };
+  }
+
   app.get("/clans/:tag/members", (req, res) => {
     const clan = socialStore.getClan(String(req.params.tag));
     if (!clan) return void res.status(404).json({ error: "not_found" });
@@ -1510,7 +1557,7 @@ async function main() {
       joinedAt: m.joinedAt,
       publicId: m.publicId,
       username: m.username,
-      stats: m.stats,
+      stats: formatClanMemberStats(m.stats),
       eloContributed: m.eloContributed ?? 0,
     }));
     res.json({
@@ -1518,7 +1565,7 @@ async function main() {
       total: results.length,
       page: 1,
       limit: 100,
-      pendingRequests: clan.requests.length,
+      pendingRequests: clan.requests?.length ?? 0,
     });
   });
 

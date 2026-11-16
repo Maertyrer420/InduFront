@@ -45,7 +45,7 @@ export { playerProfileUrl };
 let profileOpenings = 0;
 
 /** Where a profile was opened from, i.e. where its Back button leads. */
-export type ProfileOrigin = "clan" | "leaderboard" | "account";
+export type ProfileOrigin = "clan" | "leaderboard" | "account" | "friends";
 
 interface BadgeInfo {
   id: string;
@@ -1090,6 +1090,11 @@ export class PlayerProfileModal extends BaseModal {
     this.openedFrom = "account";
   }
 
+  public openFromFriends(publicId: string): void {
+    this.open({ publicID: publicId });
+    this.openedFrom = "friends";
+  }
+
   private back(): void {
     const openedFrom = this.openedFrom;
     this.close();
@@ -1109,6 +1114,10 @@ export class PlayerProfileModal extends BaseModal {
           "account-modal",
         )
         ?.returnToFriends();
+    } else if (openedFrom === "friends") {
+      document
+        .querySelector<HTMLElement & { open(): void }>("friends-modal")
+        ?.open();
     }
   }
 }

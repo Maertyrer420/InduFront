@@ -129,7 +129,6 @@ describe("nav-account-menu", () => {
     expect(itemKeys()).toEqual([
       "view-profile",
       "copy-profile-url",
-      "view-account",
       "account-settings",
       "change-username",
       "log-out",
@@ -177,7 +176,7 @@ describe("nav-account-menu", () => {
       fireUserMe(userMe());
       await el.updateComplete;
       await click(trigger());
-      expect(itemKeys()).toContain("view-account");
+      expect(itemKeys()).toContain("view-profile");
       expect(itemKeys()).not.toContain("copy-profile-url");
     } finally {
       vi.mocked(gamePortal.name).mockRestore();
