@@ -7,7 +7,7 @@ import {
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { fetchPublicPlayerProfile } from "./Api";
+import { fetchPublicPlayerProfile, savePlayerProfile } from "./Api";
 import "./ClanModal";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
@@ -47,6 +47,71 @@ let profileOpenings = 0;
 /** Where a profile was opened from, i.e. where its Back button leads. */
 export type ProfileOrigin = "clan" | "leaderboard" | "account";
 
+interface BadgeInfo {
+  id: string;
+  name: string;
+  icon: string;
+  origin: string;
+  colorClass: string;
+}
+
+function resolveBadgeInfo(badgeId: string): BadgeInfo {
+  if (badgeId.startsWith("solo:")) {
+    const parts = badgeId.split(":");
+    const mapName = parts[1] || "World";
+    const difficulty = parts[2] || "Medium";
+    let icon = "🥈";
+    let colorClass = "bg-slate-500/20 text-slate-300 border-slate-500/30";
+    if (difficulty === "Easy") {
+      icon = "🥉";
+      colorClass = "bg-amber-700/20 text-amber-500 border-amber-700/30";
+    } else if (difficulty === "Hard") {
+      icon = "🥇";
+      colorClass = "bg-amber-400/20 text-amber-300 border-amber-400/30";
+    } else if (difficulty === "Impossible") {
+      icon = "💎";
+      colorClass = "bg-cyan-400/20 text-cyan-200 border-cyan-400/40 shadow-sm";
+    }
+    return {
+      id: badgeId,
+      name: `${mapName} (${difficulty})`,
+      icon,
+      origin: `Solo-Erfolg: Sieg auf Karte "${mapName}" (${difficulty})`,
+      colorClass,
+    };
+  }
+  if (badgeId.startsWith("badge:") || badgeId.startsWith("title:")) {
+    const item = Array.isArray(STEEL_CATALOG)
+      ? STEEL_CATALOG.find((i) => i.id === badgeId)
+      : null;
+    if (item) {
+      return {
+        id: badgeId,
+        name: item.name,
+        icon: item.category === "titel" ? "👑" : "🛡️",
+        origin: `Im Stahl-Shop gekauft (${item.cost} Stahl)`,
+        colorClass: "bg-purple-500/20 text-purple-300 border-purple-500/30",
+      };
+    }
+  }
+  if (badgeId === "starter:pionier") {
+    return {
+      id: badgeId,
+      name: "InduFront Pionier",
+      icon: "🎖️",
+      origin: "Gründungsmitglied der InduFront-Community",
+      colorClass: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+    };
+  }
+  return {
+    id: badgeId,
+    name: badgeId,
+    icon: "🛡️",
+    origin: "Besondere Spieler-Auszeichnung",
+    colorClass: "bg-white/10 text-white/80 border-white/20",
+  };
+}
+
 @customElement("player-profile-modal")
 export class PlayerProfileModal extends BaseModal {
   protected routerName = "profile";
@@ -56,6 +121,13 @@ export class PlayerProfileModal extends BaseModal {
   @state() private statsTree: PlayerStatsTree | null = null;
   @state() private editingBio = false;
   @state() private bioDraft = "";
+  @state() private profileBio = "";
+  @state() private featuredRankMode: "1v1" | "2v2" | "ffa" = "ffa";
+  @state() private showcasedBadges: string[] = [];
+  @state() private soloAchievements: { mapName: string; difficulty: string }[] =
+    [];
+  @state() private ranks: Record<string, { elo: number; tier: string }> = {};
+  @state() private editingBadges = false;
   @state() private clans: NonNullable<PlayerProfile["clans"]> = [];
   @state() private displayClanTag: string | null = null;
   // Level / XP, when progression is on and the player has any.
@@ -349,95 +421,275 @@ export class PlayerProfileModal extends BaseModal {
     `;
   }
 
-  private renderBioAndEquipment(publicId: string) {
-    const isOwn = isOwnAccount(publicId);
-    const ownBio =
-      localStorage.getItem("indufront_player_bio") ??
-      localStorage.getItem(`indufront_bio_${publicId}`) ??
-      "";
-    const otherBio = localStorage.getItem(`indufront_bio_${publicId}`) ?? "";
-    const currentBio = isOwn ? ownBio : otherBio;
-
+  private getAvailableBadges(): BadgeInfo[] {
+    const list: BadgeInfo[] = [resolveBadgeInfo("starter:pionier")];
+    for (const ach of this.soloAchievements) {
+      list.push(resolveBadgeInfo(`solo:${ach.mapName}:${ach.difficulty}`));
+    }
     const equipped =
       typeof SteelStoreService?.getEquipped === "function"
         ? SteelStoreService.getEquipped()
         : {};
-    const equippedTitle =
-      equipped["titel"] && Array.isArray(STEEL_CATALOG)
-        ? STEEL_CATALOG.find((i) => i.id === equipped["titel"])
-        : null;
-    const equippedBadge =
-      equipped["badges"] && Array.isArray(STEEL_CATALOG)
-        ? STEEL_CATALOG.find((i) => i.id === equipped["badges"])
-        : null;
-    const steelBalance =
-      typeof SteelStoreService?.getBalance === "function"
-        ? SteelStoreService.getBalance()
-        : 0;
+    if (equipped["titel"]) list.push(resolveBadgeInfo(equipped["titel"]));
+    if (equipped["badges"]) list.push(resolveBadgeInfo(equipped["badges"]));
+
+    const seen = new Set<string>();
+    return list.filter((b) => {
+      if (seen.has(b.id)) return false;
+      seen.add(b.id);
+      return true;
+    });
+  }
+
+  private handleFeaturedRankChange = (e: Event) => {
+    const select = e.target as HTMLSelectElement;
+    const mode = select.value as "1v1" | "2v2" | "ffa";
+    this.featuredRankMode = mode;
+    void savePlayerProfile({
+      bio: this.profileBio,
+      featuredRankMode: mode,
+      showcasedBadges: this.showcasedBadges,
+    });
+    showToast(
+      `Hervorgehobener Rang auf ${mode.toUpperCase()} gesetzt!`,
+      "green",
+    );
+  };
+
+  private handleSaveBio = async () => {
+    const trimmed = this.bioDraft.trim().slice(0, 200);
+    this.profileBio = trimmed;
+    this.editingBio = false;
+    await savePlayerProfile({
+      bio: trimmed,
+      featuredRankMode: this.featuredRankMode,
+      showcasedBadges: this.showcasedBadges,
+    });
+    showToast("Biografie erfolgreich gespeichert!", "green");
+  };
+
+  private toggleBadgeSelection = (badgeId: string) => {
+    if (this.showcasedBadges.includes(badgeId)) {
+      this.showcasedBadges = this.showcasedBadges.filter(
+        (id) => id !== badgeId,
+      );
+    } else {
+      if (this.showcasedBadges.length >= 5) {
+        showToast("Maximal 5 Badges können ausgestellt werden!", "red");
+        return;
+      }
+      this.showcasedBadges = [...this.showcasedBadges, badgeId];
+    }
+  };
+
+  private handleSaveBadges = async () => {
+    this.editingBadges = false;
+    await savePlayerProfile({
+      bio: this.profileBio,
+      featuredRankMode: this.featuredRankMode,
+      showcasedBadges: this.showcasedBadges,
+    });
+    showToast("Ausgestellte Badges aktualisiert!", "green");
+  };
+
+  private renderBioAndEquipment(publicId: string) {
+    const isOwn = isOwnAccount(publicId);
+    const rankInfo = this.ranks[this.featuredRankMode] ?? {
+      elo: 800,
+      tier: "Eisen",
+    };
+    const currentRankTier = rankInfo.tier;
+    const currentRankElo = rankInfo.elo;
+    const modeLabel =
+      this.featuredRankMode === "1v1"
+        ? "1v1"
+        : this.featuredRankMode === "2v2"
+          ? "2v2"
+          : "FFA";
 
     return html`
       <div
-        class="mb-4 bg-white/5 rounded-xl border border-white/10 p-5 space-y-4"
+        class="mb-4 bg-white/5 rounded-xl border border-white/10 p-5 space-y-5"
       >
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div class="flex flex-wrap items-center gap-2">
-            ${equippedTitle
-              ? html`
-                  <span
-                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 shadow-sm"
-                  >
-                    <span>👑</span>
-                    <span>${equippedTitle.name}</span>
-                  </span>
-                `
-              : nothing}
-            ${equippedBadge
-              ? html`
-                  <span
-                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 shadow-sm"
-                  >
-                    <span>🛡️</span>
-                    <span>${equippedBadge.name}</span>
-                  </span>
-                `
-              : nothing}
-            ${!equippedTitle && !equippedBadge
-              ? html`
-                  <span class="text-xs text-white/40 italic"
-                    >Keine Titel oder Abzeichen ausgerüstet</span
-                  >
-                `
-              : nothing}
+        <!-- 1. Featured Rank Selector / Display -->
+        <div
+          class="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-black/30 rounded-xl border border-white/10"
+        >
+          <div class="flex items-center gap-3">
+            <span class="p-2 rounded-lg bg-amber-500/20 text-amber-400">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                <path
+                  d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                />
+              </svg>
+            </span>
+            <div>
+              <div
+                class="text-[10px] uppercase font-bold text-white/50 tracking-wider"
+              >
+                Hervorgehobener Rang
+              </div>
+              <div class="text-sm font-bold text-white flex items-center gap-2">
+                <span>${currentRankTier}</span>
+                <span
+                  class="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/70 font-mono"
+                >
+                  ${currentRankElo} ELO
+                </span>
+                <span class="text-xs text-white/40">(${modeLabel})</span>
+              </div>
+            </div>
           </div>
           ${isOwn
             ? html`
-                <div
-                  class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs font-bold text-slate-200"
-                >
-                  <svg
-                    class="w-4 h-4 text-amber-400"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
+                <div class="flex items-center gap-2">
+                  <label class="text-xs text-white/50 font-bold"
+                    >Rangliste:</label
                   >
-                    <path
-                      d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
-                    />
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                    <line x1="12" y1="22.08" x2="12" y2="12" />
-                  </svg>
-                  <span
-                    >Stahl:
-                    <strong class="text-amber-300 font-mono"
-                      >${steelBalance.toLocaleString()}</strong
-                    ></span
+                  <select
+                    class="bg-white/10 border border-white/20 text-white text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-malibu-blue cursor-pointer"
+                    .value=${this.featuredRankMode}
+                    @change=${this.handleFeaturedRankChange}
                   >
+                    <option
+                      value="1v1"
+                      ?selected=${this.featuredRankMode === "1v1"}
+                    >
+                      1v1 Ranked
+                    </option>
+                    <option
+                      value="2v2"
+                      ?selected=${this.featuredRankMode === "2v2"}
+                    >
+                      2v2 Ranked
+                    </option>
+                    <option
+                      value="ffa"
+                      ?selected=${this.featuredRankMode === "ffa"}
+                    >
+                      FFA Ranked
+                    </option>
+                  </select>
                 </div>
               `
             : nothing}
         </div>
 
+        <!-- 2. Badges Showcase (Max 5 Slots) -->
+        <div class="space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span
+              class="text-xs uppercase font-bold text-white/50 tracking-wider flex items-center gap-1.5"
+            >
+              <span>🛡️</span>
+              <span
+                >Ausgestellte Badges (${this.showcasedBadges.length}/5)</span
+              >
+            </span>
+            ${isOwn
+              ? html`
+                  <button
+                    type="button"
+                    @click=${() => (this.editingBadges = !this.editingBadges)}
+                    class="text-xs font-semibold text-malibu-blue hover:text-aquarius cursor-pointer flex items-center gap-1"
+                  >
+                    <span
+                      >${this.editingBadges
+                        ? "Schließen"
+                        : "⚙️ Badges verwalten"}</span
+                    >
+                  </button>
+                `
+              : nothing}
+          </div>
+
+          <!-- Badges Grid / Row -->
+          <div class="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
+            ${[0, 1, 2, 3, 4].map((slotIdx) => {
+              const badgeId = this.showcasedBadges[slotIdx];
+              if (badgeId) {
+                const info = resolveBadgeInfo(badgeId);
+                return html`
+                  <div
+                    class="relative group/badge flex items-center gap-2 p-2.5 rounded-xl border ${info.colorClass} transition-all cursor-help"
+                    title="${info.origin}"
+                  >
+                    <span class="text-base shrink-0">${info.icon}</span>
+                    <span class="text-xs font-bold truncate">${info.name}</span>
+                    <!-- Hover Tooltip -->
+                    <div
+                      class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/badge:flex flex-col p-2.5 bg-gray-950/95 border border-white/20 rounded-xl shadow-xl z-50 text-left min-w-[180px] max-w-[240px] pointer-events-none backdrop-blur-md"
+                    >
+                      <span
+                        class="text-xs font-bold text-white mb-0.5 flex items-center gap-1.5"
+                      >
+                        <span>${info.icon}</span>
+                        <span>${info.name}</span>
+                      </span>
+                      <span class="text-[11px] text-amber-300/90 leading-tight">
+                        ${info.origin}
+                      </span>
+                    </div>
+                  </div>
+                `;
+              }
+              return html`
+                <div
+                  class="flex items-center justify-center p-2.5 rounded-xl border border-dashed border-white/10 text-white/20 text-xs font-medium"
+                >
+                  Slot ${slotIdx + 1}
+                </div>
+              `;
+            })}
+          </div>
+
+          <!-- Badges Picker (if editing) -->
+          ${isOwn && this.editingBadges
+            ? html`
+                <div
+                  class="mt-3 p-4 bg-black/40 rounded-xl border border-white/15 space-y-3"
+                >
+                  <div class="text-xs font-bold text-white/80">
+                    Wähle bis zu 5 freigeschaltete Badges zum Ausstellen:
+                  </div>
+                  <div
+                    class="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-1"
+                  >
+                    ${this.getAvailableBadges().map((badge) => {
+                      const isSelected = this.showcasedBadges.includes(
+                        badge.id,
+                      );
+                      return html`
+                        <button
+                          type="button"
+                          @click=${() => this.toggleBadgeSelection(badge.id)}
+                          class="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${isSelected
+                            ? "bg-amber-500/30 text-amber-300 border-amber-400"
+                            : "bg-white/5 text-white/60 border-white/10 hover:bg-white/10"}"
+                          title="${badge.origin}"
+                        >
+                          <span>${badge.icon}</span>
+                          <span>${badge.name}</span>
+                          ${isSelected ? html`<span>✓</span>` : nothing}
+                        </button>
+                      `;
+                    })}
+                  </div>
+                  <div class="flex justify-end pt-2">
+                    <button
+                      type="button"
+                      @click=${this.handleSaveBadges}
+                      class="px-4 py-1.5 rounded-lg bg-malibu-blue hover:bg-aquarius text-white text-xs font-bold cursor-pointer transition-colors"
+                    >
+                      Auswahl speichern
+                    </button>
+                  </div>
+                </div>
+              `
+            : nothing}
+        </div>
+
+        <!-- 3. Bio Section -->
         <div class="border-t border-white/10 pt-3">
           <div class="flex items-center justify-between mb-2">
             <span
@@ -465,7 +717,7 @@ export class PlayerProfileModal extends BaseModal {
                   <button
                     type="button"
                     @click=${() => {
-                      this.bioDraft = currentBio;
+                      this.bioDraft = this.profileBio;
                       this.editingBio = true;
                     }}
                     class="text-xs font-semibold text-malibu-blue hover:text-aquarius cursor-pointer flex items-center gap-1"
@@ -483,7 +735,9 @@ export class PlayerProfileModal extends BaseModal {
                       />
                     </svg>
                     <span
-                      >${currentBio ? "Bearbeiten" : "+ Bio hinzufügen"}</span
+                      >${this.profileBio
+                        ? "Bearbeiten"
+                        : "+ Bio hinzufügen"}</span
                     >
                   </button>
                 `
@@ -496,7 +750,7 @@ export class PlayerProfileModal extends BaseModal {
                   <textarea
                     maxlength="200"
                     rows="3"
-                    class="w-full px-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white text-sm placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-malibu-blue"
+                    class="w-full px-3 py-2 bg-black/40 border border-white/20 rounded-lg text-white text-sm placeholder-white/30 focus:outline-none focus:ring-1 focus:ring-malibu-blue resize-none"
                     placeholder="Erzähle kurz etwas über dich... (max. 200 Zeichen)"
                     .value=${this.bioDraft}
                     @input=${(e: Event) => {
@@ -519,16 +773,7 @@ export class PlayerProfileModal extends BaseModal {
                       </button>
                       <button
                         type="button"
-                        @click=${() => {
-                          const trimmed = this.bioDraft.trim().slice(0, 200);
-                          localStorage.setItem("indufront_player_bio", trimmed);
-                          localStorage.setItem(
-                            `indufront_bio_${publicId}`,
-                            trimmed,
-                          );
-                          this.editingBio = false;
-                          showToast("Biografie gespeichert!", "green");
-                        }}
+                        @click=${this.handleSaveBio}
                         class="px-3 py-1 rounded bg-malibu-blue hover:bg-aquarius text-white font-bold cursor-pointer"
                       >
                         Speichern
@@ -539,12 +784,12 @@ export class PlayerProfileModal extends BaseModal {
               `
             : html`
                 <p
-                  class="text-sm text-white/80 ${currentBio
+                  class="text-sm text-white/80 ${this.profileBio
                     ? "italic"
                     : "text-white/40 not-italic"}"
                 >
-                  ${currentBio
-                    ? `"${currentBio}"`
+                  ${this.profileBio
+                    ? `"${this.profileBio}"`
                     : isOwn
                       ? "Noch keine Biografie eingetragen. Klicke auf '+ Bio hinzufügen'."
                       : "Keine Biografie angegeben."}
@@ -771,6 +1016,14 @@ export class PlayerProfileModal extends BaseModal {
     this.clans = profile === false ? [] : (profile.clans ?? []);
     this.displayClanTag =
       profile === false ? null : (profile.displayClanTag ?? null);
+    this.profileBio = profile === false ? "" : (profile.bio ?? "");
+    this.featuredRankMode =
+      profile === false ? "ffa" : (profile.featuredRankMode ?? "ffa");
+    this.showcasedBadges =
+      profile === false ? [] : (profile.showcasedBadges ?? []);
+    this.soloAchievements =
+      profile === false ? [] : (profile.achievements?.singleplayerMap ?? []);
+    this.ranks = profile === false ? {} : (profile.ranks ?? {});
   }
 
   // Intentionally preserves publicId/statsTree/history cache/scroll: the page

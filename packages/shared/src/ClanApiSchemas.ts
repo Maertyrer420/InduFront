@@ -58,6 +58,7 @@ export const ClanInfoSchema = z.object({
   boosted: z.boolean().optional(),
   // When the clan's boost runs out; null when unboosted (clan detail only).
   boostEndsAt: z.iso.datetime().nullable().optional(),
+  pendingRequests: z.number().int().optional(),
 });
 export type ClanInfo = z.infer<typeof ClanInfoSchema>;
 

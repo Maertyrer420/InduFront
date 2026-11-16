@@ -79,6 +79,7 @@ export class ClanModal extends BaseModal {
   @state() private selectedClanTag = "";
   @state() private selectedClan: ClanInfo | null = null;
   @state() private myRole: ClanRole | null = null;
+  @state() private viewingRequests = false;
   private myPublicId: string | null = null;
   @state() private myClanRoles = new Map<string, ClanRole>();
 
@@ -387,6 +388,7 @@ export class ClanModal extends BaseModal {
           memberCount: c.memberCount,
           softBalance: c.softBalance,
           hardBalance: c.hardBalance,
+          pendingRequests: c.pendingRequests ?? 0,
         });
       }
       this.myClanRoles = roles;
@@ -438,6 +440,11 @@ export class ClanModal extends BaseModal {
           @navigate-detail=${() => (this.view = "detail")}
           @navigate-bans=${() => (this.view = "bans")}
           @navigate-transfer=${() => (this.view = "transfer")}
+          @open-requests=${() => {
+            this.view = "detail";
+            this.activeTab = "members";
+            this.viewingRequests = true;
+          }}
           @view-profile=${(e: CustomEvent<{ publicId: string }>) =>
             this.openPlayerProfile(e.detail.publicId)}
           @clan-updated=${(e: CustomEvent<Partial<ClanInfo>>) => {
@@ -539,6 +546,7 @@ export class ClanModal extends BaseModal {
         .myClanRoles=${this.myClanRoles}
         .myPendingRequests=${this.myPendingRequests}
         .detailTab=${this.activeTab === "members" ? "members" : "overview"}
+        .viewingRequests=${this.viewingRequests}
         .cachedDetail=${this.detailCache?.tag === this.selectedClanTag
           ? this.detailCache
           : null}
@@ -546,6 +554,7 @@ export class ClanModal extends BaseModal {
           // Raised when the clan fails to load.
           if (this.backToProfile()) return;
           this.view = "list";
+          this.viewingRequests = false;
           this.selectedClan = null;
           this.selectedClanTag = "";
           this.myRole = null;

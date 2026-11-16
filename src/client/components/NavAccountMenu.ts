@@ -283,10 +283,20 @@ export class NavAccountMenu extends LitElement {
     const signInText = this.querySelector<HTMLElement>(
       "#nav-account-signin-text",
     );
-    if (signInText && !signInText.textContent?.trim()) {
-      const label = translateText("main.sign_in");
-      signInText.textContent =
-        label && label !== "main.sign_in" ? label : "Anmelden";
+    if (signInText) {
+      if (this.isSignedIn()) {
+        signInText.classList.add("hidden");
+        signInText.textContent = "";
+      } else {
+        const hasStoredSession =
+          typeof localStorage !== "undefined" &&
+          Boolean(localStorage.getItem("indufront_jwt"));
+        if (!hasStoredSession && !signInText.textContent?.trim()) {
+          const label = translateText("main.sign_in");
+          signInText.textContent =
+            label && label !== "main.sign_in" ? label : "Anmelden";
+        }
+      }
     }
     if (!this.menuOpen) {
       this.removePanel();
@@ -325,6 +335,7 @@ export class NavAccountMenu extends LitElement {
     // A portal sign-in surfaces as a userMeResponse, so re-read the SDK
     // profile alongside it.
     this.refreshPortalUser();
+    void this.updateComplete.then(() => updateAccountNavButton(event.detail));
   };
 
   private refreshPortalUser(): void {
@@ -342,7 +353,10 @@ export class NavAccountMenu extends LitElement {
   private isSignedIn(): boolean {
     if (this.userMeResponse === false) return false;
     return (
-      hasLinkedIdentity(this.userMeResponse.user) || this.portalUser !== null
+      hasLinkedIdentity(this.userMeResponse.user) ||
+      Boolean(this.userMeResponse.player?.publicId) ||
+      Boolean(this.userMeResponse.user?.publicId) ||
+      this.portalUser !== null
     );
   }
 
@@ -844,9 +858,20 @@ export class NavAccountMenu extends LitElement {
         <span
           id="nav-account-signin-text"
           data-account-signin-text
-          class="hidden text-xs font-bold tracking-widest"
+          class="${this.isSignedIn()
+            ? "hidden"
+            : ""} text-xs font-bold tracking-widest"
           data-i18n="main.sign_in"
         ></span>
+        ${this.isSignedIn() && this.userMeResponse
+          ? html`<span
+              class="text-xs font-semibold text-white/90 truncate max-w-[110px]"
+            >
+              ${this.userMeResponse.player.username ??
+              this.userMeResponse.player.usernameBase ??
+              ""}
+            </span>`
+          : nothing}
         ${this.renderChevron()}
       </button>
     `;

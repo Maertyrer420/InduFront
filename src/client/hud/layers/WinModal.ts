@@ -3,7 +3,7 @@ import { GameUpdateType } from "@openfront/engine-api/game/GameUpdates";
 import type { GameXpEligible, Progress } from "@openfront/shared/ApiSchemas";
 import { Pattern } from "@openfront/shared/CosmeticSchemas";
 import { EventBus } from "@openfront/shared/EventBus";
-import { html, LitElement, TemplateResult } from "lit";
+import { html, LitElement, nothing, TemplateResult } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
   DESKTOP_TUTORIAL_VIDEO_URL,
@@ -14,7 +14,12 @@ import {
   translateText,
   TUTORIAL_VIDEO_URL,
 } from "../../../client/Utils";
-import { fetchUserMeUncached, getUserMe, invalidateUserMe } from "../../Api";
+import {
+  fetchUserMeUncached,
+  getUserMe,
+  invalidateUserMe,
+  recordSoloAchievement,
+} from "../../Api";
 import "../../components/CosmeticCard";
 import { cosmeticSelectionLabel } from "../../components/CosmeticPresentation";
 import type { GameXpPanelState } from "../../components/GameXpPanel";
@@ -24,6 +29,7 @@ import "../../components/PurchaseButton";
 import "../../components/SteamWishlist";
 import { Controller } from "../../Controller";
 import {
+  broadcastFreshUserMe,
   fetchCosmetics,
   purchaseCosmetic,
   resolveCosmetics,
@@ -136,6 +142,31 @@ export class WinModal extends LitElement implements Controller {
 
   private hasAwardedSteel = false;
 
+  @state()
+  private unlockedSoloAchievement: { map: string; difficulty: string } | null =
+    null;
+
+  private async handleSoloAchievement(): Promise<void> {
+    try {
+      const raw = sessionStorage.getItem("indufront_solo_achievement_eligible");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed?.map && parsed?.difficulty) {
+        const ok = await recordSoloAchievement(parsed.map, parsed.difficulty);
+        if (ok) {
+          this.unlockedSoloAchievement = {
+            map: parsed.map,
+            difficulty: parsed.difficulty,
+          };
+          invalidateUserMe();
+          void broadcastFreshUserMe();
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to record solo achievement", e);
+    }
+  }
+
   // The XP this game earned. Stays hidden unless there is something to say:
   // no progression, a spectator or a replay never see the section at all.
   @state()
@@ -215,6 +246,23 @@ export class WinModal extends LitElement implements Controller {
                 </h2>
               `}
         </div>
+
+        ${this.unlockedSoloAchievement
+          ? html`
+              <div
+                class="mb-3 px-4 py-2.5 rounded-xl bg-amber-500/20 border border-amber-500/50 flex items-center justify-center gap-2 text-xs font-bold text-amber-300 animate-pulse shrink-0"
+              >
+                <span class="text-base">🏆</span>
+                <span>
+                  ${translateText("win_modal.solo_achievement_unlocked", {
+                    map: this.unlockedSoloAchievement.map,
+                    difficulty: this.unlockedSoloAchievement.difficulty,
+                  }) ||
+                  `Solo-Achievement freigeschaltet: ${this.unlockedSoloAchievement.map} (${this.unlockedSoloAchievement.difficulty})!`}
+                </span>
+              </div>
+            `
+          : nothing}
 
         <!-- Spectating banner if player died before round end -->
         ${this.isSpectatingAfterDeath && !this.isWin
@@ -1380,6 +1428,11 @@ export class WinModal extends LitElement implements Controller {
           this._title = translateText("win_modal.you_won");
           this.isWin = true;
           gamePortal.happytime();
+          if (
+            this.game.config().gameConfig().gameType === GameType.Singleplayer
+          ) {
+            void this.handleSoloAchievement();
+          }
         } else {
           this._title = translateText("win_modal.other_won", {
             player: winner.displayName(),

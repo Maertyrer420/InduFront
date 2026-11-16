@@ -149,12 +149,17 @@ function userMe(u: UserRecord): UserMeResponse {
         : rawRole === "Admin" || rawRole === "Supporter"
           ? "officer"
           : "member";
+    const pendingRequests =
+      schemaRole === "leader" || schemaRole === "officer"
+        ? (c.requests?.length ?? 0)
+        : 0;
     return {
       tag: c.tag,
       name: c.name,
       role: schemaRole,
       joinedAt: member?.joinedAt ?? c.createdAt ?? new Date().toISOString(),
       memberCount: Math.max(1, c.members.length),
+      pendingRequests,
       softBalance: "0",
       hardBalance: "0",
     };
@@ -169,6 +174,9 @@ function userMe(u: UserRecord): UserMeResponse {
       vaultToken,
       settings: u.settings ?? {},
       inventory: u.inventory ?? {},
+      bio: u.bio ?? "",
+      featuredRankMode: u.featuredRankMode ?? "ffa",
+      showcasedBadges: u.showcasedBadges ?? [],
       ...(u.googleId ? { google: { email: u.email } } : {}),
     },
     steamLicence: false,
@@ -184,7 +192,13 @@ function userMe(u: UserRecord): UserMeResponse {
       usernameDiscriminator: "0001",
       usernameStatus: "premium",
       flares: u.inventory?.flares ?? [],
-      achievements: { singleplayerMap: [], player: [] },
+      achievements: {
+        singleplayerMap: (u.singleplayerMapAchievements ?? []).map((a) => ({
+          mapName: a.mapName,
+          difficulty: a.difficulty as any,
+        })),
+        player: [],
+      },
       friends: u.friends ?? [],
       clans: clans as any,
       subscription: null,
@@ -283,6 +297,20 @@ function playerProfile(u: UserRecord) {
     stats: buildPlayerStatsTree(stats),
     clans,
     displayClanTag: clans[0]?.tag ?? null,
+    bio: u.bio ?? "",
+    featuredRankMode: u.featuredRankMode ?? "ffa",
+    showcasedBadges: u.showcasedBadges ?? [],
+    achievements: {
+      singleplayerMap: (u.singleplayerMapAchievements ?? []).map((a) => ({
+        mapName: a.mapName,
+        difficulty: a.difficulty as any,
+      })),
+    },
+    ranks: {
+      "1v1": { elo: stats.elo1v1, tier: getEloTier(stats.elo1v1) },
+      "2v2": { elo: stats.elo2v2, tier: getEloTier(stats.elo2v2) },
+      ffa: { elo: stats.eloFfa, tier: getEloTier(stats.eloFfa) },
+    },
   };
 }
 
@@ -1126,6 +1154,39 @@ async function main() {
     res.json({ ok: true, inventory: u.inventory ?? {} });
   });
 
+  app.put("/users/@me/profile", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const { bio, featuredRankMode, showcasedBadges } = req.body ?? {};
+    const updated = store.updateUserProfile(u.id, {
+      bio,
+      featuredRankMode,
+      showcasedBadges,
+    });
+    res.json({
+      ok: true,
+      bio: updated?.bio ?? "",
+      featuredRankMode: updated?.featuredRankMode ?? "ffa",
+      showcasedBadges: updated?.showcasedBadges ?? [],
+    });
+  });
+
+  app.post("/users/@me/achievements/solo", authed, (req, res) => {
+    const u = (req as Request & { user: UserRecord }).user;
+    const { mapName, difficulty } = req.body ?? {};
+    if (!mapName || !difficulty) {
+      return void res.status(400).json({ error: "missing_fields" });
+    }
+    const updated = store.addSoloAchievement(
+      u.id,
+      String(mapName),
+      String(difficulty),
+    );
+    res.json({
+      ok: true,
+      singleplayerMap: updated?.singleplayerMapAchievements ?? [],
+    });
+  });
+
   // ---- Player profiles & game history ----
   app.get("/player/:publicId", authed, (req, res) => {
     const u = store.byPublicId(String(req.params.publicId));
@@ -1415,6 +1476,7 @@ async function main() {
       hardBalance: "0",
       boosted: false,
       boostEndsAt: null,
+      pendingRequests: clan.requests?.length ?? 0,
     });
   });
 

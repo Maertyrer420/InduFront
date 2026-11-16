@@ -2523,3 +2523,48 @@ async function getServedConfig<T>(
 export async function getStreams(): Promise<StreamsFeed> {
   return getServedConfig("streams.json", StreamsFeedSchema, streamsFallback);
 }
+
+export async function savePlayerProfile(data: {
+  bio?: string;
+  featuredRankMode?: "1v1" | "2v2" | "ffa";
+  showcasedBadges?: string[];
+}): Promise<boolean> {
+  try {
+    const auth = await userAuth();
+    if (!auth) return false;
+    const res = await fetch(`${getApiBase()}/users/@me/profile`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${auth.jwt}`,
+      },
+      body: JSON.stringify(data),
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn("savePlayerProfile failed", err);
+    return false;
+  }
+}
+
+export async function recordSoloAchievement(
+  mapName: string,
+  difficulty: string,
+): Promise<boolean> {
+  try {
+    const auth = await userAuth();
+    if (!auth) return false;
+    const res = await fetch(`${getApiBase()}/users/@me/achievements/solo`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${auth.jwt}`,
+      },
+      body: JSON.stringify({ mapName, difficulty }),
+    });
+    return res.ok;
+  } catch (err) {
+    console.warn("recordSoloAchievement failed", err);
+    return false;
+  }
+}

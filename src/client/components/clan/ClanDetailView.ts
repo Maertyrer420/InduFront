@@ -26,6 +26,7 @@ import {
   filterMembersBySearch,
   formatBoostRemaining,
   membersHaveLevels,
+  normalizeClanRole,
   renderLoadingSpinner,
   renderMemberPagination,
   renderMemberRow,
@@ -58,6 +59,7 @@ export class ClanDetailView extends LitElement {
     pendingRequestCount: number;
   } | null = null;
   @property() detailTab: "overview" | "members" = "overview";
+  @property({ type: Boolean }) viewingRequests = false;
 
   @property({ type: Object }) cachedClan: ClanInfo | null = null;
   @state() private selectedClan: ClanInfo | null = null;
@@ -259,6 +261,16 @@ export class ClanDetailView extends LitElement {
   }
 
   protected willUpdate(changed: Map<string, unknown>) {
+    if (changed.has("selectedClan") && this.selectedClan) {
+      if (typeof this.selectedClan.pendingRequests === "number") {
+        this.pendingRequestCount = this.selectedClan.pendingRequests;
+      }
+      const roleStr = this.myClanRoles.get(this.clanTag);
+      const myRole = roleStr ? normalizeClanRole(roleStr) : null;
+      if (myRole === "leader" || myRole === "officer") {
+        void this.loadInitialMembers();
+      }
+    }
     if (
       (changed.has("detailTab") || changed.has("selectedClan")) &&
       this.detailTab === "members" &&
@@ -540,6 +552,53 @@ export class ClanDetailView extends LitElement {
         : ""}
     `;
 
+    const pendingRequestsBanner =
+      canManageRequests && this.pendingRequestCount > 0
+        ? html`
+            <div
+              class="flex items-center justify-between gap-3 p-4 rounded-xl bg-amber-500/15 border border-amber-500/40"
+            >
+              <div class="flex items-center gap-3">
+                <span class="p-2 rounded-lg bg-amber-500/20 text-amber-300">
+                  <svg
+                    class="w-5 h-5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
+                    />
+                  </svg>
+                </span>
+                <div>
+                  <div class="text-sm font-bold text-white">
+                    ${translateText("clan_modal.pending_requests_title") ||
+                    "Beitrittsanfragen"}
+                  </div>
+                  <div class="text-xs text-amber-300/80">
+                    ${translateText("clan_modal.pending_requests_count", {
+                      count: this.pendingRequestCount,
+                    })}
+                  </div>
+                </div>
+              </div>
+              <button
+                @click=${() => {
+                  this.detailTab = "members";
+                  this.viewingRequests = true;
+                }}
+                class="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-colors cursor-pointer"
+              >
+                ${translateText("clan_modal.view_requests") || "Prüfen"}
+              </button>
+            </div>
+          `
+        : "";
+
     if (clan.discordUrl) {
       // Two-column on desktop: description + stats on the left, the Discord
       // card as a sidebar on the right, with the actions as a full-width
@@ -547,6 +606,7 @@ export class ClanDetailView extends LitElement {
       // phone stack reads description → stats → Discord → actions.
       return html`
         <div class="space-y-4">
+          ${pendingRequestsBanner}
           <div class="grid gap-4 sm:grid-cols-5 items-start">
             <div class="sm:col-span-3 flex flex-col gap-4">
               ${this.renderDescriptionCard(clan)}
@@ -566,7 +626,7 @@ export class ClanDetailView extends LitElement {
 
     return html`
       <div class="space-y-6">
-        ${this.renderDescriptionCard(clan)}
+        ${pendingRequestsBanner} ${this.renderDescriptionCard(clan)}
         ${this.renderClanLevelCard(clan, isMember)}
         <div class="grid grid-cols-2 gap-3">${this.renderStatTiles(clan)}</div>
         ${actions}

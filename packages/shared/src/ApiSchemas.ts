@@ -557,6 +557,9 @@ export const UserMeResponseSchema = z.object({
         activeLoadout: z.string().nullable().optional(),
       })
       .optional(),
+    bio: z.string().max(200).optional(),
+    featuredRankMode: z.enum(["1v1", "2v2", "ffa"]).optional(),
+    showcasedBadges: z.array(z.string()).max(5).optional(),
   }),
   // The caller's active account ban, shown to them (localized client-side), or
   // null. `category` is a server enum but kept as a string here so an
@@ -682,6 +685,7 @@ export const UserMeResponseSchema = z.object({
           // format. Decimal bigint strings; optional for older responses.
           softBalance: z.string().optional(),
           hardBalance: z.string().optional(),
+          pendingRequests: z.number().int().optional(),
         }),
       )
       .optional(),
@@ -1204,6 +1208,23 @@ export const PlayerProfileSchema = z.object({
   // games has one. Optional so responses from an API without the field still
   // parse (→ no tag shown).
   displayClanTag: z.string().nullable().optional(),
+  bio: z.string().max(200).optional(),
+  featuredRankMode: z.enum(["1v1", "2v2", "ffa"]).optional(),
+  showcasedBadges: z.array(z.string()).max(5).optional(),
+  achievements: z
+    .object({
+      singleplayerMap: z.array(SingleplayerMapAchievementSchema).optional(),
+    })
+    .optional(),
+  ranks: z
+    .record(
+      z.string(),
+      z.object({
+        elo: z.number(),
+        tier: z.string(),
+      }),
+    )
+    .optional(),
 });
 export type PlayerProfile = z.infer<typeof PlayerProfileSchema>;
 

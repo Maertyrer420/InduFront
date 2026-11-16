@@ -1,4 +1,4 @@
-import { html, LitElement } from "lit";
+import { html, LitElement, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { invalidateUserMe } from "../../Api";
 import {
@@ -354,6 +354,45 @@ export class ClanManageView extends LitElement {
   private renderManageContent(clan: ClanInfo) {
     return html`
       <div class="space-y-6">
+        <!-- Join Requests Section -->
+        <div
+          class="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 flex items-center justify-between gap-4"
+        >
+          <div>
+            <div class="text-white text-sm font-bold flex items-center gap-2">
+              <span>${translateText("clan_modal.join_requests")}</span>
+              ${(clan.pendingRequests ?? 0) > 0
+                ? html`<span
+                    class="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-black"
+                  >
+                    ${clan.pendingRequests}
+                  </span>`
+                : nothing}
+            </div>
+            <div class="text-white/60 text-xs mt-1">
+              ${(clan.pendingRequests ?? 0) > 0
+                ? translateText("clan_modal.pending_requests_count", {
+                    count: clan.pendingRequests ?? 0,
+                  })
+                : translateText("clan_modal.no_pending_requests") ||
+                  "Keine offenen Beitrittsanfragen"}
+            </div>
+          </div>
+          <button
+            type="button"
+            @click=${() =>
+              this.dispatchEvent(
+                new CustomEvent("open-requests", {
+                  bubbles: true,
+                  composed: true,
+                }),
+              )}
+            class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold transition-all cursor-pointer"
+          >
+            ${translateText("clan_modal.view_requests") || "Anfragen verwalten"}
+          </button>
+        </div>
+
         <!-- Edit Settings -->
         <div
           class="bg-white/5 rounded-2xl border border-white/10 p-6 space-y-5"

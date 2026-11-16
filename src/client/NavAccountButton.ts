@@ -192,7 +192,12 @@ function updateInstance(
   // account whose avatar URL didn't resolve, or a missing avatar element): the
   // user is still authenticated, so show the logged-in person icon. Only a
   // session with no linked identity at all gets the sign-in prompt.
-  if (responseHasLinkedIdentity(userMeResponse)) {
+  if (
+    responseHasLinkedIdentity(userMeResponse) ||
+    (userMeResponse !== false &&
+      (Boolean(userMeResponse?.player?.publicId) ||
+        Boolean(userMeResponse?.user?.publicId)))
+  ) {
     showLoggedInPlain();
     return;
   }

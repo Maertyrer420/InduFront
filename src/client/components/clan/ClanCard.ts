@@ -112,6 +112,17 @@ export class ClanCard extends LitElement {
               </span>
             </div>
           </div>
+          ${(this.clan.pendingRequests ?? 0) > 0 &&
+          (normalizeClanRole(this.clanRole ?? "") === "leader" ||
+            normalizeClanRole(this.clanRole ?? "") === "officer")
+            ? html`<span
+                class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0 bg-amber-500/25 text-amber-300 border border-amber-500/40"
+              >
+                ${translateText("clan_modal.pending_requests_badge", {
+                  count: this.clan.pendingRequests ?? 0,
+                }) || `Anfragen (${this.clan.pendingRequests ?? 0})`}
+              </span>`
+            : ""}
           ${this.clan.boosted
             ? html`<span
                 data-boosted

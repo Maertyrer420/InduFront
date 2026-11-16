@@ -69,6 +69,14 @@ export interface UserRecord {
   searchHidden?: boolean;
   settings?: Record<string, string>;
   inventory?: UserInventoryRecord;
+  bio?: string;
+  featuredRankMode?: "1v1" | "2v2" | "ffa";
+  showcasedBadges?: string[];
+  singleplayerMapAchievements?: {
+    mapName: string;
+    difficulty: string;
+    achievedAt?: string;
+  }[];
 }
 
 export interface SessionRecord {
@@ -478,6 +486,55 @@ export class AuthStore {
     }
     this.save(true, u);
     return u.inventory;
+  }
+
+  updateUserProfile(
+    userId: string,
+    profile: {
+      bio?: string;
+      featuredRankMode?: "1v1" | "2v2" | "ffa";
+      showcasedBadges?: string[];
+    },
+  ): UserRecord | null {
+    const u = this.byId(userId);
+    if (!u) return null;
+    if (typeof profile.bio === "string") {
+      u.bio = profile.bio.trim().slice(0, 200);
+    }
+    if (
+      profile.featuredRankMode === "1v1" ||
+      profile.featuredRankMode === "2v2" ||
+      profile.featuredRankMode === "ffa"
+    ) {
+      u.featuredRankMode = profile.featuredRankMode;
+    }
+    if (Array.isArray(profile.showcasedBadges)) {
+      u.showcasedBadges = profile.showcasedBadges.slice(0, 5).map(String);
+    }
+    this.save(true, u);
+    return u;
+  }
+
+  addSoloAchievement(
+    userId: string,
+    mapName: string,
+    difficulty: string,
+  ): UserRecord | null {
+    const u = this.byId(userId);
+    if (!u) return null;
+    u.singleplayerMapAchievements ??= [];
+    const exists = u.singleplayerMapAchievements.some(
+      (a) => a.mapName === mapName && a.difficulty === difficulty,
+    );
+    if (!exists) {
+      u.singleplayerMapAchievements.push({
+        mapName,
+        difficulty,
+        achievedAt: new Date().toISOString(),
+      });
+      this.save(true, u);
+    }
+    return u;
   }
 
   isUserDeleted(userId: string): boolean {

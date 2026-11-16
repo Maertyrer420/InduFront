@@ -210,6 +210,7 @@ export class SinglePlayerModal extends BaseModal {
   @state() private disabledUnits: UnitType[] = [
     ...DEFAULT_OPTIONS.disabledUnits,
   ];
+  @state() private rulesChangedAlert: boolean = false;
   @state() private customAlliances: boolean = DEFAULT_OPTIONS.customAlliances;
   @state() private customAllianceMinutes: number | undefined =
     DEFAULT_OPTIONS.customAllianceMinutes;
@@ -263,9 +264,23 @@ export class SinglePlayerModal extends BaseModal {
   }
 
   private toggleAchievements = () => {
+    if (!this.showAchievements && this.hasOptionsChanged()) {
+      this.rulesChangedAlert = true;
+      return;
+    }
     this.showAchievements = !this.showAchievements;
-    if (this.showAchievements) void this.ensureEligibleMaps();
+    if (this.showAchievements) {
+      this.rulesChangedAlert = false;
+      void this.ensureEligibleMaps();
+    }
   };
+
+  private checkAndDeactivateAchievements() {
+    if (this.showAchievements && this.hasOptionsChanged()) {
+      this.showAchievements = false;
+      this.rulesChangedAlert = true;
+    }
+  }
 
   private async ensureEligibleMaps() {
     if (this.eligibleMaps) return;
@@ -1019,6 +1034,7 @@ export class SinglePlayerModal extends BaseModal {
       default:
         break;
     }
+    this.checkAndDeactivateAchievements();
   };
 
   private handleConfigUnitToggleChanged = (e: Event) => {
@@ -1029,6 +1045,7 @@ export class SinglePlayerModal extends BaseModal {
       unit,
       checked,
     );
+    this.checkAndDeactivateAchievements();
   };
 
   private handleBotsChange = (e: Event) => {
@@ -1038,6 +1055,7 @@ export class SinglePlayerModal extends BaseModal {
       return;
     }
     this.bots = value;
+    this.checkAndDeactivateAchievements();
   };
 
   private handleNationsChange = (e: Event) => {
@@ -1047,6 +1065,7 @@ export class SinglePlayerModal extends BaseModal {
       return;
     }
     this.nations = value;
+    this.checkAndDeactivateAchievements();
   };
 
   private handleMaxTimerToggle = (
@@ -1055,6 +1074,7 @@ export class SinglePlayerModal extends BaseModal {
   ) => {
     this.maxTimer = checked;
     this.maxTimerValue = toOptionalNumber(value);
+    this.checkAndDeactivateAchievements();
   };
 
   private handleGoldMultiplierToggle = (
@@ -1063,6 +1083,7 @@ export class SinglePlayerModal extends BaseModal {
   ) => {
     this.goldMultiplier = checked;
     this.goldMultiplierValue = toOptionalNumber(value);
+    this.checkAndDeactivateAchievements();
   };
 
   private handleStartingGoldToggle = (
@@ -1071,6 +1092,7 @@ export class SinglePlayerModal extends BaseModal {
   ) => {
     this.startingGold = checked;
     this.startingGoldValue = toOptionalNumber(value);
+    this.checkAndDeactivateAchievements();
   };
 
   private handleCustomAlliancesToggle = (
@@ -1079,6 +1101,7 @@ export class SinglePlayerModal extends BaseModal {
   ) => {
     this.customAlliances = checked;
     this.customAllianceMinutes = toOptionalNumber(value);
+    this.checkAndDeactivateAchievements();
   };
 
   private handleOvertimeToggle = (
@@ -1087,6 +1110,7 @@ export class SinglePlayerModal extends BaseModal {
   ) => {
     this.overtime = checked;
     this.overtimeStartMinutes = toOptionalNumber(value);
+    this.checkAndDeactivateAchievements();
   };
 
   private handleOvertimeMinutesKeyDown = (e: KeyboardEvent) => {
@@ -1345,6 +1369,18 @@ export class SinglePlayerModal extends BaseModal {
 
       // The ad is long enough that the modal can be closed while it runs.
       if (attempt !== this.startAttempt) return;
+
+      if (!this.hasOptionsChanged() && this.showAchievements) {
+        sessionStorage.setItem(
+          "indufront_solo_achievement_eligible",
+          JSON.stringify({
+            map: this.selectedMap,
+            difficulty: this.selectedDifficulty,
+          }),
+        );
+      } else {
+        sessionStorage.removeItem("indufront_solo_achievement_eligible");
+      }
 
       this.dispatchEvent(
         new CustomEvent("join-lobby", {

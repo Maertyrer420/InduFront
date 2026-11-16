@@ -35,7 +35,7 @@ export const TIER_THRESHOLDS = [
   { tier: "Platin", min: 1400, max: 1600, color: "#9fe3dc" },
   { tier: "Gold", min: 1200, max: 1400, color: "#f2c230" },
   { tier: "Silber", min: 1000, max: 1200, color: "#c3cbd6" },
-  { tier: "Bronze", min: 800, max: 1000, color: "#c27c3e" },
+  { tier: "Bronze", min: 801, max: 1000, color: "#c27c3e" },
   { tier: "Eisen", min: 0, max: 800, color: "#6b7280" },
 ] as const;
 

@@ -972,10 +972,10 @@ export class GameSocialStore {
         publicId,
         username,
         qp: 0,
-        elo1v1: 1000,
-        elo2v2: 1000,
-        eloFfa: 1000,
-        peakElo: 1000,
+        elo1v1: 800,
+        elo2v2: 800,
+        eloFfa: 800,
+        peakElo: 800,
         wins: 0,
         losses: 0,
         games: 0,
@@ -983,6 +983,14 @@ export class GameSocialStore {
         steelBalance: 500,
         unlockedItems: [],
       };
+      this.save();
+    }
+    const rec = this.data.playerStats[key];
+    if (rec.games === 0 && (rec.eloFfa === 1000 || rec.elo1v1 === 1000)) {
+      rec.elo1v1 = 800;
+      rec.elo2v2 = 800;
+      rec.eloFfa = 800;
+      rec.peakElo = 800;
       this.save();
     }
     this.data.playerStats[key].steelBalance ??= 500;
