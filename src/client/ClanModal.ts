@@ -26,6 +26,7 @@ import "./components/CurrencyDisplay";
 import { modalHeader } from "./components/ui/ModalHeader";
 import { signedOutNotice } from "./components/ui/SignedOutNotice";
 import "./GameStatsModal";
+import { whenModalLoaded } from "./LazyModals";
 import { modalRouter } from "./ModalRouter";
 import "./PlayerProfileModal";
 import type { ProfileOrigin } from "./PlayerProfileModal";
@@ -708,27 +709,29 @@ export class ClanModal extends BaseModal {
   }
 
   private openPlayerProfile(publicId: string): void {
-    const profileModal = document.querySelector<
-      HTMLElement & { openFromClan(publicId: string): void }
-    >("player-profile-modal");
-    if (!profileModal) return;
+    whenModalLoaded("player-profile-modal", () => {
+      const profileModal = document.querySelector<
+        HTMLElement & { openFromClan(publicId: string): void }
+      >("player-profile-modal");
+      if (!profileModal) return;
 
-    // Route the profile modal's Back button to whichever tab opened it. Only
-    // the game-history tab needs its scroll position preserved on return.
-    this.profileOpenedFromTab =
-      this.activeTab === "game-history" ? "game-history" : "members";
-    if (this.profileOpenedFromTab === "game-history") {
-      this.gameHistoryScrollTop = this.modalEl?.getScrollTop() ?? 0;
-    }
+      // Route the profile modal's Back button to whichever tab opened it. Only
+      // the game-history tab needs its scroll position preserved on return.
+      this.profileOpenedFromTab =
+        this.activeTab === "game-history" ? "game-history" : "members";
+      if (this.profileOpenedFromTab === "game-history") {
+        this.gameHistoryScrollTop = this.modalEl?.getScrollTop() ?? 0;
+      }
 
-    // Same handoff as openGameStats: keep clan state so the profile modal's
-    // back button can land on the originating tab without a refetch.
-    this.preserveStateForModalHandoff = true;
-    try {
-      profileModal.openFromClan(publicId);
-    } finally {
-      this.preserveStateForModalHandoff = false;
-    }
+      // Same handoff as openGameStats: keep clan state so the profile modal's
+      // back button can land on the originating tab without a refetch.
+      this.preserveStateForModalHandoff = true;
+      try {
+        profileModal.openFromClan(publicId);
+      } finally {
+        this.preserveStateForModalHandoff = false;
+      }
+    });
   }
 
   // Entry point for the profile modal's Back button (opened via openFromClan

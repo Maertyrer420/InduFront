@@ -418,11 +418,11 @@ export class NavAccountMenu extends LitElement {
         labelKey: "nav_account_menu.view_profile",
         icon: iconUser,
         onSelect: () => {
-          document
-            .querySelector<
-              HTMLElement & { open(args?: Record<string, unknown>): void }
-            >("player-profile-modal")
-            ?.open({ publicID: publicId });
+          window.showPage?.("page-account");
+          const accountModal = document.querySelector<
+            HTMLElement & { open(args?: Record<string, unknown>): void }
+          >("account-modal");
+          accountModal?.open({ tab: "profile" });
         },
       });
     } else {

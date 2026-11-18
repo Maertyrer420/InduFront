@@ -7,7 +7,14 @@ import {
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { ClientEnv } from "src/client/ClientEnv";
-import { fetchPublicPlayerProfile, savePlayerProfile } from "./Api";
+import {
+  addProfileComment,
+  deleteProfileComment,
+  fetchProfileComments,
+  fetchPublicPlayerProfile,
+  type ProfileComment,
+  savePlayerProfile,
+} from "./Api";
 import "./ClanModal";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
@@ -47,7 +54,7 @@ let profileOpenings = 0;
 /** Where a profile was opened from, i.e. where its Back button leads. */
 export type ProfileOrigin = "clan" | "leaderboard" | "account" | "friends";
 
-interface BadgeInfo {
+export interface BadgeInfo {
   id: string;
   name: string;
   icon: string;
@@ -55,7 +62,7 @@ interface BadgeInfo {
   colorClass: string;
 }
 
-function resolveBadgeInfo(badgeId: string): BadgeInfo {
+export function resolveBadgeInfo(badgeId: string): BadgeInfo {
   if (badgeId.startsWith("solo:")) {
     const parts = badgeId.split(":");
     const mapName = parts[1] || "World";
@@ -103,6 +110,52 @@ function resolveBadgeInfo(badgeId: string): BadgeInfo {
       colorClass: "bg-blue-500/20 text-blue-300 border-blue-500/30",
     };
   }
+  if (badgeId === "clan:founder") {
+    return {
+      id: badgeId,
+      name: "Clan-Gründer",
+      icon: "👑",
+      origin: "Gründer eines registrierten InduFront-Clans",
+      colorClass: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+    };
+  }
+  if (badgeId === "streak:10") {
+    return {
+      id: badgeId,
+      name: "10er Siegesserie",
+      icon: "🔥",
+      origin: "10 Siege in Folge im Ranked oder Mehrspieler",
+      colorClass: "bg-red-500/20 text-red-300 border-red-500/30",
+    };
+  }
+  if (badgeId === "level:10") {
+    return {
+      id: badgeId,
+      name: "Level 10 Meilenstein",
+      icon: "⭐",
+      origin: "Erreiche Spielerlevel 10",
+      colorClass: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+    };
+  }
+  if (badgeId === "level:25") {
+    return {
+      id: badgeId,
+      name: "Level 25 Veteran",
+      icon: "🌟",
+      origin: "Erreiche Spielerlevel 25",
+      colorClass: "bg-indigo-500/20 text-indigo-300 border-indigo-500/30",
+    };
+  }
+  if (badgeId === "level:50") {
+    return {
+      id: badgeId,
+      name: "Level 50 Legende",
+      icon: "💫",
+      origin: "Erreiche Spielerlevel 50",
+      colorClass:
+        "bg-yellow-400/20 text-yellow-200 border-yellow-400/40 shadow-sm",
+    };
+  }
   return {
     id: badgeId,
     name: badgeId,
@@ -136,6 +189,10 @@ export class PlayerProfileModal extends BaseModal {
   // The link this profile was opened from (`openfront.io/player/<id>`), when
   // it was opened from one: the not-found state shows it.
   @state() private openedLink: string | null = null;
+  @state() private comments: ProfileComment[] = [];
+  @state() private commentInput = "";
+  @state() private commentsLoading = false;
+  @state() private submittingComment = false;
   private openedFrom: ProfileOrigin | null = null;
   // Mirrors the account modal's Games tab: keep the accumulated history list +
   // cursor across tab switches (and the game-stats detour) so re-entering Games
@@ -418,11 +475,198 @@ export class PlayerProfileModal extends BaseModal {
       <player-stats-tree-view
         .statsTree=${this.statsTree}
       ></player-stats-tree-view>
+      ${this.renderCommentsSection(publicId)}
+    `;
+  }
+
+  private async handleAddComment(publicId: string) {
+    const text = this.commentInput.trim();
+    if (!text) return;
+    this.submittingComment = true;
+    try {
+      const added = await addProfileComment(publicId, text);
+      if (added) {
+        this.comments = [added, ...this.comments];
+        this.commentInput = "";
+        showToast("Kommentar hinzugefügt!", "green");
+      } else {
+        showToast(
+          "Kommentar konnte nicht gesendet werden (Anmeldung erforderlich)",
+          "red",
+        );
+      }
+    } finally {
+      this.submittingComment = false;
+    }
+  }
+
+  private async handleDeleteComment(publicId: string, commentId: string) {
+    const ok = await deleteProfileComment(publicId, commentId);
+    if (ok) {
+      this.comments = this.comments.filter((c) => c.id !== commentId);
+      showToast("Kommentar gelöscht", "green");
+    } else {
+      showToast("Kommentar konnte nicht gelöscht werden", "red");
+    }
+  }
+
+  private openCommenterProfile(authorPublicId: string) {
+    if (!authorPublicId || authorPublicId === this.publicId) return;
+    this.open({ publicID: authorPublicId });
+  }
+
+  private renderCommentsSection(publicId: string) {
+    const isOwn = isOwnAccount(publicId);
+    return html`
+      <div
+        class="mt-6 bg-white/5 rounded-2xl border border-white/10 p-5 space-y-4"
+      >
+        <div
+          class="flex items-center justify-between border-b border-white/10 pb-3"
+        >
+          <div class="flex items-center gap-2">
+            <span class="text-lg">💬</span>
+            <h3 class="text-sm font-bold uppercase tracking-wider text-white">
+              Gästebuch / Kommentare
+            </h3>
+            <span
+              class="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/70 font-mono"
+            >
+              ${this.comments.length}
+            </span>
+          </div>
+        </div>
+
+        <!-- Add Comment Input -->
+        <div class="flex flex-col sm:flex-row gap-2.5">
+          <input
+            type="text"
+            maxlength="300"
+            .value=${this.commentInput}
+            @input=${(e: Event) =>
+              (this.commentInput = (e.target as HTMLInputElement).value)}
+            @keydown=${(e: KeyboardEvent) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                void this.handleAddComment(publicId);
+              }
+            }}
+            placeholder="Schreibe einen Kommentar auf dieser Profilseite..."
+            class="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 text-xs focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all"
+            ?disabled=${this.submittingComment}
+          />
+          <button
+            type="button"
+            @click=${() => void this.handleAddComment(publicId)}
+            ?disabled=${this.submittingComment ||
+            this.commentInput.trim().length === 0}
+            class="px-5 py-2.5 rounded-xl bg-malibu-blue hover:bg-aquarius disabled:opacity-50 disabled:pointer-events-none text-black font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow flex items-center justify-center gap-1.5 shrink-0"
+          >
+            <span>Senden</span>
+            <span>✉️</span>
+          </button>
+        </div>
+
+        <!-- Comments List -->
+        ${this.comments.length === 0
+          ? html`
+              <div
+                class="p-6 text-center text-xs text-white/40 italic bg-white/[0.02] rounded-xl border border-dashed border-white/10"
+              >
+                Noch keine Kommentare vorhanden. Sei der Erste, der etwas
+                hinterlässt!
+              </div>
+            `
+          : html`
+              <div class="space-y-2.5">
+                ${this.comments.map((c) => {
+                  const isAuthor = isOwnAccount(c.authorPublicId);
+                  const canDelete = isAuthor || isOwn;
+                  const formattedDate = new Date(c.createdAt).toLocaleString(
+                    "de-DE",
+                    {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    },
+                  );
+
+                  return html`
+                    <div
+                      class="p-3.5 bg-white/[0.04] hover:bg-white/[0.07] rounded-xl border border-white/10 transition-colors space-y-1.5"
+                    >
+                      <div class="flex items-center justify-between gap-2">
+                        <div
+                          class="flex items-center gap-2 cursor-pointer group"
+                          @click=${() =>
+                            this.openCommenterProfile(c.authorPublicId)}
+                          title="Profil ansehen"
+                        >
+                          <div
+                            class="w-6 h-6 rounded-full bg-slate-800 border border-white/20 group-hover:border-blue-400 flex items-center justify-center text-[10px] font-bold text-white transition-colors"
+                          >
+                            ${c.authorUsername.charAt(0).toUpperCase()}
+                          </div>
+                          <span
+                            class="text-xs font-bold text-white group-hover:text-blue-300 group-hover:underline transition-colors"
+                          >
+                            ${c.authorUsername}
+                          </span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                          <span
+                            class="text-[10px] font-mono text-white/40 flex items-center gap-1"
+                          >
+                            <span>🕒</span>
+                            <span>${formattedDate} Uhr</span>
+                          </span>
+                          ${canDelete
+                            ? html`
+                                <button
+                                  type="button"
+                                  @click=${() =>
+                                    void this.handleDeleteComment(
+                                      publicId,
+                                      c.id,
+                                    )}
+                                  class="text-white/30 hover:text-red-400 p-1 rounded transition-colors cursor-pointer text-xs"
+                                  title="Kommentar löschen"
+                                >
+                                  ✕
+                                </button>
+                              `
+                            : nothing}
+                        </div>
+                      </div>
+                      <p
+                        class="text-xs text-white/80 leading-relaxed break-words pl-8"
+                      >
+                        ${c.text}
+                      </p>
+                    </div>
+                  `;
+                })}
+              </div>
+            `}
+      </div>
     `;
   }
 
   private getAvailableBadges(): BadgeInfo[] {
-    const list: BadgeInfo[] = [resolveBadgeInfo("starter:pionier")];
+    const list: BadgeInfo[] = [
+      resolveBadgeInfo("starter:pionier"),
+      resolveBadgeInfo("streak:10"),
+    ];
+    if (this.clans.some((c) => c.role === "leader")) {
+      list.push(resolveBadgeInfo("clan:founder"));
+    }
+    const lvl = this.progress?.level ?? 1;
+    if (lvl >= 10) list.push(resolveBadgeInfo("level:10"));
+    if (lvl >= 25) list.push(resolveBadgeInfo("level:25"));
+    if (lvl >= 50) list.push(resolveBadgeInfo("level:50"));
+
     for (const ach of this.soloAchievements) {
       list.push(resolveBadgeInfo(`solo:${ach.mapName}:${ach.difficulty}`));
     }
@@ -916,14 +1160,10 @@ export class PlayerProfileModal extends BaseModal {
     const publicId =
       typeof args?.publicID === "string" && args.publicID.length > 0
         ? args.publicID
-        : null;
+        : typeof args?.publicId === "string" && args.publicId.length > 0
+          ? args.publicId
+          : this.publicId;
 
-    // Returning from the game-stats modal. The page router closed this modal
-    // underneath when the stats page showed, but onClose deliberately preserves
-    // state (like the account modal) — so restore the scroll and keep the
-    // game-history cache instead of refetching. Preserve even when the profile
-    // stats never loaded (still pending / failed): the Games tab loads
-    // independently, so its list should survive the detour regardless.
     if (
       this.restoreGamesScrollAfterOpen &&
       publicId !== null &&
@@ -934,14 +1174,6 @@ export class PlayerProfileModal extends BaseModal {
       return;
     }
 
-    // The Progression tab can't be selected until this player's progress is
-    // known (BaseModal drops a tab it doesn't list): hold the profile on
-    // Stats, and switch once the progress shows up. An explicit tab request
-    // decides on its own: when already open, BaseModal calls onOpen before it
-    // applies the requested tab, so activeTab may still be the remembered one.
-    // Only without a request does the remembered Progression tab carry over.
-    // Asked for while already open on another tab (Games, Clans), the profile
-    // holds on Stats too, so the switch below still happens.
     this.wantsProgressionTab =
       typeof args?.tab === "string"
         ? args.tab === "progression"
@@ -950,55 +1182,43 @@ export class PlayerProfileModal extends BaseModal {
       this.activeTab = "stats";
     }
 
-    // Fresh open (router/share link): clear any stale origin. The openFrom*
-    // helpers re-set it right after open() so back() routes home; the
-    // return-from-stats path above skips this and keeps the origin intact.
     this.openedFrom = null;
-    // A new opening: the profile card plays its flourish again.
-    // Counted across every profile modal, so no two openings share a key.
     this.openCount = ++profileOpenings;
-    this.publicId = publicId;
-    this.username = null;
-    this.statsTree = null;
-    this.clans = [];
-    this.displayClanTag = null;
-    this.progress = null;
-    this.gameHistoryCache = null;
-    this.gamesScrollTop = 0;
-    this.restoreGamesScrollAfterOpen = false;
-    // Only while the path is this player's: the URL can still name the last
-    // one for the moment (see open()).
-    this.openedLink =
-      publicId !== null &&
-      modalRouter.isPathRouted("profile") &&
-      parsePlayerProfilePath(window.location.pathname) === publicId
-        ? `${window.location.host}${window.location.pathname}`
-        : null;
-    this.loading = publicId !== null;
-    if (publicId !== null) {
-      void this.loadProfile(publicId);
+
+    if (publicId !== this.publicId || !this.profileLoaded()) {
+      this.publicId = publicId;
+      this.username = null;
+      this.statsTree = null;
+      this.clans = [];
+      this.displayClanTag = null;
+      this.progress = null;
+      this.comments = [];
+      this.gameHistoryCache = null;
+      this.gamesScrollTop = 0;
+      this.restoreGamesScrollAfterOpen = false;
+      this.openedLink =
+        publicId !== null &&
+        modalRouter.isPathRouted("profile") &&
+        parsePlayerProfilePath(window.location.pathname) === publicId
+          ? `${window.location.host}${window.location.pathname}`
+          : null;
+      this.loading = publicId !== null;
+      if (publicId !== null) {
+        void this.loadProfile(publicId);
+      }
     }
   }
 
   private async loadProfile(publicId: string): Promise<void> {
     const gen = ++this.loadGeneration;
-    // Drop a superseded response: a newer load started, or the modal moved to a
-    // different player. onClose no longer clears publicId, so the id check alone
-    // can't reject a stale same-player load started before an earlier close.
     const current = () =>
       gen === this.loadGeneration && this.publicId === publicId;
-    // The level is a nice-to-have: it lands whenever it arrives and never
-    // holds up the profile (its request can take up to its own timeout).
-    // Only shown alongside a loaded profile (see renderProfile). Missing
-    // progress hides the summary.
     const read = ++this.progressRead;
     void loadPlayerProgress(publicId).then((progress) => {
       if (!current() || read !== this.progressRead) return;
       this.progress = progress;
       const wanted = this.wantsProgressionTab;
       this.wantsProgressionTab = false;
-      // Unless the viewer has moved to another tab, or closed the profile
-      // (the tab would then be remembered for the next opening), meanwhile.
       if (
         wanted &&
         progress !== null &&
@@ -1008,6 +1228,12 @@ export class PlayerProfileModal extends BaseModal {
         this.setActiveTab("progression");
       }
     });
+
+    void fetchProfileComments(publicId).then((cmts) => {
+      if (!current()) return;
+      this.comments = cmts;
+    });
+
     const profile = await fetchPublicPlayerProfile(publicId);
     if (!current()) return;
     this.loading = false;

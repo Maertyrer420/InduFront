@@ -2568,3 +2568,78 @@ export async function recordSoloAchievement(
     return false;
   }
 }
+
+export interface ProfileComment {
+  id: string;
+  authorPublicId: string;
+  authorUsername: string;
+  text: string;
+  createdAt: string;
+}
+
+export async function fetchProfileComments(
+  publicId: string,
+): Promise<ProfileComment[]> {
+  try {
+    const res = await fetch(
+      `${getApiBase()}/public/player/${encodeURIComponent(publicId)}/comments`,
+      { headers: { Accept: "application/json" } },
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    return Array.isArray(data.comments) ? data.comments : [];
+  } catch (err) {
+    console.warn("fetchProfileComments failed", err);
+    return [];
+  }
+}
+
+export async function addProfileComment(
+  publicId: string,
+  text: string,
+): Promise<ProfileComment | false> {
+  try {
+    const auth = await userAuth();
+    if (!auth) return false;
+    const res = await fetch(
+      `${getApiBase()}/player/${encodeURIComponent(publicId)}/comments`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth.jwt}`,
+        },
+        body: JSON.stringify({ text }),
+      },
+    );
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data.comment ?? false;
+  } catch (err) {
+    console.warn("addProfileComment failed", err);
+    return false;
+  }
+}
+
+export async function deleteProfileComment(
+  publicId: string,
+  commentId: string,
+): Promise<boolean> {
+  try {
+    const auth = await userAuth();
+    if (!auth) return false;
+    const res = await fetch(
+      `${getApiBase()}/player/${encodeURIComponent(publicId)}/comments/${encodeURIComponent(commentId)}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${auth.jwt}`,
+        },
+      },
+    );
+    return res.ok;
+  } catch (err) {
+    console.warn("deleteProfileComment failed", err);
+    return false;
+  }
+}

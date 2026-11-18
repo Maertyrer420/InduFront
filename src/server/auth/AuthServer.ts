@@ -1248,6 +1248,42 @@ async function main() {
     res.json({ results, nextCursor: null });
   });
 
+  app.get("/public/player/:publicId/comments", (req, res) => {
+    const rawId = String(req.params.publicId).trim();
+    const comments = socialStore.getProfileComments(rawId);
+    res.json({ comments });
+  });
+
+  app.post("/player/:publicId/comments", authed, (req, res) => {
+    const targetPublicId = String(req.params.publicId).trim();
+    const user = (req as Request & { user: UserRecord }).user;
+    const text = typeof req.body?.text === "string" ? req.body.text : "";
+    const comment = socialStore.addProfileComment(
+      targetPublicId,
+      { publicId: user.publicId, username: user.username },
+      text,
+    );
+    if (!comment) {
+      return void res.status(400).json({ error: "invalid_comment" });
+    }
+    res.json({ comment });
+  });
+
+  app.delete("/player/:publicId/comments/:commentId", authed, (req, res) => {
+    const targetPublicId = String(req.params.publicId).trim();
+    const commentId = String(req.params.commentId).trim();
+    const user = (req as Request & { user: UserRecord }).user;
+    const ok = socialStore.deleteProfileComment(
+      targetPublicId,
+      commentId,
+      user.publicId,
+    );
+    if (!ok) {
+      return void res.status(403).json({ error: "forbidden_or_not_found" });
+    }
+    res.json({ success: true });
+  });
+
   // ---- Steel Currency & Cosmetics API ----
   app.get("/api/steel/:publicId", (req, res) => {
     const pubId = String(req.params.publicId);

@@ -14,6 +14,7 @@ const copyToClipboardMock = vi.hoisted(() =>
 );
 
 const fetchPublicPlayerProfileMock = vi.hoisted(() => vi.fn());
+const fetchProfileCommentsMock = vi.hoisted(() => vi.fn(async () => []));
 
 vi.mock("../../src/client/Utils", () => ({
   translateText: vi.fn((key: string) => key),
@@ -27,6 +28,11 @@ vi.mock("../../src/client/ProgressionAccount", () => ({
 
 vi.mock("../../src/client/Api", () => ({
   fetchPublicPlayerProfile: fetchPublicPlayerProfileMock,
+  fetchProfileComments: fetchProfileCommentsMock,
+  addProfileComment: vi.fn(async () => null),
+  deleteProfileComment: vi.fn(async () => true),
+  savePlayerProfile: vi.fn(async () => true),
+  getUserMe: vi.fn(async () => false as const),
 }));
 
 vi.mock(

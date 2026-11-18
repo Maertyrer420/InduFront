@@ -9,6 +9,10 @@ vi.mock("../../src/client/Api", () => ({
   fetchPlayerById: vi.fn(async () => null),
   setMarketingConsent: vi.fn(async () => true),
   getApiBase: vi.fn(() => ""),
+  fetchProfileComments: vi.fn(async () => []),
+  addProfileComment: vi.fn(async () => null),
+  deleteProfileComment: vi.fn(async () => true),
+  savePlayerProfile: vi.fn(async () => true),
 }));
 
 vi.mock("../../src/client/Auth", () => ({
@@ -103,11 +107,15 @@ describe("AccountModal — rendering", () => {
   // bypassing onOpen()'s network calls — this mirrors ClanModalTestUtils'
   // setState() helper, but userMeResponse is a plain private field (not a Lit
   // @state), so we force a render manually afterward.
-  async function setLoggedInUser(userMe: UserMeResponse): Promise<void> {
+  async function setLoggedInUser(
+    userMe: UserMeResponse,
+    tab = "account",
+  ): Promise<void> {
     (
       modal as unknown as { userMeResponse: UserMeResponse | null }
     ).userMeResponse = userMe;
     (modal as unknown as { isLoadingUser: boolean }).isLoadingUser = false;
+    (modal as unknown as { activeTab: string }).activeTab = tab;
     modal.requestUpdate();
     await modal.updateComplete;
   }

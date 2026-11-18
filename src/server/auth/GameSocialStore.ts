@@ -140,6 +140,14 @@ export interface DirectChatMessage {
   timestamp: string;
 }
 
+export interface ProfileComment {
+  id: string;
+  authorPublicId: string;
+  authorUsername: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface TribeLeaderboardEntry {
   rank: number;
   tribe: string;
@@ -217,6 +225,7 @@ interface StoreData {
   matches: MatchRecord[];
   globalChat: GlobalChatMessage[];
   directChat: DirectChatMessage[];
+  profileComments?: Record<string, ProfileComment[]>;
 }
 
 export class GameSocialStore {
@@ -226,6 +235,7 @@ export class GameSocialStore {
     matches: [],
     globalChat: [],
     directChat: [],
+    profileComments: {},
   };
 
   // In-memory heartbeat tracker: publicId -> timestamp
@@ -270,6 +280,7 @@ export class GameSocialStore {
     this.data.matches ??= [];
     this.data.globalChat ??= [];
     this.data.directChat ??= [];
+    this.data.profileComments ??= {};
 
     this.seedDefaultBotTribes();
     this.initPromise = this.syncFromDb();
@@ -980,6 +991,71 @@ export class GameSocialStore {
       () => {},
     );
     return msg;
+  }
+
+  // ---- PROFILE COMMENTS ----
+  public getProfileComments(targetPublicId: string): ProfileComment[] {
+    const key = targetPublicId.toLowerCase();
+    this.data.profileComments ??= {};
+    return this.data.profileComments[key] ?? [];
+  }
+
+  public addProfileComment(
+    targetPublicId: string,
+    author: { publicId: string; username: string },
+    text: string,
+  ): ProfileComment | null {
+    const trimmed = text.trim();
+    if (!trimmed || trimmed.length > 300) return null;
+    const key = targetPublicId.toLowerCase();
+    this.data.profileComments ??= {};
+    this.data.profileComments[key] ??= [];
+
+    const comment: ProfileComment = {
+      id:
+        "cm_" +
+        Date.now().toString(36) +
+        "_" +
+        Math.random().toString(36).slice(2, 6),
+      authorPublicId: author.publicId,
+      authorUsername: author.username,
+      text: trimmed,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Store up to 100 comments per profile, newest first
+    this.data.profileComments[key].unshift(comment);
+    if (this.data.profileComments[key].length > 100) {
+      this.data.profileComments[key] = this.data.profileComments[key].slice(
+        0,
+        100,
+      );
+    }
+    this.save();
+    return comment;
+  }
+
+  public deleteProfileComment(
+    targetPublicId: string,
+    commentId: string,
+    requesterPublicId: string,
+  ): boolean {
+    const key = targetPublicId.toLowerCase();
+    const comments = this.data.profileComments?.[key];
+    if (!comments) return false;
+    const idx = comments.findIndex((c) => c.id === commentId);
+    if (idx === -1) return false;
+    const comment = comments[idx];
+    const reqLower = requesterPublicId.toLowerCase();
+    if (
+      comment.authorPublicId.toLowerCase() !== reqLower &&
+      targetPublicId.toLowerCase() !== reqLower
+    ) {
+      return false;
+    }
+    comments.splice(idx, 1);
+    this.save();
+    return true;
   }
 
   // ---- PLAYER STATS, MATCH HISTORY & LEADERBOARDS ----

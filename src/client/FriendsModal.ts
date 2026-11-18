@@ -13,6 +13,7 @@ import {
   removeFriend,
   sendFriendRequest,
 } from "./FriendsApi";
+import { whenModalLoaded } from "./LazyModals";
 import { showToast } from "./Utils";
 
 export interface DirectChatMessage {
@@ -357,19 +358,21 @@ export class FriendsModal extends BaseModal {
 
   private openFriendProfile(publicId: string): void {
     if (!publicId) return;
-    const profileModal = document.querySelector<
-      HTMLElement & {
-        openFromFriends?(publicId: string): void;
-        open(args?: Record<string, unknown>): void;
+    whenModalLoaded("player-profile-modal", () => {
+      const profileModal = document.querySelector<
+        HTMLElement & {
+          openFromFriends?(publicId: string): void;
+          open(args?: Record<string, unknown>): void;
+        }
+      >("player-profile-modal");
+      if (profileModal) {
+        if (typeof profileModal.openFromFriends === "function") {
+          profileModal.openFromFriends(publicId);
+        } else {
+          profileModal.open({ publicID: publicId });
+        }
       }
-    >("player-profile-modal");
-    if (profileModal) {
-      if (typeof profileModal.openFromFriends === "function") {
-        profileModal.openFromFriends(publicId);
-      } else {
-        profileModal.open({ publicID: publicId });
-      }
-    }
+    });
   }
 
   private openChatWithFriend(friend: { publicId: string; username: string }) {
