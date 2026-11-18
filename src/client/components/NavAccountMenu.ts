@@ -13,6 +13,7 @@ import { hasLinkedIdentity } from "../AccountIdentity";
 import { logOut } from "../Auth";
 import { gamePortal, type PortalUser } from "../GamePortal";
 import { showInGameConfirm } from "../InGameModal";
+import { whenModalLoaded } from "../LazyModals";
 import {
   latestUserMeResponse,
   updateAccountNavButton,
@@ -418,11 +419,12 @@ export class NavAccountMenu extends LitElement {
         labelKey: "nav_account_menu.view_profile",
         icon: iconUser,
         onSelect: () => {
-          window.showPage?.("page-account");
-          const accountModal = document.querySelector<
-            HTMLElement & { open(args?: Record<string, unknown>): void }
-          >("account-modal");
-          accountModal?.open({ tab: "profile" });
+          whenModalLoaded("player-profile-modal", () => {
+            const profileModal = document.querySelector<
+              HTMLElement & { open(args: { publicID: string }): void }
+            >("player-profile-modal");
+            profileModal?.open({ publicID: publicId });
+          });
         },
       });
     } else {

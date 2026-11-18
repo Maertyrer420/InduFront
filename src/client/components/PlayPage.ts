@@ -3,6 +3,7 @@ import { assetUrl } from "@openfront/shared/AssetUrls";
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { hasLinkedIdentity } from "../AccountIdentity";
+import { whenModalLoaded } from "../LazyModals";
 import { latestUserMeResponse } from "../NavAccountButton";
 import "./CosmeticBackground";
 import "./ColorPalettePicker";
@@ -42,6 +43,16 @@ export class PlayPage extends LitElement {
   };
 
   private openAccount = (tab?: string) => {
+    const publicId = this.userMe ? this.userMe.player?.publicId : undefined;
+    if (publicId) {
+      whenModalLoaded("player-profile-modal", () => {
+        const profileModal = document.querySelector<
+          HTMLElement & { open(args: { publicID: string; tab?: string }): void }
+        >("player-profile-modal");
+        profileModal?.open({ publicID: publicId, tab });
+      });
+      return;
+    }
     if (tab) {
       window.location.hash = `modal=account&tab=${tab}`;
     } else {
@@ -81,7 +92,7 @@ export class PlayPage extends LitElement {
               @click=${() => this.openAccount()}
               class="px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-xs font-semibold text-emerald-200 transition-colors cursor-pointer"
             >
-              ${isDe ? "Konto" : "Account"}
+              ${isDe ? "Profil" : "Profile"}
             </button>
           </div>
         </div>

@@ -11,16 +11,7 @@ import {
   hasLinkedIdentity,
   responseHasLinkedIdentity,
 } from "./AccountIdentity";
-import {
-  addProfileComment,
-  deleteProfileComment,
-  fetchPlayerById,
-  fetchProfileComments,
-  getUserMe,
-  invalidateUserMe,
-  type ProfileComment,
-  savePlayerProfile,
-} from "./Api";
+import { fetchPlayerById, getUserMe, invalidateUserMe } from "./Api";
 import {
   discordLogin,
   googleLogin,
@@ -32,7 +23,6 @@ import {
   steamLogin,
 } from "./Auth";
 import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
-import "./components/ProfileShare";
 import { BaseModal } from "./components/BaseModal";
 import type { CreatorChangedDetail } from "./components/CreatorCodePanel";
 import "./components/baseComponents/stats/DiscordUserHeader";
@@ -56,21 +46,19 @@ import "./components/RewardsPanel";
 import { gamePortal, type PortalUser } from "./GamePortal";
 import { showInGameAlert } from "./InGameModal";
 import { whenModalLoaded } from "./LazyModals";
-import { consumeLinkResult } from "./LinkResult";
 import "./GameStatsModal";
+import { consumeLinkResult } from "./LinkResult";
 import { consumeLoginResult, LoginResult } from "./LoginResult";
-import { type BadgeInfo, resolveBadgeInfo } from "./PlayerProfileModal";
-import { loadPlayerProgress } from "./PlayerProgress";
 import "./PlayerProfileModal";
+import { loadPlayerProgress } from "./PlayerProgress";
 import {
   PROVISIONAL_PROGRESS_CHANGED,
   provisionalProgress,
   scoredGames,
 } from "./ProvisionalProgress";
 import { steamSDK } from "./SteamSDK";
-import { SteelStoreService } from "./SteelStore";
 import { playerProfileUrl } from "./utilities/PlayerProfileUrl";
-import { currentPagePath, showToast, translateText } from "./Utils";
+import { currentPagePath, translateText } from "./Utils";
 
 // Each login refusal says its own thing. Sharing one string was fine while
 // email_exists was the only recognised result; a player refused because their
@@ -136,18 +124,6 @@ export class AccountModal extends BaseModal {
   // from the `creatorCode=` router arg (a `/c/CODE` share-link visit).
   // Reassigned on every open, same as loginError above.
   @state() private prefillCreatorCode: string | undefined;
-  @state() private profileBio = "";
-  @state() private bioDraft = "";
-  @state() private editingBio = false;
-  @state() private featuredRankMode: "1v1" | "2v2" | "ffa" = "ffa";
-  @state() private showcasedBadges: string[] = [];
-  @state() private editingBadges = false;
-  @state() private ranks: Record<string, { elo: number; tier: string }> = {};
-  @state() private soloAchievements: { mapName: string; difficulty: string }[] =
-    [];
-  @state() private comments: ProfileComment[] = [];
-  @state() private commentInput = "";
-  @state() private submittingComment = false;
 
   private userMeResponse: UserMeResponse | null = null;
   private statsTree: PlayerStatsTree | null = null;
@@ -254,7 +230,7 @@ export class AccountModal extends BaseModal {
     }
     return {
       tabs: [
-        { key: "profile", label: translateText("account_modal.tab_profile") },
+        { key: "account", label: translateText("account_modal.tab_account") },
         { key: "stats", label: translateText("account_modal.tab_stats") },
         { key: "games", label: translateText("account_modal.tab_games") },
         // Where the player profile has it, after Games. Only for a player
@@ -268,7 +244,6 @@ export class AccountModal extends BaseModal {
               },
             ]
           : []),
-        { key: "account", label: translateText("account_modal.tab_account") },
       ],
     };
   }
@@ -305,8 +280,6 @@ export class AccountModal extends BaseModal {
 
   private renderTab(tab: string): TemplateResult {
     switch (tab) {
-      case "profile":
-        return this.renderProfileTab();
       case "stats":
         return this.renderStatsTab();
       case "games":
@@ -318,7 +291,7 @@ export class AccountModal extends BaseModal {
       case "account":
         return this.renderAccountTab();
       default:
-        return this.renderProfileTab();
+        return this.renderAccountTab();
     }
   }
 
@@ -365,591 +338,13 @@ export class AccountModal extends BaseModal {
     window.showPage?.("page-friends");
   }
 
-  private renderProfileTab(): TemplateResult {
-    const player = this.userMeResponse?.player;
-    const publicId = player?.publicId ?? "";
-    const username = player?.username ?? publicId;
-
-    return html`
-      ${this.renderProfileCard("full")} ${this.renderBioAndEquipment(publicId)}
-      <profile-share
-        class="mb-[18px] block"
-        .url=${playerProfileUrl(publicId)}
-        .name=${username}
-      ></profile-share>
-      ${this.renderCommentsSection(publicId)}
-    `;
-  }
-
-  private handleFeaturedRankChange = (e: Event) => {
-    const select = e.target as HTMLSelectElement;
-    const mode = select.value as "1v1" | "2v2" | "ffa";
-    this.featuredRankMode = mode;
-    void savePlayerProfile({
-      bio: this.profileBio,
-      featuredRankMode: mode,
-      showcasedBadges: this.showcasedBadges,
-    });
-    showToast(
-      `Hervorgehobener Rang auf ${mode.toUpperCase()} gesetzt!`,
-      "green",
-    );
-  };
-
-  private handleSaveBio = async () => {
-    const trimmed = this.bioDraft.trim().slice(0, 200);
-    this.profileBio = trimmed;
-    this.editingBio = false;
-    await savePlayerProfile({
-      bio: trimmed,
-      featuredRankMode: this.featuredRankMode,
-      showcasedBadges: this.showcasedBadges,
-    });
-    showToast("Biografie erfolgreich gespeichert!", "green");
-  };
-
-  private toggleBadgeSelection = (badgeId: string) => {
-    if (this.showcasedBadges.includes(badgeId)) {
-      this.showcasedBadges = this.showcasedBadges.filter(
-        (id) => id !== badgeId,
-      );
-    } else {
-      if (this.showcasedBadges.length >= 5) {
-        showToast("Maximal 5 Badges können ausgestellt werden!", "red");
-        return;
-      }
-      this.showcasedBadges = [...this.showcasedBadges, badgeId];
-    }
-  };
-
-  private handleSaveBadges = async () => {
-    this.editingBadges = false;
-    await savePlayerProfile({
-      bio: this.profileBio,
-      featuredRankMode: this.featuredRankMode,
-      showcasedBadges: this.showcasedBadges,
-    });
-    showToast("Ausgestellte Badges aktualisiert!", "green");
-  };
-
-  private getAvailableBadges(): BadgeInfo[] {
-    const list: BadgeInfo[] = [
-      resolveBadgeInfo("starter:pionier"),
-      resolveBadgeInfo("streak:10"),
-    ];
-    const clans = (this.userMeResponse?.player as any)?.clans ?? [];
-    if (
-      Array.isArray(clans) &&
-      clans.some((c: any) => c.role === "leader" || c.role === "Owner")
-    ) {
-      list.push(resolveBadgeInfo("clan:founder"));
-    }
-    const lvl = this.userMeResponse?.player?.progress?.level ?? 1;
-    if (lvl >= 10) list.push(resolveBadgeInfo("level:10"));
-    if (lvl >= 25) list.push(resolveBadgeInfo("level:25"));
-    if (lvl >= 50) list.push(resolveBadgeInfo("level:50"));
-
-    for (const ach of this.soloAchievements) {
-      list.push(resolveBadgeInfo(`solo:${ach.mapName}:${ach.difficulty}`));
-    }
-    const equipped =
-      typeof SteelStoreService?.getEquipped === "function"
-        ? SteelStoreService.getEquipped()
-        : {};
-    if (equipped["titel"]) list.push(resolveBadgeInfo(equipped["titel"]));
-    if (equipped["badges"]) list.push(resolveBadgeInfo(equipped["badges"]));
-
-    const seen = new Set<string>();
-    return list.filter((b) => {
-      if (seen.has(b.id)) return false;
-      seen.add(b.id);
-      return true;
-    });
-  }
-
-  private renderBioAndEquipment(publicId: string): TemplateResult {
-    const rankInfo = this.ranks[this.featuredRankMode] ?? {
-      elo: 800,
-      tier: "Eisen",
-    };
-    const currentRankTier = rankInfo.tier;
-    const currentRankElo = rankInfo.elo;
-    const modeLabel =
-      this.featuredRankMode === "1v1"
-        ? "1v1"
-        : this.featuredRankMode === "2v2"
-          ? "2v2"
-          : "FFA";
-
-    return html`
-      <div
-        class="mb-4 bg-white/5 rounded-xl border border-white/10 p-5 space-y-5"
-      >
-        <!-- 1. Featured Rank Selector -->
-        <div
-          class="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-black/30 rounded-xl border border-white/10"
-        >
-          <div class="flex items-center gap-3">
-            <span class="p-2 rounded-lg bg-amber-500/20 text-amber-400">
-              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                <path
-                  d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                />
-              </svg>
-            </span>
-            <div>
-              <div
-                class="text-[10px] uppercase font-bold text-white/50 tracking-wider"
-              >
-                Hervorgehobener Rang
-              </div>
-              <div class="text-sm font-bold text-white flex items-center gap-2">
-                <span>${currentRankTier}</span>
-                <span
-                  class="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/70 font-mono"
-                >
-                  ${currentRankElo} ELO
-                </span>
-                <span class="text-xs text-white/40">(${modeLabel})</span>
-              </div>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <label class="text-xs text-white/50 font-bold">Rangliste:</label>
-            <select
-              class="bg-white/10 border border-white/20 text-white text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-malibu-blue cursor-pointer"
-              .value=${this.featuredRankMode}
-              @change=${this.handleFeaturedRankChange}
-            >
-              <option value="1v1" ?selected=${this.featuredRankMode === "1v1"}>
-                1v1 Ranked
-              </option>
-              <option value="2v2" ?selected=${this.featuredRankMode === "2v2"}>
-                2v2 Ranked
-              </option>
-              <option value="ffa" ?selected=${this.featuredRankMode === "ffa"}>
-                FFA Ranked
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <!-- 2. Badges Showcase (Max 5 Slots) -->
-        <div class="space-y-2.5">
-          <div class="flex items-center justify-between">
-            <span
-              class="text-xs uppercase font-bold text-white/50 tracking-wider flex items-center gap-1.5"
-            >
-              <span>🛡️</span>
-              <span
-                >Ausgestellte Badges (${this.showcasedBadges.length}/5)</span
-              >
-            </span>
-            <button
-              type="button"
-              @click=${() => (this.editingBadges = !this.editingBadges)}
-              class="text-xs font-semibold text-malibu-blue hover:text-aquarius cursor-pointer flex items-center gap-1"
-            >
-              <span
-                >${this.editingBadges
-                  ? "Schließen"
-                  : "⚙️ Badges verwalten"}</span
-              >
-            </button>
-          </div>
-
-          <!-- Badges Grid / Row -->
-          <div class="grid grid-cols-1 sm:grid-cols-5 gap-2.5">
-            ${[0, 1, 2, 3, 4].map((slotIdx) => {
-              const badgeId = this.showcasedBadges[slotIdx];
-              if (badgeId) {
-                const info = resolveBadgeInfo(badgeId);
-                return html`
-                  <div
-                    class="relative group/badge flex items-center gap-2 p-2.5 rounded-xl border ${info.colorClass} transition-all cursor-help"
-                    title="${info.origin}"
-                  >
-                    <span class="text-base shrink-0">${info.icon}</span>
-                    <span class="text-xs font-bold truncate">${info.name}</span>
-                    <div
-                      class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/badge:flex flex-col p-2.5 bg-gray-950/95 border border-white/20 rounded-xl shadow-xl z-50 text-left min-w-[180px] max-w-[240px] pointer-events-none backdrop-blur-md"
-                    >
-                      <span
-                        class="text-xs font-bold text-white mb-0.5 flex items-center gap-1.5"
-                      >
-                        <span>${info.icon}</span>
-                        <span>${info.name}</span>
-                      </span>
-                      <span class="text-[11px] text-amber-300/90 leading-tight">
-                        ${info.origin}
-                      </span>
-                    </div>
-                  </div>
-                `;
-              }
-              return html`
-                <div
-                  class="flex items-center justify-center p-2.5 rounded-xl border border-dashed border-white/10 text-white/20 text-xs font-medium"
-                >
-                  Slot ${slotIdx + 1}
-                </div>
-              `;
-            })}
-          </div>
-
-          <!-- Badges Picker (if editing) -->
-          ${this.editingBadges
-            ? html`
-                <div
-                  class="mt-3 p-4 bg-black/40 rounded-xl border border-white/15 space-y-3"
-                >
-                  <div class="text-xs font-bold text-white/80">
-                    Wähle bis zu 5 freigeschaltete Badges zum Ausstellen:
-                  </div>
-                  <div
-                    class="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-1"
-                  >
-                    ${this.getAvailableBadges().map((badge) => {
-                      const isSelected = this.showcasedBadges.includes(
-                        badge.id,
-                      );
-                      return html`
-                        <button
-                          type="button"
-                          @click=${() => this.toggleBadgeSelection(badge.id)}
-                          class="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer border ${isSelected
-                            ? "bg-amber-500/30 text-amber-300 border-amber-400"
-                            : "bg-white/5 text-white/60 border-white/10 hover:bg-white/10"}"
-                          title="${badge.origin}"
-                        >
-                          <span>${badge.icon}</span>
-                          <span>${badge.name}</span>
-                          ${isSelected ? html`<span>✓</span>` : nothing}
-                        </button>
-                      `;
-                    })}
-                  </div>
-                  <div class="flex justify-end pt-2">
-                    <button
-                      type="button"
-                      @click=${this.handleSaveBadges}
-                      class="px-4 py-1.5 rounded-lg bg-malibu-blue hover:bg-aquarius text-white text-xs font-bold cursor-pointer transition-colors"
-                    >
-                      Auswahl speichern
-                    </button>
-                  </div>
-                </div>
-              `
-            : nothing}
-        </div>
-
-        <!-- 3. Bio Section -->
-        <div class="border-t border-white/10 pt-3">
-          <div class="flex items-center justify-between mb-2">
-            <span
-              class="text-xs uppercase font-bold text-white/50 tracking-wider flex items-center gap-1.5"
-            >
-              <svg
-                class="w-3.5 h-3.5 text-white/40"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path
-                  d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
-                />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-                <polyline points="10 9 9 9 8 9" />
-              </svg>
-              <span>Biografie</span>
-            </span>
-            ${!this.editingBio
-              ? html`
-                  <button
-                    type="button"
-                    @click=${() => {
-                      this.bioDraft = this.profileBio;
-                      this.editingBio = true;
-                    }}
-                    class="text-xs font-semibold text-malibu-blue hover:text-aquarius cursor-pointer flex items-center gap-1"
-                  >
-                    <svg
-                      class="w-3.5 h-3.5"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <path d="M12 20h9" />
-                      <path
-                        d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                      />
-                    </svg>
-                    <span
-                      >${this.profileBio
-                        ? "Bearbeiten"
-                        : "+ Bio hinzufügen"}</span
-                    >
-                  </button>
-                `
-              : nothing}
-          </div>
-
-          ${this.editingBio
-            ? html`
-                <div class="space-y-2 mt-2">
-                  <textarea
-                    class="w-full bg-black/40 border border-white/20 rounded-xl p-3 text-white text-xs placeholder-white/30 focus:outline-none focus:border-malibu-blue resize-none"
-                    rows="3"
-                    maxlength="200"
-                    placeholder="Erzähle etwas über dich, deine Spielweise oder Taktiken... (max. 200 Zeichen)"
-                    .value=${this.bioDraft}
-                    @input=${(e: Event) =>
-                      (this.bioDraft = (e.target as HTMLTextAreaElement).value)}
-                  ></textarea>
-                  <div class="flex items-center justify-between text-xs">
-                    <span class="text-white/40 text-[11px] font-mono">
-                      ${this.bioDraft.length}/200 Zeichen
-                    </span>
-                    <div class="flex items-center gap-2">
-                      <button
-                        type="button"
-                        @click=${() => (this.editingBio = false)}
-                        class="px-3 py-1 text-white/50 hover:text-white rounded-lg transition-colors cursor-pointer"
-                      >
-                        Abbrechen
-                      </button>
-                      <button
-                        type="button"
-                        @click=${this.handleSaveBio}
-                        class="px-4 py-1 bg-malibu-blue hover:bg-aquarius text-white rounded-lg font-bold transition-colors cursor-pointer"
-                      >
-                        Speichern
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              `
-            : html`
-                <div
-                  class="text-xs text-white/70 italic p-3 bg-white/[0.03] rounded-xl border border-white/5 min-h-[48px] flex items-center"
-                >
-                  ${this.profileBio ||
-                  html`<span class="text-white/30 font-normal"
-                    >Noch keine Biografie hinterlegt. Klicke auf "+ Bio
-                    hinzufügen"</span
-                  >`}
-                </div>
-              `}
-        </div>
-      </div>
-    `;
-  }
-
-  private async handleAddComment(publicId: string) {
-    const text = this.commentInput.trim();
-    if (!text) return;
-    this.submittingComment = true;
-    try {
-      const added = await addProfileComment(publicId, text);
-      if (added) {
-        this.comments = [added, ...this.comments];
-        this.commentInput = "";
-        showToast("Kommentar hinzugefügt!", "green");
-      } else {
-        showToast(
-          "Kommentar konnte nicht gesendet werden (Anmeldung erforderlich)",
-          "red",
-        );
-      }
-    } finally {
-      this.submittingComment = false;
-    }
-  }
-
-  private async handleDeleteComment(publicId: string, commentId: string) {
-    const ok = await deleteProfileComment(publicId, commentId);
-    if (ok) {
-      this.comments = this.comments.filter((c) => c.id !== commentId);
-      showToast("Kommentar gelöscht", "green");
-    } else {
-      showToast("Kommentar konnte nicht gelöscht werden", "red");
-    }
-  }
-
-  private renderCommentsSection(publicId: string): TemplateResult {
-    return html`
-      <div
-        class="mt-6 bg-white/5 rounded-2xl border border-white/10 p-5 space-y-4"
-      >
-        <div
-          class="flex items-center justify-between border-b border-white/10 pb-3"
-        >
-          <div class="flex items-center gap-2">
-            <span class="text-lg">💬</span>
-            <h3 class="text-sm font-bold uppercase tracking-wider text-white">
-              Gästebuch / Kommentare
-            </h3>
-            <span
-              class="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/70 font-mono"
-            >
-              ${this.comments.length}
-            </span>
-          </div>
-        </div>
-
-        <!-- Add Comment Input -->
-        <div class="flex flex-col sm:flex-row gap-2.5">
-          <input
-            type="text"
-            maxlength="300"
-            .value=${this.commentInput}
-            @input=${(e: Event) =>
-              (this.commentInput = (e.target as HTMLInputElement).value)}
-            @keydown=${(e: KeyboardEvent) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                void this.handleAddComment(publicId);
-              }
-            }}
-            placeholder="Schreibe einen Kommentar auf deinem Profil..."
-            class="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 text-xs focus:outline-none focus:ring-2 focus:ring-malibu-blue/50 focus:border-malibu-blue/50 transition-all"
-            ?disabled=${this.submittingComment}
-          />
-          <button
-            type="button"
-            @click=${() => void this.handleAddComment(publicId)}
-            ?disabled=${this.submittingComment ||
-            this.commentInput.trim().length === 0}
-            class="px-5 py-2.5 rounded-xl bg-malibu-blue hover:bg-aquarius disabled:opacity-50 disabled:pointer-events-none text-black font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow flex items-center justify-center gap-1.5 shrink-0"
-          >
-            <span>Senden</span>
-            <span>✉️</span>
-          </button>
-        </div>
-
-        <!-- Comments List -->
-        ${this.comments.length === 0
-          ? html`
-              <div
-                class="p-6 text-center text-xs text-white/40 italic bg-white/[0.02] rounded-xl border border-dashed border-white/10"
-              >
-                Noch keine Kommentare vorhanden.
-              </div>
-            `
-          : html`
-              <div class="space-y-2.5">
-                ${this.comments.map((c) => {
-                  const isAuthor =
-                    c.authorPublicId.toLowerCase() === publicId.toLowerCase();
-                  const canDelete = isAuthor;
-                  const formattedDate = new Date(c.createdAt).toLocaleString(
-                    "de-DE",
-                    {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    },
-                  );
-
-                  return html`
-                    <div
-                      class="p-3.5 bg-white/[0.04] hover:bg-white/[0.07] rounded-xl border border-white/10 transition-colors space-y-1.5"
-                    >
-                      <div class="flex items-center justify-between gap-2">
-                        <div
-                          class="flex items-center gap-2 cursor-pointer group"
-                          @click=${() =>
-                            this.openPlayerProfile(c.authorPublicId)}
-                          title="Profil ansehen"
-                        >
-                          <div
-                            class="w-6 h-6 rounded-full bg-slate-800 border border-white/20 group-hover:border-blue-400 flex items-center justify-center text-[10px] font-bold text-white transition-colors"
-                          >
-                            ${c.authorUsername.charAt(0).toUpperCase()}
-                          </div>
-                          <span
-                            class="text-xs font-bold text-white group-hover:text-blue-300 group-hover:underline transition-colors"
-                          >
-                            ${c.authorUsername}
-                          </span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                          <span
-                            class="text-[10px] font-mono text-white/40 flex items-center gap-1"
-                          >
-                            <span>🕒</span>
-                            <span>${formattedDate} Uhr</span>
-                          </span>
-                          ${canDelete
-                            ? html`
-                                <button
-                                  type="button"
-                                  @click=${() =>
-                                    void this.handleDeleteComment(
-                                      publicId,
-                                      c.id,
-                                    )}
-                                  class="text-white/30 hover:text-red-400 p-1 rounded transition-colors cursor-pointer text-xs"
-                                  title="Kommentar löschen"
-                                >
-                                  ✕
-                                </button>
-                              `
-                            : nothing}
-                        </div>
-                      </div>
-                      <p
-                        class="text-xs text-white/80 leading-relaxed break-words pl-8"
-                      >
-                        ${c.text}
-                      </p>
-                    </div>
-                  `;
-                })}
-              </div>
-            `}
-      </div>
-    `;
-  }
-
   private renderAccountTab(): TemplateResult {
     if (this.portalUser) {
       return this.renderPortalAccount(this.portalUser);
     }
-    const publicId = this.userMeResponse?.player?.publicId;
     return html`
       <div class="flex flex-col gap-6">
         ${this.renderProfileCard("compact")}
-        ${publicId
-          ? html`
-              <div
-                class="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-blue-900/30 via-indigo-900/20 to-purple-900/30 border border-blue-500/30"
-              >
-                <div class="flex flex-col">
-                  <span class="text-sm font-bold text-white"
-                    >Öffentliches Spielerprofil</span
-                  >
-                  <span class="text-xs text-white/50"
-                    >Profil, Rang, Statistiken und persönliche Biografie
-                    verwalten</span
-                  >
-                </div>
-                <button
-                  type="button"
-                  @click=${() => this.openPlayerProfile(publicId)}
-                  class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-colors cursor-pointer shadow"
-                >
-                  Profil öffnen
-                </button>
-              </div>
-            `
-          : null}
         <div class="bg-white/5 rounded-xl border border-white/10 p-6">
           <div class="flex flex-col items-center gap-4">
             <div
@@ -1491,10 +886,6 @@ export class AccountModal extends BaseModal {
     this.gameHistoryCache = null;
     this.gamesScrollTop = 0;
     this.restoreGamesScrollAfterOpen = false;
-    this.profileBio = "";
-    this.featuredRankMode = "ffa";
-    this.showcasedBadges = [];
-    this.comments = [];
   }
 
   // Shown when a sign-in was rejected because the provider's verified email
@@ -1735,27 +1126,10 @@ export class AccountModal extends BaseModal {
 
       this.statsTree = data.stats;
       this.displayClanTag = data.displayClanTag ?? null;
-      if (data.bio !== undefined) this.profileBio = data.bio;
-      if (data.featuredRankMode !== undefined)
-        this.featuredRankMode = data.featuredRankMode;
-      if (data.showcasedBadges !== undefined)
-        this.showcasedBadges = data.showcasedBadges;
-      if (data.ranks !== undefined) this.ranks = data.ranks;
-      if (data.achievements?.singleplayerMap) {
-        this.soloAchievements = data.achievements.singleplayerMap;
-      }
-
-      void this.loadComments(publicId);
       this.requestUpdate();
     } catch (err) {
       console.warn("Failed to load player data:", err);
       this.requestUpdate();
     }
-  }
-
-  private async loadComments(publicId: string): Promise<void> {
-    const cmts = await fetchProfileComments(publicId);
-    this.comments = cmts;
-    this.requestUpdate();
   }
 }
