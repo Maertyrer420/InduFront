@@ -6,7 +6,6 @@ import {
 } from "@openfront/shared/ApiSchemas";
 import { html, nothing } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { ClientEnv } from "src/client/ClientEnv";
 import {
   addProfileComment,
   deleteProfileComment,
@@ -15,23 +14,25 @@ import {
   type ProfileComment,
   savePlayerProfile,
 } from "./Api";
+import { ClientEnv } from "./ClientEnv";
+import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
 import "./ClanModal";
 import "./components/baseComponents/Button";
 import "./components/baseComponents/stats/PlayerGameHistoryView";
-import type { PlayerGameHistoryCache } from "./components/baseComponents/stats/PlayerGameHistoryView";
-import "./components/baseComponents/stats/PlayerStatsTree";
 import { BaseModal } from "./components/BaseModal";
+import "./components/baseComponents/stats/PlayerStatsTree";
+import { modalHeader } from "./components/ui/ModalHeader";
 import "./components/clan/ClanCard";
 import "./components/PlayerName";
 import "./components/ProfileCard";
 import "./components/ProfileProgression";
 import "./components/ProfileShare";
-import { modalHeader } from "./components/ui/ModalHeader";
 import { usernameText } from "./components/ui/UsernameText";
 import { verifiedBadge } from "./components/ui/VerifiedBadge";
+import { modalRouter } from "./ModalRouter";
 import "./GameStatsModal";
 import "./LeaderboardModal";
-import { modalRouter } from "./ModalRouter";
+import { latestUserMeResponse } from "./NavAccountButton";
 import { loadPlayerProgress } from "./PlayerProgress";
 import {
   isOwnAccount,
@@ -235,6 +236,13 @@ export class PlayerProfileModal extends BaseModal {
     this.requestUpdate();
   };
 
+  private isOwn(publicId: string | null | undefined): boolean {
+    if (!publicId) return false;
+    const me = latestUserMeResponse();
+    const myId = me ? me.player?.publicId : null;
+    return isOwnAccount(publicId) || (!!myId && publicId === myId);
+  }
+
   // A pending game was scored: on the viewer's own open profile, read the
   // progress again, for its history and milestones. The level holds
   // meanwhile (and on a stale read): the scored game's XP counts onto any
@@ -242,7 +250,7 @@ export class PlayerProfileModal extends BaseModal {
   private rereadProgress(): void {
     const publicId = this.publicId;
     if (publicId === null || this.progress === null) return;
-    if (!this.isConnected || !this.isOpen() || !isOwnAccount(publicId)) return;
+    if (!this.isConnected || !this.isOpen() || !this.isOwn(publicId)) return;
     const gen = this.loadGeneration;
     const read = ++this.progressRead;
     void loadPlayerProgress(publicId).then((progress) => {
@@ -516,7 +524,7 @@ export class PlayerProfileModal extends BaseModal {
   }
 
   private renderCommentsSection(publicId: string) {
-    const isOwn = isOwnAccount(publicId);
+    const isOwn = this.isOwn(publicId);
     return html`
       <div
         class="mt-6 bg-white/5 rounded-2xl border border-white/10 p-5 space-y-4"
@@ -580,7 +588,7 @@ export class PlayerProfileModal extends BaseModal {
           : html`
               <div class="space-y-2.5">
                 ${this.comments.map((c) => {
-                  const isAuthor = isOwnAccount(c.authorPublicId);
+                  const isAuthor = this.isOwn(c.authorPublicId);
                   const canDelete = isAuthor || isOwn;
                   const formattedDate = new Date(c.createdAt).toLocaleString(
                     "de-DE",
@@ -737,7 +745,7 @@ export class PlayerProfileModal extends BaseModal {
   };
 
   private renderBioAndEquipment(publicId: string) {
-    const isOwn = isOwnAccount(publicId);
+    const isOwn = this.isOwn(publicId);
     const rankInfo = this.ranks[this.featuredRankMode] ?? {
       elo: 800,
       tier: "Eisen",
@@ -1157,12 +1165,14 @@ export class PlayerProfileModal extends BaseModal {
   }
 
   protected onOpen(args?: Record<string, unknown>): void {
+    const userMe = latestUserMeResponse();
+    const myId = userMe ? userMe.player?.publicId : null;
     const publicId =
       typeof args?.publicID === "string" && args.publicID.length > 0
         ? args.publicID
         : typeof args?.publicId === "string" && args.publicId.length > 0
           ? args.publicId
-          : this.publicId;
+          : (this.publicId ?? myId ?? null);
 
     if (
       this.restoreGamesScrollAfterOpen &&
@@ -1237,19 +1247,58 @@ export class PlayerProfileModal extends BaseModal {
     const profile = await fetchPublicPlayerProfile(publicId);
     if (!current()) return;
     this.loading = false;
-    this.statsTree = profile === false ? null : profile.stats;
-    this.username = profile === false ? null : (profile.username ?? null);
-    this.clans = profile === false ? [] : (profile.clans ?? []);
-    this.displayClanTag =
-      profile === false ? null : (profile.displayClanTag ?? null);
-    this.profileBio = profile === false ? "" : (profile.bio ?? "");
-    this.featuredRankMode =
-      profile === false ? "ffa" : (profile.featuredRankMode ?? "ffa");
-    this.showcasedBadges =
-      profile === false ? [] : (profile.showcasedBadges ?? []);
-    this.soloAchievements =
-      profile === false ? [] : (profile.achievements?.singleplayerMap ?? []);
-    this.ranks = profile === false ? {} : (profile.ranks ?? {});
+    if (profile !== false) {
+      this.statsTree = profile.stats;
+      this.username = profile.username ?? null;
+      this.clans = profile.clans ?? [];
+      this.displayClanTag = profile.displayClanTag ?? null;
+      this.profileBio = profile.bio ?? "";
+      this.featuredRankMode = profile.featuredRankMode ?? "ffa";
+      this.showcasedBadges = profile.showcasedBadges ?? [];
+      this.soloAchievements = profile.achievements?.singleplayerMap ?? [];
+      this.ranks = profile.ranks ?? {};
+    } else {
+      const me = latestUserMeResponse();
+      if (me && me.player?.publicId === publicId) {
+        this.username = me.player.username ?? null;
+        this.clans = me.player.clans ?? [];
+        this.displayClanTag = (me.player.clans as any)?.[0]?.tag ?? null;
+        this.profileBio = me.user?.bio ?? "";
+        this.featuredRankMode = me.user?.featuredRankMode ?? "ffa";
+        this.showcasedBadges = me.user?.showcasedBadges ?? [];
+        this.soloAchievements = me.player.achievements?.singleplayerMap ?? [];
+        const ffaElo = me.player?.leaderboard?.ffa?.elo ?? 800;
+        const oneVOneElo = me.player?.leaderboard?.oneVone?.elo ?? 800;
+        const twoVTwoElo = me.player?.leaderboard?.twoVtwo?.elo ?? 800;
+        this.ranks = {
+          "1v1": { elo: oneVOneElo, tier: "Eisen" },
+          "2v2": { elo: twoVTwoElo, tier: "Eisen" },
+          ffa: { elo: ffaElo, tier: "Eisen" },
+        };
+        this.statsTree = {
+          Public: {
+            "Free For All": {
+              Medium: {
+                wins: 0n,
+                losses: 0n,
+                total: 0n,
+                stats: {},
+              },
+            },
+          },
+        };
+      } else {
+        this.statsTree = null;
+        this.username = null;
+        this.clans = [];
+        this.displayClanTag = null;
+        this.profileBio = "";
+        this.featuredRankMode = "ffa";
+        this.showcasedBadges = [];
+        this.soloAchievements = [];
+        this.ranks = {};
+      }
+    }
   }
 
   // Intentionally preserves publicId/statsTree/history cache/scroll: the page

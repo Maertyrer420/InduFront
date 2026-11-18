@@ -91,7 +91,8 @@ function resolveTarget(req: http.IncomingMessage): {
     pathname.startsWith("/leaderboard/") ||
     pathname.startsWith("/public/clans") ||
     pathname.startsWith("/public/player") ||
-    pathname.startsWith("/player/") ||
+    (pathname.startsWith("/player/") &&
+      !req.headers["accept"]?.includes("text/html")) ||
     pathname.startsWith("/api/steel") ||
     pathname.startsWith("/game/") ||
     pathname.startsWith("/matchmaking/") ||

@@ -1,3 +1,4 @@
+import { Difficulty, GameMode } from "@openfront/engine-api/game/GameTypes";
 import type { UserMeResponse } from "@openfront/shared/ApiSchemas";
 import { uuidToBase64url } from "@openfront/shared/Base64";
 import * as dotenv from "dotenv";
@@ -133,6 +134,14 @@ const validUsername = (u: unknown): u is string =>
 const validPassword = (p: unknown): p is string =>
   typeof p === "string" && p.length >= 8 && p.length <= 128;
 
+function normalizeDifficulty(d: unknown): Difficulty {
+  const lower = String(d ?? "").toLowerCase();
+  if (lower === "easy") return Difficulty.Easy;
+  if (lower === "hard") return Difficulty.Hard;
+  if (lower === "impossible") return Difficulty.Impossible;
+  return Difficulty.Medium;
+}
+
 function userMe(u: UserRecord): UserMeResponse {
   const recoveryKey = store.ensureRecoveryKey(u.id) ?? u.recoveryKey;
   const stats = socialStore.getOrCreatePlayerStats(u.publicId, u.username);
@@ -195,7 +204,7 @@ function userMe(u: UserRecord): UserMeResponse {
       achievements: {
         singleplayerMap: (u.singleplayerMapAchievements ?? []).map((a) => ({
           mapName: a.mapName,
-          difficulty: a.difficulty as any,
+          difficulty: normalizeDifficulty(a.difficulty),
         })),
         player: [],
       },
@@ -247,13 +256,13 @@ function buildPlayerStatsTree(
 
   return {
     Public: {
-      FFA: {
-        Medium: ffaLeaf,
+      [GameMode.FFA]: {
+        [Difficulty.Medium]: ffaLeaf,
       },
     },
     Singleplayer: {
-      FFA: {
-        Medium: ffaLeaf,
+      [GameMode.FFA]: {
+        [Difficulty.Medium]: ffaLeaf,
       },
     },
     Ranked: {
@@ -305,7 +314,7 @@ function playerProfile(u: UserRecord) {
     achievements: {
       singleplayerMap: (u.singleplayerMapAchievements ?? []).map((a) => ({
         mapName: a.mapName,
-        difficulty: a.difficulty as any,
+        difficulty: normalizeDifficulty(a.difficulty),
       })),
     },
     ranks: {
